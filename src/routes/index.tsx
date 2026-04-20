@@ -7,8 +7,10 @@ import { toast } from "sonner"
 import { TravelerShell } from "@/components/traveler-shell"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { getCurrentUserFn, logoutFn } from "@/lib/auth"
 import { formatCurrency, titleCaseStatus } from "@/lib/format"
 import { searchFlightsFn, type FlightOption } from "@/lib/queries"
@@ -98,14 +100,20 @@ function PublicHomePage() {
             <form.Field name="tripType">
               {(field) => (
                 <div className="mt-6 flex flex-wrap items-center gap-4 text-center md:justify-start">
-                  <Label className="flex cursor-pointer items-center gap-2">
-                    <input checked={field.state.value === "round-trip"} className="size-4 rounded-sm border-slate-300 text-slate-950 focus:ring-slate-950" name="tripType" onChange={() => field.handleChange("round-trip")} type="radio" />
-                    <span className={cn("text-sm font-medium", field.state.value === "round-trip" ? "text-slate-950" : "text-slate-500")}>Round Trip</span>
-                  </Label>
-                  <Label className="flex cursor-pointer items-center gap-2">
-                    <input checked={field.state.value === "one-way"} className="size-4 rounded-sm border-slate-300 text-slate-950 focus:ring-slate-950" name="tripType" onChange={() => field.handleChange("one-way")} type="radio" />
-                    <span className={cn("text-sm font-medium", field.state.value === "one-way" ? "text-slate-950" : "text-slate-500")}>One Way</span>
-                  </Label>
+                  <RadioGroup
+                    className="flex flex-row gap-4"
+                    onValueChange={(v) => field.handleChange(v as "one-way" | "round-trip")}
+                    value={field.state.value}
+                  >
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem id="round-trip" value="round-trip" />
+                      <Label className={cn("cursor-pointer text-sm font-medium", field.state.value === "round-trip" ? "text-slate-950" : "text-slate-500")} htmlFor="round-trip">Round Trip</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem id="one-way" value="one-way" />
+                      <Label className={cn("cursor-pointer text-sm font-medium", field.state.value === "one-way" ? "text-slate-950" : "text-slate-500")} htmlFor="one-way">One Way</Label>
+                    </div>
+                  </RadioGroup>
                   <div className="hidden h-4 w-px bg-slate-300 md:block" />
                   <Button size="sm" variant="ghost">
                     1 Passenger <ChevronDown className="size-4" />
@@ -297,7 +305,7 @@ function FilterLine({ label, price, defaultChecked }: { label: string; price?: s
   return (
     <Label className="flex cursor-pointer items-center justify-between">
       <div className="flex items-center gap-2">
-        <input defaultChecked={defaultChecked} className="size-4 rounded-sm border-slate-300 text-slate-950 focus:ring-slate-950" type="checkbox" />
+        <Checkbox defaultChecked={defaultChecked} />
         <span className="text-sm text-slate-500 transition-colors hover:text-slate-950">{label}</span>
       </div>
       {price ? <span className="text-xs text-slate-500">{price}</span> : null}
