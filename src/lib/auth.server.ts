@@ -179,7 +179,7 @@ export async function loginUser(data: { password: string; role: AuthRole; userna
     role: "staff",
   })
 
-  return { redirectTo: "/staff" as const }
+  return { redirectTo: "/staff/app" as const }
 }
 
 export async function registerCustomer(data: {
@@ -310,5 +310,5 @@ export async function registerStaff(data: {
     role: "staff",
   })
 
-  return { redirectTo: "/staff" as const }
+  return { redirectTo: "/staff/app" as const }
 }

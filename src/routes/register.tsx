@@ -5,6 +5,7 @@ import { toast } from "sonner"
 
 import { SignupForm } from "@/components/signup-form"
 import { getCurrentUserFn, registerCustomerFn } from "@/lib/auth"
+import { pickRandomAuthImage } from "@/lib/auth-images"
 
 export const Route = createFileRoute("/register")({
   loader: async () => ({ currentUser: await getCurrentUserFn() }),
@@ -14,6 +15,7 @@ export const Route = createFileRoute("/register")({
 function RegisterPage() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
+  const heroImageUrl = pickRandomAuthImage()
 
   const form = useForm({
     defaultValues: {
@@ -70,6 +72,7 @@ function RegisterPage() {
                                                           {(passportExpField) => (
                                                             <SignupForm
                                                               error={error}
+                                                              heroImageUrl={heroImageUrl}
                                                               fields={{
                                                                 buildingNumber: { onChange: (v) => buildingField.handleChange(v), value: buildingField.state.value },
                                                                 city: { onChange: (v) => cityField.handleChange(v), value: cityField.state.value },

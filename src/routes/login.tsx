@@ -5,6 +5,7 @@ import { toast } from "sonner"
 
 import { LoginForm } from "@/components/login-form"
 import { getCurrentUserFn, loginFn } from "@/lib/auth"
+import { pickRandomAuthImage } from "@/lib/auth-images"
 
 export const Route = createFileRoute("/login")({
   loader: async () => ({ currentUser: await getCurrentUserFn() }),
@@ -14,6 +15,7 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
+  const heroImageUrl = pickRandomAuthImage()
 
   const form = useForm({
     defaultValues: { password: "", username: "" },
@@ -38,6 +40,7 @@ function LoginPage() {
                     <LoginForm
                       emailValue={usernameField.state.value}
                       error={error}
+                      heroImageUrl={heroImageUrl}
                       onEmailChange={(v) => usernameField.handleChange(v)}
                       onPasswordChange={(v) => passwordField.handleChange(v)}
                       onSubmit={async (e) => {

@@ -14,6 +14,10 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CustomerRouteImport } from './routes/customer'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StaffIndexRouteImport } from './routes/staff.index'
+import { Route as StaffRegisterRouteImport } from './routes/staff.register'
+import { Route as StaffLoginRouteImport } from './routes/staff.login'
+import { Route as StaffAppRouteImport } from './routes/staff.app'
 
 const StaffRoute = StaffRouteImport.update({
   id: '/staff',
@@ -40,20 +44,47 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StaffIndexRoute = StaffIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => StaffRoute,
+} as any)
+const StaffRegisterRoute = StaffRegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => StaffRoute,
+} as any)
+const StaffLoginRoute = StaffLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => StaffRoute,
+} as any)
+const StaffAppRoute = StaffAppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => StaffRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/customer': typeof CustomerRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/staff': typeof StaffRoute
+  '/staff': typeof StaffRouteWithChildren
+  '/staff/app': typeof StaffAppRoute
+  '/staff/login': typeof StaffLoginRoute
+  '/staff/register': typeof StaffRegisterRoute
+  '/staff/': typeof StaffIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/customer': typeof CustomerRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/staff': typeof StaffRoute
+  '/staff/app': typeof StaffAppRoute
+  '/staff/login': typeof StaffLoginRoute
+  '/staff/register': typeof StaffRegisterRoute
+  '/staff': typeof StaffIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -61,14 +92,45 @@ export interface FileRoutesById {
   '/customer': typeof CustomerRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/staff': typeof StaffRoute
+  '/staff': typeof StaffRouteWithChildren
+  '/staff/app': typeof StaffAppRoute
+  '/staff/login': typeof StaffLoginRoute
+  '/staff/register': typeof StaffRegisterRoute
+  '/staff/': typeof StaffIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/customer' | '/login' | '/register' | '/staff'
+  fullPaths:
+    | '/'
+    | '/customer'
+    | '/login'
+    | '/register'
+    | '/staff'
+    | '/staff/app'
+    | '/staff/login'
+    | '/staff/register'
+    | '/staff/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/customer' | '/login' | '/register' | '/staff'
-  id: '__root__' | '/' | '/customer' | '/login' | '/register' | '/staff'
+  to:
+    | '/'
+    | '/customer'
+    | '/login'
+    | '/register'
+    | '/staff/app'
+    | '/staff/login'
+    | '/staff/register'
+    | '/staff'
+  id:
+    | '__root__'
+    | '/'
+    | '/customer'
+    | '/login'
+    | '/register'
+    | '/staff'
+    | '/staff/app'
+    | '/staff/login'
+    | '/staff/register'
+    | '/staff/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -76,7 +138,7 @@ export interface RootRouteChildren {
   CustomerRoute: typeof CustomerRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
-  StaffRoute: typeof StaffRoute
+  StaffRoute: typeof StaffRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -116,15 +178,59 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/staff/': {
+      id: '/staff/'
+      path: '/'
+      fullPath: '/staff/'
+      preLoaderRoute: typeof StaffIndexRouteImport
+      parentRoute: typeof StaffRoute
+    }
+    '/staff/register': {
+      id: '/staff/register'
+      path: '/register'
+      fullPath: '/staff/register'
+      preLoaderRoute: typeof StaffRegisterRouteImport
+      parentRoute: typeof StaffRoute
+    }
+    '/staff/login': {
+      id: '/staff/login'
+      path: '/login'
+      fullPath: '/staff/login'
+      preLoaderRoute: typeof StaffLoginRouteImport
+      parentRoute: typeof StaffRoute
+    }
+    '/staff/app': {
+      id: '/staff/app'
+      path: '/app'
+      fullPath: '/staff/app'
+      preLoaderRoute: typeof StaffAppRouteImport
+      parentRoute: typeof StaffRoute
+    }
   }
 }
+
+interface StaffRouteChildren {
+  StaffAppRoute: typeof StaffAppRoute
+  StaffLoginRoute: typeof StaffLoginRoute
+  StaffRegisterRoute: typeof StaffRegisterRoute
+  StaffIndexRoute: typeof StaffIndexRoute
+}
+
+const StaffRouteChildren: StaffRouteChildren = {
+  StaffAppRoute: StaffAppRoute,
+  StaffLoginRoute: StaffLoginRoute,
+  StaffRegisterRoute: StaffRegisterRoute,
+  StaffIndexRoute: StaffIndexRoute,
+}
+
+const StaffRouteWithChildren = StaffRoute._addFileChildren(StaffRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CustomerRoute: CustomerRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
-  StaffRoute: StaffRoute,
+  StaffRoute: StaffRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

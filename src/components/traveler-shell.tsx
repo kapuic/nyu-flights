@@ -61,6 +61,7 @@ export function TravelerShell({ children, currentUser, onLogout, section = "expl
               </>
             ) : (
               <>
+                <Link className="text-sm text-slate-500 transition-opacity hover:text-slate-900" to="/staff/login">Staff</Link>
                 <Link className="font-medium text-slate-900 transition-opacity hover:opacity-80" to="/login">Sign In</Link>
                 <Link className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-medium text-white hover:bg-slate-800" to="/register">Join</Link>
               </>

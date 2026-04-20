@@ -26,7 +26,7 @@ export const Route = createFileRoute("/customer")({
   loader: async () => {
     const currentUser = await getCurrentUserFn()
     if (!currentUser) throw redirect({ to: "/login" })
-    if (currentUser.role !== "customer") throw redirect({ to: "/staff" })
+    if (currentUser.role !== "customer") throw redirect({ to: "/staff/app" })
 
     return getCustomerDashboardFn({
       data: { destination: "", endDate: "", source: "", startDate: "" },
@@ -124,16 +124,16 @@ function CustomerPage() {
                 <span className="text-sm font-bold">{dashboardData.currentUser.displayName.split(" ").map((n: string) => n[0]).join("")}</span>
               </div>
               <div>
-                <h2 className="font-bold text-slate-900 font-['Manrope'] leading-tight">Traveler Hub</h2>
+                <h2 className="font-bold text-slate-900 leading-tight">Traveler Hub</h2>
                 <p className="text-xs text-slate-500">Silver Status</p>
               </div>
             </div>
           </div>
           <nav className="flex flex-1 flex-col gap-1 text-sm font-medium">
             {sidebarItems.map((item) => (
-              <button
+              <Button
                 className={cn(
-                  "flex items-center gap-3 rounded-sm px-3 py-2.5 transition-colors text-left",
+                  "justify-start gap-3 rounded-sm px-3 py-2.5 text-left transition-colors",
                   activeSection === item.key
                     ? "bg-white font-semibold text-slate-900 shadow-sm"
                     : "text-slate-500 hover:bg-slate-200/50",
@@ -141,10 +141,11 @@ function CustomerPage() {
                 key={item.key}
                 onClick={() => setActiveSection(item.key)}
                 type="button"
+                variant="ghost"
               >
                 <item.icon className="size-5" />
                 {item.label}
-              </button>
+              </Button>
             ))}
           </nav>
         </aside>
@@ -202,14 +203,14 @@ function FlightsSection({
     <>
       <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
-          <h1 className="mb-2 text-3xl font-bold text-slate-950 font-['Manrope']">My Trips</h1>
+          <h1 className="mb-2 text-3xl font-bold text-slate-950">My Trips</h1>
           <p className="text-sm text-slate-500">Manage your upcoming itineraries and review past journeys.</p>
         </div>
       </div>
 
       {/* Upcoming Trips */}
       <section className="mb-12">
-        <h2 className="mb-6 flex items-center gap-2 text-lg font-semibold text-slate-950 font-['Manrope']">
+        <h2 className="mb-6 flex items-center gap-2 text-lg font-semibold text-slate-950">
           <Plane className="size-5 text-slate-950" />
           Upcoming
         </h2>
@@ -221,7 +222,7 @@ function FlightsSection({
               <div className="mx-auto mb-6 flex size-20 items-center justify-center rounded-full bg-slate-100">
                 <Plane className="size-10 text-slate-400" />
               </div>
-              <h3 className="mb-2 text-xl font-semibold text-slate-950 font-['Manrope']">No upcoming flights</h3>
+              <h3 className="mb-2 text-xl font-semibold text-slate-950">No upcoming flights</h3>
               <p className="mx-auto mb-8 max-w-md text-sm text-slate-500">You don't have any flights scheduled. Ready to plan your next destination?</p>
               <Button className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-slate-950 to-slate-800 text-white hover:opacity-90" onClick={() => {}}>
                 Search Flights <ArrowRight className="size-4" />
@@ -233,7 +234,7 @@ function FlightsSection({
 
       {/* Book Flights (inline search) */}
       <section className="mb-12">
-        <h2 className="mb-6 flex items-center gap-2 text-lg font-semibold text-slate-950 font-['Manrope']">
+        <h2 className="mb-6 flex items-center gap-2 text-lg font-semibold text-slate-950">
           <Plus className="size-5" />
           Book a Flight
         </h2>
@@ -271,7 +272,7 @@ function FlightsSection({
         {/* Purchase Form */}
         {selectedFlight ? (
           <div className="mt-6 rounded-lg bg-slate-950 p-6 text-white">
-            <h3 className="mb-4 text-2xl font-bold font-['Manrope']">Complete your booking</h3>
+            <h3 className="mb-4 text-2xl font-bold">Complete your booking</h3>
             <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
               <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); purchaseForm.handleSubmit() }}>
                 <div className="grid gap-4 md:grid-cols-2">
@@ -307,9 +308,9 @@ function FlightsSection({
               </form>
               <div className="rounded-lg bg-white/10 p-5">
                 <div className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-white/45">Selected Route</div>
-                <div className="mt-3 text-2xl font-bold font-['Manrope']">{selectedFlight.departureAirportCode} → {selectedFlight.arrivalAirportCode}</div>
+                <div className="mt-3 text-2xl font-bold">{selectedFlight.departureAirportCode} → {selectedFlight.arrivalAirportCode}</div>
                 <div className="mt-2 text-sm text-white/70">{formatDateTime(selectedFlight.departureDatetime)}</div>
-                <div className="mt-6 text-3xl font-bold font-['Manrope']">{formatCurrency(selectedFlight.basePrice)}</div>
+                <div className="mt-6 text-3xl font-bold">{formatCurrency(selectedFlight.basePrice)}</div>
                 <div className="mt-1 text-sm text-white/70">Total per traveler</div>
               </div>
             </div>
@@ -319,7 +320,7 @@ function FlightsSection({
 
       {/* Past Journeys */}
       <section>
-        <h2 className="mb-6 flex items-center gap-2 text-lg font-semibold text-slate-950 font-['Manrope']">
+        <h2 className="mb-6 flex items-center gap-2 text-lg font-semibold text-slate-950">
           <History className="size-5 text-slate-500" />
           Past Journeys
         </h2>
@@ -335,7 +336,7 @@ function FlightsSection({
                         <Plane className="size-5 text-slate-500" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-slate-950 font-['Manrope']">{flight.departureAirportCode} → {flight.arrivalAirportCode}</h4>
+                        <h4 className="font-bold text-slate-950">{flight.departureAirportCode} → {flight.arrivalAirportCode}</h4>
                         <p className="text-xs font-medium text-slate-500">{formatDateTime(flight.departureDatetime)}</p>
                       </div>
                     </div>
@@ -384,7 +385,7 @@ function UpcomingTripCard({ flight }: { flight: any }) {
         <div className="flex aspect-video items-center justify-center bg-slate-200">
           <Plane className="size-8 text-slate-400" />
         </div>
-        <span className="absolute bottom-2 left-2 text-lg font-bold text-white drop-shadow-md font-['Manrope']">{flight.arrivalAirportCode}</span>
+        <span className="absolute bottom-2 left-2 text-lg font-bold text-white drop-shadow-md">{flight.arrivalAirportCode}</span>
       </div>
       <div className="flex-1">
         <div className="mb-2 flex items-center justify-between">
@@ -394,7 +395,7 @@ function UpcomingTripCard({ flight }: { flight: any }) {
           </div>
           <span className="text-sm font-semibold text-slate-950">{formatDate(flight.departureDatetime)}</span>
         </div>
-        <h3 className="mb-1 text-xl font-bold text-slate-950 font-['Manrope']">{flight.arrivalCity ?? flight.arrivalAirportCode}</h3>
+        <h3 className="mb-1 text-xl font-bold text-slate-950">{flight.arrivalCity ?? flight.arrivalAirportCode}</h3>
         <p className="mb-4 text-sm text-slate-500">Direct flight · Economy</p>
         <div className="flex flex-wrap gap-2">
           <Button className="rounded bg-gradient-to-r from-slate-950 to-slate-800 text-white hover:opacity-90" size="sm">View Itinerary</Button>
@@ -421,7 +422,7 @@ function SearchResultCard({ flight, onChoose }: { flight: FlightOption; onChoose
         </div>
         <div className="flex w-full items-center justify-between">
           <div>
-            <div className="text-2xl font-bold text-slate-950 font-['Manrope']">{dep}</div>
+            <div className="text-2xl font-bold text-slate-950">{dep}</div>
             <div className="text-sm font-medium text-slate-500">{flight.departureAirportCode}</div>
           </div>
           <div className="flex flex-1 flex-col items-center px-8">
@@ -433,14 +434,14 @@ function SearchResultCard({ flight, onChoose }: { flight: FlightOption; onChoose
             <div className="mt-1 text-xs text-slate-500">Nonstop</div>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold text-slate-950 font-['Manrope']">{arr}</div>
+            <div className="text-2xl font-bold text-slate-950">{arr}</div>
             <div className="text-sm font-medium text-slate-500">{flight.arrivalAirportCode}</div>
           </div>
         </div>
       </div>
       <div className="flex w-full flex-row items-center justify-between md:w-auto md:flex-col md:items-end md:gap-4">
         <div className="text-left md:text-right">
-          <div className="text-3xl font-bold text-slate-950 font-['Manrope']">{formatCurrency(flight.basePrice)}</div>
+          <div className="text-3xl font-bold text-slate-950">{formatCurrency(flight.basePrice)}</div>
           <div className="text-xs text-slate-500">Round trip</div>
         </div>
         <Button className="rounded-lg bg-slate-950 text-white hover:bg-slate-800" onClick={() => onChoose(flight)}>Select</Button>
@@ -463,7 +464,7 @@ function ReviewComposer({ flight, isSubmitting, onSubmit }: {
 
   return (
     <div className="mt-4 rounded-lg bg-slate-50 p-5">
-      <h4 className="mb-3 text-sm font-semibold text-slate-950 font-['Manrope']">Rate your experience</h4>
+      <h4 className="mb-3 text-sm font-semibold text-slate-950">Rate your experience</h4>
       <form.Field name="rating">
         {(field: any) => (
           <div className="mb-4 flex items-center gap-2">
@@ -504,11 +505,11 @@ function ReviewComposer({ flight, isSubmitting, onSubmit }: {
 function PaymentsSection() {
   return (
     <>
-      <h1 className="mb-2 text-3xl font-bold text-slate-950 font-['Manrope']">Payment Methods</h1>
+      <h1 className="mb-2 text-3xl font-bold text-slate-950">Payment Methods</h1>
       <p className="mb-8 text-sm text-slate-500">Manage your saved cards and billing information for seamless bookings.</p>
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <h2 className="text-xl font-bold text-slate-950 font-['Manrope']">Saved Cards</h2>
+          <h2 className="text-xl font-bold text-slate-950">Saved Cards</h2>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="rounded bg-white p-6 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
@@ -516,7 +517,7 @@ function PaymentsSection() {
                 <Badge className="rounded-sm bg-slate-200 text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-700" variant="secondary">Default</Badge>
               </div>
               <div className="text-sm text-slate-500">Corporate Card</div>
-              <div className="mt-1 text-lg font-bold tracking-wider text-slate-950 font-['Manrope']">•••• •••• •••• 4242</div>
+              <div className="mt-1 text-lg font-bold tracking-wider text-slate-950">•••• •••• •••• 4242</div>
               <div className="mt-2 flex justify-between text-xs text-slate-500"><span>Exp: 12/26</span><span className="font-bold">Visa</span></div>
             </div>
             <div className="rounded bg-slate-50 p-6">
@@ -524,13 +525,13 @@ function PaymentsSection() {
                 <CreditCard className="size-5 text-slate-500" />
               </div>
               <div className="text-sm text-slate-500">Personal Rewards Card</div>
-              <div className="mt-1 text-lg font-bold tracking-wider text-slate-950 font-['Manrope']">•••• •••• •••• 5555</div>
+              <div className="mt-1 text-lg font-bold tracking-wider text-slate-950">•••• •••• •••• 5555</div>
               <div className="mt-2 flex justify-between text-xs text-slate-500"><span>Exp: 08/25</span><span className="font-bold">Mastercard</span></div>
             </div>
           </div>
         </div>
         <div className="rounded bg-slate-50 p-6">
-          <h2 className="mb-4 text-lg font-bold text-slate-950 font-['Manrope']">Billing Address</h2>
+          <h2 className="mb-4 text-lg font-bold text-slate-950">Billing Address</h2>
           <div className="text-sm leading-relaxed text-slate-600">
             John Doe<br />
             123 Aviation Parkway<br />
@@ -548,11 +549,11 @@ function PaymentsSection() {
 function SecuritySection() {
   return (
     <>
-      <h1 className="mb-2 text-3xl font-bold text-slate-950 font-['Manrope']">Security Settings</h1>
+      <h1 className="mb-2 text-3xl font-bold text-slate-950">Security Settings</h1>
       <p className="mb-8 text-sm text-slate-500">Manage your account access and security preferences.</p>
       <div className="space-y-8">
         <div className="rounded-lg bg-white p-8 shadow-sm">
-          <h2 className="mb-6 flex items-center gap-2 text-xl font-bold text-slate-950 font-['Manrope']">
+          <h2 className="mb-6 flex items-center gap-2 text-xl font-bold text-slate-950">
             <Lock className="size-5 text-slate-400" /> Change Password
           </h2>
           <div className="space-y-5">
@@ -586,7 +587,7 @@ function SecuritySection() {
 function PreferencesSection() {
   return (
     <>
-      <h1 className="mb-2 text-3xl font-bold text-slate-950 font-['Manrope']">Preferences</h1>
+      <h1 className="mb-2 text-3xl font-bold text-slate-950">Preferences</h1>
       <p className="mb-8 text-sm text-slate-500">Customize your travel experience.</p>
       <div className="rounded-lg bg-white p-8 text-sm text-slate-500 shadow-sm">
         Preferences will be available in a future update.

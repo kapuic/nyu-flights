@@ -11,6 +11,13 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { getCurrentUserFn, logoutFn } from "@/lib/auth"
 import { formatCurrency, titleCaseStatus } from "@/lib/format"
 import { searchFlightsFn, type FlightOption } from "@/lib/queries"
@@ -26,6 +33,20 @@ function PublicHomePage() {
   const { currentUser } = Route.useLoaderData()
   const [searchBusy, setSearchBusy] = useState(false)
   const [searchResults, setSearchResults] = useState<{ outbound: FlightOption[]; returnOptions: FlightOption[]; tripType: "one-way" | "round-trip" } | null>(null)
+  const [passengers, setPassengers] = useState("1")
+  const [cabinClass, setCabinClass] = useState("economy")
+  const passengerOptions = [
+    { label: "1 Passenger", value: "1" },
+    { label: "2 Passengers", value: "2" },
+    { label: "3 Passengers", value: "3" },
+    { label: "4 Passengers", value: "4" },
+  ]
+  const cabinClassOptions = [
+    { label: "Economy", value: "economy" },
+    { label: "Premium Economy", value: "premium-economy" },
+    { label: "Business", value: "business" },
+    { label: "First", value: "first" },
+  ]
 
   const form = useForm({
     defaultValues: {
@@ -59,7 +80,7 @@ function PublicHomePage() {
       <div className="mx-auto w-full max-w-screen-2xl px-4 py-8 md:px-8 md:py-12">
         <section className="relative overflow-hidden rounded-xl bg-[#f2f4f6] p-8 md:p-12">
           <div className="relative z-10 mx-auto max-w-4xl text-center md:text-left">
-            <h1 className="mb-4 font-['Manrope'] text-[3.5rem] font-bold leading-[1.1] tracking-[-0.02em] text-slate-950">Where to next?</h1>
+            <h1 className="mb-4 text-[3.5rem] font-bold leading-[1.1] tracking-[-0.02em] text-slate-950">Where to next?</h1>
             <p className="mb-8 text-lg text-slate-500">Precision routing for the modern traveler.</p>
 
             <form className="relative z-20 flex w-full flex-col items-center gap-2 rounded-lg bg-white p-2 shadow-[0_20px_40px_-10px_rgba(25,28,30,0.08)] md:flex-row md:gap-4 md:p-4" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); form.handleSubmit() }}>
@@ -115,12 +136,30 @@ function PublicHomePage() {
                     </div>
                   </RadioGroup>
                   <div className="hidden h-4 w-px bg-slate-300 md:block" />
-                  <Button size="sm" variant="ghost">
-                    1 Passenger <ChevronDown className="size-4" />
-                  </Button>
-                  <Button size="sm" variant="ghost">
-                    Economy <ChevronDown className="size-4" />
-                  </Button>
+                  <Select onValueChange={(value) => setPassengers(value ?? passengers)} value={passengers}>
+                    <SelectTrigger className="h-8 w-[160px] border-0 bg-transparent px-2.5 shadow-none hover:bg-slate-100 focus-visible:ring-2">
+                      <SelectValue>
+                        {passengerOptions.find((option) => option.value === passengers)?.label ?? "Passengers"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {passengerOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select onValueChange={(value) => setCabinClass(value ?? cabinClass)} value={cabinClass}>
+                    <SelectTrigger className="h-8 w-[180px] border-0 bg-transparent px-2.5 shadow-none hover:bg-slate-100 focus-visible:ring-2">
+                      <SelectValue>
+                        {cabinClassOptions.find((option) => option.value === cabinClass)?.label ?? "Cabin class"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cabinClassOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
             </form.Field>
@@ -134,7 +173,7 @@ function PublicHomePage() {
         <section className="mt-12 grid grid-cols-1 gap-8 md:gap-12 lg:grid-cols-12">
           <aside className="hidden space-y-8 lg:col-span-3 lg:block">
             <div>
-              <h3 className="mb-4 text-lg font-bold text-slate-950 font-['Manrope']">Filters</h3>
+              <h3 className="mb-4 text-lg font-bold text-slate-950">Filters</h3>
               <div className="space-y-6">
                 <div>
                   <h4 className="mb-3 text-sm font-medium text-slate-950">Stops</h4>
@@ -158,7 +197,7 @@ function PublicHomePage() {
           <div className="space-y-6 lg:col-span-9">
             <div className="mb-6 flex items-end justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-slate-950 font-['Manrope']">{searchResults?.outbound.length ? `${searchResults.outbound[0].departureCity} to ${searchResults.outbound[0].arrivalCity}` : "New York to London"}</h2>
+                <h2 className="text-2xl font-bold text-slate-950">{searchResults?.outbound.length ? `${searchResults.outbound[0].departureCity} to ${searchResults.outbound[0].arrivalCity}` : "New York to London"}</h2>
                 <p className="text-sm text-slate-500">{searchResults?.outbound.length ? "1 Adult • Economy" : "Search to view live future departures."}</p>
               </div>
               <div className="hidden items-center gap-2 md:flex">
@@ -217,7 +256,7 @@ function FlightCard({ currentUser, flight }: { currentUser: Awaited<ReturnType<t
         </div>
         <div className="flex w-full items-center justify-between">
           <div className="text-left">
-            <div className="text-2xl font-bold text-slate-950 font-['Manrope']">{dep}</div>
+            <div className="text-2xl font-bold text-slate-950">{dep}</div>
             <div className="text-sm font-medium text-slate-500">{flight.departureAirportCode}</div>
           </div>
           <div className="flex flex-1 flex-col items-center px-8">
@@ -230,7 +269,7 @@ function FlightCard({ currentUser, flight }: { currentUser: Awaited<ReturnType<t
             <div className="mt-1 text-xs text-slate-500">Nonstop</div>
           </div>
           <div className="text-right">
-            <div className="flex items-start justify-end gap-1 text-2xl font-bold text-slate-950 font-['Manrope']">{arr} {plusOne ? <sup className="mt-2 text-xs text-slate-500">+1</sup> : null}</div>
+            <div className="flex items-start justify-end gap-1 text-2xl font-bold text-slate-950">{arr} {plusOne ? <sup className="mt-2 text-xs text-slate-500">+1</sup> : null}</div>
             <div className="text-sm font-medium text-slate-500">{flight.arrivalAirportCode}</div>
           </div>
         </div>
@@ -238,7 +277,7 @@ function FlightCard({ currentUser, flight }: { currentUser: Awaited<ReturnType<t
       <div className="hidden h-24 w-[1px] bg-slate-200 md:block" />
       <div className="flex w-full flex-row items-center justify-between md:w-auto md:flex-col md:items-end md:justify-center md:gap-4">
         <div className="text-left md:text-right">
-          <div className="text-3xl font-bold text-slate-950 font-['Manrope']">{formatCurrency(flight.basePrice)}</div>
+          <div className="text-3xl font-bold text-slate-950">{formatCurrency(flight.basePrice)}</div>
           <div className="text-xs text-slate-500">Round trip</div>
         </div>
         <Link className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-medium text-white hover:bg-slate-800" to={currentUser?.role === "customer" ? "/customer" : "/login"}>Select</Link>
@@ -271,7 +310,7 @@ function DemoFlightCard({ airline, departureCode, departureTime, arrivalCode, ar
         </div>
         <div className="flex w-full items-center justify-between">
           <div className="text-left">
-            <div className="text-2xl font-bold text-slate-950 font-['Manrope']">{departureTime}</div>
+            <div className="text-2xl font-bold text-slate-950">{departureTime}</div>
             <div className="text-sm font-medium text-slate-500">{departureCode}</div>
           </div>
           <div className="flex flex-1 flex-col items-center px-8">
@@ -284,7 +323,7 @@ function DemoFlightCard({ airline, departureCode, departureTime, arrivalCode, ar
             <div className="mt-1 text-xs text-slate-500">Nonstop</div>
           </div>
           <div className="text-right">
-            <div className="flex items-start justify-end gap-1 text-2xl font-bold text-slate-950 font-['Manrope']">{arrivalTime} {hasPlusOne ? <sup className="mt-2 text-xs text-slate-500">+1</sup> : null}</div>
+            <div className="flex items-start justify-end gap-1 text-2xl font-bold text-slate-950">{arrivalTime} {hasPlusOne ? <sup className="mt-2 text-xs text-slate-500">+1</sup> : null}</div>
             <div className="text-sm font-medium text-slate-500">{arrivalCode}</div>
           </div>
         </div>
@@ -292,7 +331,7 @@ function DemoFlightCard({ airline, departureCode, departureTime, arrivalCode, ar
       <div className="hidden h-24 w-[1px] bg-slate-200 md:block" />
       <div className="flex w-full flex-row items-center justify-between md:w-auto md:flex-col md:items-end md:justify-center md:gap-4">
         <div className="text-left md:text-right">
-          <div className="text-3xl font-bold text-slate-950 font-['Manrope']">${price}</div>
+          <div className="text-3xl font-bold text-slate-950">${price}</div>
           <div className="text-xs text-slate-500">Round trip</div>
         </div>
         <Link className={cn("inline-flex h-9 items-center justify-center rounded-lg px-4 text-sm font-medium", variant === "primary" ? "bg-slate-950 text-white hover:bg-slate-800" : "bg-slate-200 text-slate-900 hover:bg-slate-300")} to="/login">Select</Link>
@@ -319,7 +358,7 @@ function NoResultsCard() {
       <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-slate-200 text-slate-400">
         <Plane className="size-10" />
       </div>
-      <h3 className="mt-6 text-xl font-bold text-slate-950 font-['Manrope']">No flights found</h3>
+      <h3 className="mt-6 text-xl font-bold text-slate-950">No flights found</h3>
       <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">We are unable to locate active flight schedules for the selected route and parameters.</p>
       <div className="mt-6 flex flex-wrap justify-center gap-4">
         <Button variant="secondary">Clear Filters</Button>

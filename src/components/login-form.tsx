@@ -1,5 +1,7 @@
-import { cn } from "@/lib/utils"
+
 import { Button } from "@/components/ui/button"
+import { TRAVELER_AUTH_IMAGE_URLS } from "@/lib/auth-images"
+import { cn } from "@/lib/utils"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Field,
@@ -11,7 +13,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Eye, Lock } from "lucide-react"
 import { useState } from "react"
-
 type LoginFormProps = {
   className?: string
   error: string | null
@@ -21,6 +22,7 @@ type LoginFormProps = {
   onSubmit: (e: React.FormEvent) => void
   emailValue: string
   passwordValue: string
+  heroImageUrl?: string
 }
 
 export function LoginForm({
@@ -32,9 +34,11 @@ export function LoginForm({
   onSubmit,
   emailValue,
   passwordValue,
+  heroImageUrl = TRAVELER_AUTH_IMAGE_URLS[0],
   ...props
 }: LoginFormProps & Omit<React.ComponentProps<"div">, keyof LoginFormProps>) {
   const [showPassword, setShowPassword] = useState(false)
+
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -82,13 +86,15 @@ export function LoginForm({
                     type={showPassword ? "text" : "password"}
                     value={passwordValue}
                   />
-                  <button
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                  <Button
+                    className="absolute right-1 top-1/2 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     onClick={() => setShowPassword(!showPassword)}
+                    size="icon-sm"
                     type="button"
+                    variant="ghost"
                   >
                     <Eye className="size-4" />
-                  </button>
+                  </Button>
                 </div>
               </Field>
               {error ? (
@@ -122,19 +128,12 @@ export function LoginForm({
             </FieldGroup>
           </form>
           <div className="relative hidden bg-slate-100 md:block">
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-10">
-              <div className="flex size-16 items-center justify-center rounded-full bg-slate-200">
-                <Lock className="size-8 text-slate-500" />
-              </div>
-              <div className="text-center">
-                <h3 className="text-lg font-semibold text-slate-700">
-                  Secure Booking
-                </h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  Your connection is encrypted and your data is protected.
-                </p>
-              </div>
-            </div>
+            <img
+              alt="Traveler authentication"
+              className="absolute inset-0 h-full w-full object-cover"
+              src={heroImageUrl}
+            />
+            <div className="absolute inset-0 bg-black/20" />
           </div>
         </CardContent>
       </Card>

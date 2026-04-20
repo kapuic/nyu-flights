@@ -1,5 +1,6 @@
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { TRAVELER_AUTH_IMAGE_URLS } from "@/lib/auth-images"
+import { cn } from "@/lib/utils"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Field,
@@ -14,6 +15,7 @@ import { useState } from "react"
 type SignupFormProps = {
   className?: string
   error: string | null
+  heroImageUrl?: string
   fields: {
     name: { value: string; onChange: (v: string) => void }
     email: { value: string; onChange: (v: string) => void }
@@ -36,6 +38,7 @@ export function SignupForm({
   className,
   error,
   fields,
+  heroImageUrl = TRAVELER_AUTH_IMAGE_URLS[1],
   isSubmitting,
   onSubmit,
   ...props
@@ -96,13 +99,15 @@ export function SignupForm({
                     type={showPassword ? "text" : "password"}
                     value={fields.password.value}
                   />
-                  <button
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                  <Button
+                    className="absolute right-1 top-1/2 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     onClick={() => setShowPassword(!showPassword)}
+                    size="icon-sm"
                     type="button"
+                    variant="ghost"
                   >
                     <Eye className="size-4" />
-                  </button>
+                  </Button>
                 </div>
                 <FieldDescription>
                   Must be at least 8 characters long.
@@ -231,19 +236,12 @@ export function SignupForm({
             </FieldGroup>
           </form>
           <div className="relative hidden bg-slate-100 md:block">
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-10">
-              <div className="flex size-16 items-center justify-center rounded-full bg-slate-200">
-                <UserRoundPlus className="size-8 text-slate-500" />
-              </div>
-              <div className="text-center">
-                <h3 className="text-lg font-semibold text-slate-700">
-                  Join AeroPrecision
-                </h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  Create your traveler account to book flights, earn rewards, and manage trips.
-                </p>
-              </div>
-            </div>
+            <img
+              alt="Traveler signup"
+              className="absolute inset-0 h-full w-full object-cover"
+              src={heroImageUrl}
+            />
+            <div className="absolute inset-0 bg-black/20" />
           </div>
         </CardContent>
       </Card>
