@@ -1,80 +1,87 @@
 import { Link } from "@tanstack/react-router"
-import { LogOut, Plane, Search, Shield, Ticket, UserRound } from "lucide-react"
+import { Luggage, PersonStanding, Search, Wallet } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 type TravelerShellProps = {
   children: React.ReactNode
-  currentUser?: {
-    displayName: string
-    role: "customer" | "staff"
-  } | null
-  onLogout?: () => void | Promise<void>
-  section?: "bookings" | "explore" | "support"
+  currentUser?: { displayName: string; email: string } | null
+  onLogout?: () => void
+  section?: "explore" | "bookings" | "support"
 }
 
-export function TravelerShell({ children, currentUser, onLogout, section = "explore" }: TravelerShellProps) {
-  const nav = [
-    { key: "explore", label: "Explore", to: "/", icon: Search },
-    { key: "bookings", label: "Bookings", to: currentUser?.role === "customer" ? "/customer" : "/login", icon: Ticket },
-    { key: "support", label: "Support", to: "/register", icon: Shield },
-  ] as const
+const DESKTOP_NAV: Array<{ key: "explore" | "bookings" | "support"; label: string; to: "/" | "/customer" }> = [
+  { key: "explore", label: "Explore", to: "/" },
+  { key: "bookings", label: "Bookings", to: "/customer" },
+  { key: "support", label: "Support", to: "/" },
+]
 
+const MOBILE_NAV: Array<{ icon: React.ComponentType<{ className?: string; fill?: string }>; label: string; to: string }> = [
+  { icon: Search, label: "Search", to: "/" },
+  { icon: Luggage, label: "Trips", to: "/customer" },
+  { icon: Wallet, label: "Wallet", to: "/" },
+  { icon: PersonStanding, label: "Profile", to: "/customer" },
+]
+
+export function TravelerShell({ children, currentUser, onLogout, section = "explore" }: TravelerShellProps) {
   return (
-    <div className="min-h-svh bg-[#f5f7fb] text-slate-950">
-      <div className="mx-auto flex min-h-svh w-full max-w-[1340px] flex-col px-4 py-3">
-        <header className="rounded-[18px] border border-slate-200/80 bg-white px-8 py-4 shadow-[0_14px_36px_-32px_rgba(15,23,42,0.18)]">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-3">
-              <Plane className="size-5 text-slate-950" />
-              <Link className="text-[1.85rem] font-semibold tracking-[-0.045em] text-slate-950" to="/">
-                AeroPrecision
-              </Link>
-            </div>
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-12">
-              <nav className="flex items-center gap-8 text-sm font-medium text-slate-500">
-                {nav.map((item) => (
-                  <Link
-                    className={cn(
-                      "border-b-2 border-transparent pb-1 transition-colors hover:text-slate-950",
-                      section === item.key && "border-slate-950 text-slate-950",
-                    )}
-                    key={item.key}
-                    to={item.to}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </nav>
-              <div className="flex items-center gap-5 self-start lg:self-auto">
-                {currentUser ? (
-                  <>
-                    <div className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-                      <UserRound className="size-4" />
-                      {currentUser.displayName}
-                    </div>
-                    <Button className="h-10 rounded-[10px] bg-slate-950 px-4 text-white hover:bg-slate-800" onClick={onLogout} type="button">
-                      <LogOut className="size-4" data-icon="inline-start" />
-                      Log out
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Link className="text-sm font-medium text-slate-950 transition-colors hover:text-slate-700" to="/login">
-                      Sign In
-                    </Link>
-                    <Link className="inline-flex h-10 items-center justify-center rounded-[10px] bg-slate-950 px-5 text-sm font-medium text-white transition-colors hover:bg-slate-800" to="/register">
-                      Join
-                    </Link>
-                  </>
-                )}
-              </div>
-            </div>
+    <div className="min-h-svh bg-[#f7f9fb] text-slate-950 antialiased">
+      <header className="fixed top-0 z-50 hidden w-full bg-slate-50 md:block">
+        <div className="mx-auto flex h-16 w-full max-w-screen-2xl items-center justify-between px-8">
+          <div className="flex items-center gap-8">
+            <Link className="flex items-center gap-2 text-xl font-bold tracking-tighter text-slate-900" to="/">
+              <svg className="size-5" fill="currentColor" viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0 0 11.5 2 1.5 1.5 0 0 0 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z" /></svg>
+              AeroPrecision
+            </Link>
+            <nav className="flex gap-8">
+              {DESKTOP_NAV.map((item) => (
+                <Link
+                  className={cn(
+                    "border-b-2 pb-1 font-medium transition-all",
+                    section === item.key
+                      ? "border-slate-900 text-slate-900"
+                      : "border-transparent text-slate-500 hover:text-slate-900",
+                  )}
+                  key={item.key}
+                  to={item.to}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
           </div>
-        </header>
-        <main className="flex-1 py-8">{children}</main>
-      </div>
+          <div className="flex items-center gap-4">
+            {currentUser ? (
+              <>
+                <span className="text-sm font-medium text-slate-700">{currentUser.displayName}</span>
+                <Button className="rounded-lg bg-slate-950 text-white hover:bg-slate-800" onClick={onLogout} size="sm">
+                  Log out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Link className="font-medium text-slate-900 transition-opacity hover:opacity-80" to="/login">Sign In</Link>
+                <Link className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-medium text-white hover:bg-slate-800" to="/register">Join</Link>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="h-[1px] w-full bg-slate-200/10" />
+      </header>
+
+      <main className="flex min-h-svh flex-col pb-20 pt-16 md:pb-0">
+        {children}
+      </main>
+
+      <nav className="fixed bottom-0 left-0 z-50 flex h-16 w-full items-center justify-around border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_12px_rgba(0,0,0,0.05)] backdrop-blur-md md:hidden">
+        {MOBILE_NAV.map((item) => (
+          <Link className="flex flex-col items-center justify-center text-slate-400" key={item.label} to={item.to}>
+            <item.icon className="mb-0.5 size-5" />
+            <span className="mt-0.5 text-[10px] uppercase tracking-widest">{item.label}</span>
+          </Link>
+        ))}
+      </nav>
     </div>
   )
 }

@@ -1,20 +1,16 @@
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router"
 import { useForm } from "@tanstack/react-form"
-import { ArrowRight, CalendarDays, CreditCard, PlaneTakeoff, Star, Wallet } from "lucide-react"
+import { ArrowRight, CreditCard, History, Lock, Plane, Plus, Settings, Star } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
 import { TravelerShell } from "@/components/traveler-shell"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Field, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 import { getCurrentUserFn, logoutFn } from "@/lib/auth"
 import { formatCurrency, formatDate, formatDateTime, titleCaseStatus } from "@/lib/format"
 import { type FlightOption, getCustomerDashboardFn, purchaseTicketFn, searchFlightsFn, submitReviewFn } from "@/lib/queries"
+import { cn } from "@/lib/utils"
 
 export const Route = createFileRoute("/customer")({
   loader: async () => {
@@ -23,12 +19,7 @@ export const Route = createFileRoute("/customer")({
     if (currentUser.role !== "customer") throw redirect({ to: "/staff" })
 
     return getCustomerDashboardFn({
-      data: {
-        destination: "",
-        endDate: "",
-        source: "",
-        startDate: "",
-      },
+      data: { destination: "", endDate: "", source: "", startDate: "" },
     })
   },
   component: CustomerPage,
@@ -38,29 +29,11 @@ function CustomerPage() {
   const router = useRouter()
   const loaderData = Route.useLoaderData()
   const [dashboardData, setDashboardData] = useState(loaderData)
-  const [activeSection, setActiveSection] = useState<"account" | "bookings" | "payments" | "trips">("trips")
+  const [activeSection, setActiveSection] = useState<"flights" | "payments" | "security" | "preferences">("flights")
   const [searchBusy, setSearchBusy] = useState(false)
   const [searchResults, setSearchResults] = useState<{ outbound: FlightOption[]; returnOptions: FlightOption[]; tripType: "one-way" | "round-trip" } | null>(null)
   const [selectedFlight, setSelectedFlight] = useState<FlightOption | null>(null)
   const [reviewingKey, setReviewingKey] = useState<string | null>(null)
-  const [filterBusy, setFilterBusy] = useState(false)
-
-  const tripFilterForm = useForm({
-    defaultValues: {
-      destination: "",
-      endDate: "",
-      source: "",
-      startDate: "",
-    },
-    onSubmit: async ({ value }) => {
-      setFilterBusy(true)
-      try {
-        setDashboardData(await getCustomerDashboardFn({ data: value }))
-      } finally {
-        setFilterBusy(false)
-      }
-    },
-  })
 
   const searchForm = useForm({
     defaultValues: {
@@ -76,19 +49,12 @@ function CustomerPage() {
         const result = await searchFlightsFn({ data: value })
         setSearchResults(result)
         if (!result.outbound.length) toast.message("No future flights matched those filters.")
-      } finally {
-        setSearchBusy(false)
-      }
+      } finally { setSearchBusy(false) }
     },
   })
 
   const purchaseForm = useForm({
-    defaultValues: {
-      cardExpiration: "",
-      cardNumber: "",
-      cardType: "credit",
-      nameOnCard: "",
-    },
+    defaultValues: { cardExpiration: "", cardNumber: "", cardType: "credit", nameOnCard: "" },
     onSubmit: async ({ value }) => {
       if (!selectedFlight) return
       const response = await purchaseTicketFn({
@@ -105,8 +71,7 @@ function CustomerPage() {
       toast.success(response.message)
       setSelectedFlight(null)
       purchaseForm.reset()
-      setActiveSection("trips")
-      setDashboardData(await getCustomerDashboardFn({ data: tripFilterForm.state.values }))
+      setDashboardData(await getCustomerDashboardFn({ data: { destination: "", endDate: "", source: "", startDate: "" } }))
     },
   })
 
@@ -117,385 +82,496 @@ function CustomerPage() {
     await router.navigate({ to: response.redirectTo })
   }
 
-  async function refreshDashboard() {
-    setDashboardData(await getCustomerDashboardFn({ data: tripFilterForm.state.values }))
-  }
-
-  async function handleTripFilterSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    event.stopPropagation()
-    await tripFilterForm.handleSubmit()
-  }
-
-  async function handleSearch(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    event.stopPropagation()
-    await searchForm.handleSubmit()
-  }
-
-  async function handlePurchase(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    event.stopPropagation()
-    try {
-      await purchaseForm.handleSubmit()
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Purchase failed.")
-    }
-  }
-
-  async function handleReviewSubmit(
-    flight: (typeof dashboardData.pastFlights)[number],
-    values: { comment: string; rating: string },
-  ) {
-    if (!values.rating) {
-      toast.error("Choose a rating first.")
-      return
-    }
-
+  async function handleReviewSubmit(flight: (typeof dashboardData.pastFlights)[number], values: { comment: string; rating: string }) {
+    if (!values.rating) { toast.error("Choose a rating first."); return }
     const key = `${flight.airlineName}:${flight.flightNumber}:${flight.departureDatetime}`
     setReviewingKey(key)
     try {
       const result = await submitReviewFn({
-        data: {
-          airlineName: flight.airlineName,
-          comment: values.comment,
-          departureDatetime: flight.departureDatetime,
-          flightNumber: flight.flightNumber,
-          rating: Number(values.rating),
-        },
+        data: { airlineName: flight.airlineName, comment: values.comment, departureDatetime: flight.departureDatetime, flightNumber: flight.flightNumber, rating: Number(values.rating) },
       })
-      if (result?.error) {
-        toast.error(result.error)
-        return
-      }
+      if (result?.error) { toast.error(result.error); return }
       toast.success(result?.message ?? "Review saved.")
-      await refreshDashboard()
-    } finally {
-      setReviewingKey(null)
-    }
+      setDashboardData(await getCustomerDashboardFn({ data: { destination: "", endDate: "", source: "", startDate: "" } }))
+    } finally { setReviewingKey(null) }
   }
 
+  const sidebarItems = [
+    { icon: Plane, key: "flights" as const, label: "My Trips" },
+    { icon: CreditCard, key: "payments" as const, label: "Payment Methods" },
+    { icon: Lock, key: "security" as const, label: "Security" },
+    { icon: Settings, key: "preferences" as const, label: "Preferences" },
+  ]
+
   return (
-    <TravelerShell currentUser={{ displayName: dashboardData.currentUser.displayName, role: "customer" }} onLogout={handleLogout} section="bookings">
-      <div className="grid gap-6 xl:grid-cols-[290px_minmax(0,1fr)]">
-        <aside className="rounded-[30px] bg-white p-5 shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)] ring-1 ring-slate-200/80">
-          <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Traveler Hub</div>
-          <div className="mt-4 rounded-[24px] bg-slate-50 p-4">
-            <div className="text-lg font-semibold tracking-[-0.03em] text-slate-950">{dashboardData.currentUser.displayName}</div>
-            <div className="mt-1 text-sm text-slate-500">Customer account</div>
+    <TravelerShell currentUser={{ displayName: dashboardData.currentUser.displayName, email: dashboardData.currentUser.email }} onLogout={handleLogout} section="bookings">
+      <div className="mx-auto flex w-full max-w-screen-2xl flex-1">
+        {/* Sidebar — matches Stitch traveler_my_trips_hub */}
+        <aside className="hidden w-64 shrink-0 border-r-0 bg-slate-50 p-4 md:flex md:flex-col md:sticky md:top-16 md:h-[calc(100vh-4rem)]">
+          <div className="mb-8 px-2 pt-4">
+            <div className="mb-1 flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-full bg-slate-200 text-slate-600">
+                <span className="text-sm font-bold">{dashboardData.currentUser.displayName.split(" ").map((n: string) => n[0]).join("")}</span>
+              </div>
+              <div>
+                <h2 className="font-bold text-slate-900 font-['Manrope'] leading-tight">Traveler Hub</h2>
+                <p className="text-xs text-slate-500">Silver Status</p>
+              </div>
+            </div>
           </div>
-          <nav className="mt-6 space-y-2">
-            {[
-              { key: "trips", label: "My Trips", icon: PlaneTakeoff },
-              { key: "payments", label: "Payment Methods", icon: Wallet },
-              { key: "account", label: "Profile", icon: CreditCard },
-              { key: "bookings", label: "Search Flights", icon: CalendarDays },
-            ].map((item) => (
+          <nav className="flex flex-1 flex-col gap-1 text-sm font-medium">
+            {sidebarItems.map((item) => (
               <button
-                className={`flex w-full items-center gap-3 rounded-[16px] px-4 py-3 text-left text-sm font-medium transition-colors ${activeSection === item.key ? "bg-slate-950 text-white" : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"}`}
+                className={cn(
+                  "flex items-center gap-3 rounded-sm px-3 py-2.5 transition-colors text-left",
+                  activeSection === item.key
+                    ? "bg-white font-semibold text-slate-900 shadow-sm"
+                    : "text-slate-500 hover:bg-slate-200/50",
+                )}
                 key={item.key}
-                onClick={() => setActiveSection(item.key as typeof activeSection)}
+                onClick={() => setActiveSection(item.key)}
                 type="button"
               >
-                <item.icon className="size-4" />
+                <item.icon className="size-5" />
                 {item.label}
               </button>
             ))}
           </nav>
         </aside>
 
-        <section className="space-y-6">
-          {activeSection === "trips" ? (
-            <>
-              <Card className="rounded-[32px] border-0 bg-white shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)] ring-1 ring-slate-200/80">
-                <CardHeader>
-                  <CardTitle className="text-3xl tracking-[-0.04em]">My Trips</CardTitle>
-                  <p className="text-sm leading-6 text-slate-500">Manage upcoming itineraries and review completed journeys.</p>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <div className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Upcoming</div>
-                    <div className="space-y-4">
-                      {dashboardData.upcomingFlights.length ? dashboardData.upcomingFlights.map((flight) => (
-                        <UpcomingTripCard flight={flight} key={`${flight.airlineName}-${flight.flightNumber}-${flight.departureDatetime}`} />
-                      )) : <EmptyCard title="No upcoming flights" description="You do not have any flights scheduled yet. Search and book your next itinerary." />}
-                    </div>
-                  </div>
-                  <form className="grid gap-4 rounded-[24px] bg-slate-50 p-5 md:grid-cols-[1fr_1fr_180px_180px_auto] md:items-end" onSubmit={handleTripFilterSubmit}>
-                    <tripFilterForm.Field name="source">{(field) => <Field><FieldLabel>From</FieldLabel><Input onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} placeholder="City or airport code" value={field.state.value} /></Field>}</tripFilterForm.Field>
-                    <tripFilterForm.Field name="destination">{(field) => <Field><FieldLabel>To</FieldLabel><Input onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} placeholder="City or airport code" value={field.state.value} /></Field>}</tripFilterForm.Field>
-                    <tripFilterForm.Field name="startDate">{(field) => <Field><FieldLabel>Start date</FieldLabel><Input onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} type="date" value={field.state.value} /></Field>}</tripFilterForm.Field>
-                    <tripFilterForm.Field name="endDate">{(field) => <Field><FieldLabel>End date</FieldLabel><Input onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} type="date" value={field.state.value} /></Field>}</tripFilterForm.Field>
-                    <Button className="h-11 rounded-[16px] bg-slate-950 text-white hover:bg-slate-800" disabled={filterBusy} type="submit">{filterBusy ? "Filtering…" : "Apply filters"}</Button>
-                  </form>
-                  <div>
-                    <div className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Past journeys</div>
-                    <div className="space-y-4">
-                      {dashboardData.pastFlights.length ? dashboardData.pastFlights.map((flight) => {
-                        const key = `${flight.airlineName}:${flight.flightNumber}:${flight.departureDatetime}`
-                        return (
-                          <Card className="rounded-[24px] border-0 bg-white shadow-none ring-1 ring-slate-200/80" key={key}>
-                            <CardContent className="space-y-4 px-5 py-5">
-                              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                <div>
-                                  <div className="flex items-center gap-2 text-lg font-semibold tracking-[-0.03em] text-slate-950">{flight.departureAirportCode} → {flight.arrivalAirportCode}</div>
-                                  <div className="mt-1 text-sm text-slate-500">{formatDateTime(flight.departureDatetime)} · Purchased {formatDateTime(flight.purchaseDatetime)}</div>
-                                </div>
-                                <div className="text-right text-sm text-slate-500">{flight.rating ? `Reviewed · ${flight.rating}/5` : "Awaiting review"}</div>
-                              </div>
-                              {flight.canReview ? (
-                                <ReviewComposer flight={flight} isSubmitting={reviewingKey === key} onSubmit={handleReviewSubmit} />
-                              ) : flight.comment ? <div className="rounded-[18px] bg-slate-50 px-4 py-3 text-sm text-slate-600">{flight.comment}</div> : null}
-                            </CardContent>
-                          </Card>
-                        )
-                      }) : <EmptyCard title="No matching past journeys" description="Adjust the filters above if you expected to see older purchases here." />}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          ) : null}
-
-          {activeSection === "bookings" ? (
-            <Card className="rounded-[32px] border-0 bg-white shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)] ring-1 ring-slate-200/80">
-              <CardHeader>
-                <CardTitle className="text-3xl tracking-[-0.04em]">Search flights</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <form className="grid gap-4 rounded-[24px] bg-slate-50 p-5 md:grid-cols-[180px_1fr_1fr_220px_220px_auto] md:items-end" onSubmit={handleSearch}>
-                  <searchForm.Field name="tripType">{(field) => <Field><FieldLabel>Trip</FieldLabel><Select onValueChange={(value) => field.handleChange(value as "one-way" | "round-trip")} value={field.state.value}><SelectTrigger className="h-11 rounded-[16px] border-0 bg-white"><SelectValue placeholder="Trip type" /></SelectTrigger><SelectContent><SelectItem value="one-way">One way</SelectItem><SelectItem value="round-trip">Round trip</SelectItem></SelectContent></Select></Field>}</searchForm.Field>
-                  <searchForm.Field name="source">{(field) => <Field><FieldLabel>From</FieldLabel><Input className="h-11 rounded-[16px] border-0 bg-white" onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} placeholder="City or airport code" value={field.state.value} /></Field>}</searchForm.Field>
-                  <searchForm.Field name="destination">{(field) => <Field><FieldLabel>To</FieldLabel><Input className="h-11 rounded-[16px] border-0 bg-white" onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} placeholder="City or airport code" value={field.state.value} /></Field>}</searchForm.Field>
-                  <searchForm.Field name="departureDate">{(field) => <Field><FieldLabel>Departure</FieldLabel><Input className="h-11 rounded-[16px] border-0 bg-white" onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} type="date" value={field.state.value} /></Field>}</searchForm.Field>
-                  <searchForm.Field name="returnDate">{(field) => <searchForm.Subscribe selector={(state) => state.values.tripType}>{(tripType) => <Field><FieldLabel>Return</FieldLabel><Input className="h-11 rounded-[16px] border-0 bg-white disabled:opacity-40" disabled={tripType !== "round-trip"} onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} type="date" value={field.state.value} /></Field>}</searchForm.Subscribe>}</searchForm.Field>
-                  <Button className="h-11 rounded-[16px] bg-slate-950 text-white hover:bg-slate-800" disabled={searchBusy} type="submit">{searchBusy ? "Searching…" : "Search"}</Button>
-                </form>
-                {searchResults ? (
-                  <div className="space-y-4">
-                    {searchResults.outbound.map((flight) => (
-                      <SearchResultCard flight={flight} key={`${flight.airlineName}-${flight.flightNumber}-${flight.departureDatetime}`} onChoose={setSelectedFlight} />
-                    ))}
-                    {searchResults.tripType === "round-trip" && searchResults.returnOptions.length ? (
-                      <div className="space-y-3 pt-2">
-                        <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Return</div>
-                        {searchResults.returnOptions.map((flight) => (
-                          <SearchResultCard flight={flight} key={`${flight.airlineName}-${flight.flightNumber}-${flight.departureDatetime}-return`} onChoose={setSelectedFlight} />
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : <EmptyCard title="No search yet" description="Search the live schedule and secure the flights you want from the traveler hub." />}
-                {selectedFlight ? (
-                  <Card className="rounded-[28px] border-0 bg-slate-950 text-white shadow-none">
-                    <CardHeader>
-                      <CardTitle className="text-2xl tracking-[-0.03em]">Complete your booking</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <form className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]" onSubmit={handlePurchase}>
-                        <div className="space-y-5">
-                          <div className="grid gap-4 md:grid-cols-2">
-                            <purchaseForm.Field name="nameOnCard">{(field) => <Field><FieldLabel>Name on card</FieldLabel><Input className="h-11 rounded-[16px] border-0 bg-white text-slate-950" onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} value={field.state.value} /></Field>}</purchaseForm.Field>
-                            <purchaseForm.Field name="cardNumber">{(field) => <Field><FieldLabel>Card number</FieldLabel><Input className="h-11 rounded-[16px] border-0 bg-white text-slate-950" onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} value={field.state.value} /></Field>}</purchaseForm.Field>
-                            <purchaseForm.Field name="cardExpiration">{(field) => <Field><FieldLabel>Expiration</FieldLabel><Input className="h-11 rounded-[16px] border-0 bg-white text-slate-950" onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} type="date" value={field.state.value} /></Field>}</purchaseForm.Field>
-                            <purchaseForm.Field name="cardType">{(field) => <Field><FieldLabel>Card type</FieldLabel><Select onValueChange={(value) => field.handleChange(value ?? "credit")} value={field.state.value}><SelectTrigger className="h-11 rounded-[16px] border-0 bg-white text-slate-950"><SelectValue placeholder="Choose type" /></SelectTrigger><SelectContent><SelectItem value="credit">Credit</SelectItem><SelectItem value="debit">Debit</SelectItem></SelectContent></Select></Field>}</purchaseForm.Field>
-                          </div>
-                          <div className="flex flex-col gap-3 sm:flex-row">
-                            <Button className="h-11 rounded-[16px] bg-white text-slate-950 hover:bg-slate-100" type="submit">Confirm & pay</Button>
-                            <Button className="h-11 rounded-[16px] border-white/20 text-white hover:bg-white/10" onClick={() => setSelectedFlight(null)} type="button" variant="outline">Cancel</Button>
-                          </div>
-                        </div>
-                        <div className="rounded-[24px] bg-white/8 p-5 text-sm text-white/75">
-                          <div className="text-xs font-semibold uppercase tracking-[0.24em] text-white/45">Selected route</div>
-                          <div className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-white">{selectedFlight.departureAirportCode} → {selectedFlight.arrivalAirportCode}</div>
-                          <div className="mt-2">{formatDateTime(selectedFlight.departureDatetime)}</div>
-                          <div className="mt-6 text-3xl font-semibold tracking-[-0.04em] text-white">{formatCurrency(selectedFlight.basePrice)}</div>
-                          <div className="mt-1">Total per traveler</div>
-                        </div>
-                      </form>
-                    </CardContent>
-                  </Card>
-                ) : null}
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {activeSection === "payments" ? (
-            <Card className="rounded-[32px] border-0 bg-white shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)] ring-1 ring-slate-200/80">
-              <CardHeader>
-                <CardTitle className="text-3xl tracking-[-0.04em]">Payment Methods</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 text-sm text-slate-600">
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-                  <div className="rounded-[24px] bg-slate-50 p-5">
-                    <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Saved cards</div>
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
-                      <PaymentCard label="Corporate" last4="4242" />
-                      <PaymentCard label="Personal" last4="5555" />
-                    </div>
-                  </div>
-                  <div className="rounded-[24px] bg-slate-50 p-5">
-                    <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Billing address</div>
-                    <div className="mt-4 leading-7 text-slate-600">204 Hudson Ave<br />Unit 6B<br />United States</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {activeSection === "account" ? (
-            <Card className="rounded-[32px] border-0 bg-white shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)] ring-1 ring-slate-200/80">
-              <CardHeader>
-                <CardTitle className="text-3xl tracking-[-0.04em]">Account Settings</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-4 lg:grid-cols-2">
-                <div className="rounded-[24px] bg-slate-50 p-5">
-                  <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Profile</div>
-                  <div className="mt-4 text-lg font-semibold tracking-[-0.03em] text-slate-950">{dashboardData.currentUser.displayName}</div>
-                  <div className="mt-1 text-sm text-slate-500">{dashboardData.currentUser.email}</div>
-                </div>
-                <div className="rounded-[24px] bg-slate-50 p-5">
-                  <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Security</div>
-                  <div className="mt-4 text-sm leading-6 text-slate-500">The current scope exposes session/logout behavior. Password reset and 2FA are visual placeholders from the Stitch direction and not yet backed by server mutations.</div>
-                </div>
-              </CardContent>
-            </Card>
-          ) : null}
-        </section>
+        {/* Main Content — matches Stitch content area */}
+        <main className="flex-1 p-6 md:p-12">
+          <div className="mx-auto max-w-4xl">
+            {activeSection === "flights" ? (
+              <FlightsSection
+                dashboardData={dashboardData}
+                handleReviewSubmit={handleReviewSubmit}
+                purchaseForm={purchaseForm}
+                reviewingKey={reviewingKey}
+                searchBusy={searchBusy}
+                searchForm={searchForm}
+                searchResults={searchResults}
+                selectedFlight={selectedFlight}
+                setSelectedFlight={setSelectedFlight}
+              />
+            ) : null}
+            {activeSection === "payments" ? <PaymentsSection /> : null}
+            {activeSection === "security" ? <SecuritySection /> : null}
+            {activeSection === "preferences" ? <PreferencesSection /> : null}
+          </div>
+        </main>
       </div>
     </TravelerShell>
   )
 }
 
-function UpcomingTripCard({ flight }: { flight: (typeof Route.useLoaderData extends never ? never : any) }) {
-  return (
-    <Card className="rounded-[24px] border-0 bg-slate-50 shadow-none">
-      <CardContent className="flex flex-col gap-4 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-4">
-          <div className="rounded-[18px] bg-white px-4 py-4 text-center shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{new Date(flight.departureDatetime).toLocaleDateString([], { month: "short" })}</div>
-            <div className="mt-1 text-3xl font-semibold tracking-[-0.04em] text-slate-950">{new Date(flight.departureDatetime).getDate()}</div>
-          </div>
-          <div>
-            <div className="text-lg font-semibold tracking-[-0.03em] text-slate-950">{flight.departureAirportCode} → {flight.arrivalAirportCode}</div>
-            <div className="mt-1 text-sm text-slate-500">{formatDate(flight.departureDatetime)} · {flight.flightNumber}</div>
-            <div className="mt-1 text-sm text-slate-500">{formatCurrency(flight.basePrice)}</div>
-          </div>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button className="rounded-[14px] bg-slate-950 text-white hover:bg-slate-800" type="button">View itinerary</Button>
-          <Button className="rounded-[14px]" type="button" variant="outline">Modify options</Button>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
+/* ─── Flights Section — Stitch traveler_my_trips_hub ─── */
 
-function SearchResultCard({ flight, onChoose }: { flight: FlightOption; onChoose: (flight: FlightOption) => void }) {
-  return (
-    <Card className="rounded-[24px] border-0 bg-slate-50 shadow-none">
-      <CardContent className="flex flex-col gap-4 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
-        <div className="grid gap-4 lg:grid-cols-[150px_minmax(0,1fr)_140px] lg:items-center lg:gap-8">
-          <div>
-            <div className="text-3xl font-semibold tracking-[-0.04em] text-slate-950">{new Date(flight.departureDatetime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
-            <div className="mt-1 text-sm text-slate-500">{flight.departureAirportCode}</div>
-          </div>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 text-sm text-slate-500">
-              <span>{flight.airlineName} {flight.flightNumber}</span>
-              <Badge className="rounded-full bg-white px-2.5 py-1 text-slate-600 hover:bg-white" variant="secondary">{flight.availableSeats} seats left</Badge>
-            </div>
-            <div className="flex items-center gap-3 text-sm text-slate-500">
-              <span className="h-px flex-1 bg-slate-200" />
-              <span>Nonstop</span>
-              <span className="h-px flex-1 bg-slate-200" />
-            </div>
-            <div className="text-sm text-slate-500">{titleCaseStatus(flight.status)}</div>
-          </div>
-          <div className="text-left lg:text-right">
-            <div className="text-3xl font-semibold tracking-[-0.04em] text-slate-950">{new Date(flight.arrivalDatetime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
-            <div className="mt-1 text-sm text-slate-500">{flight.arrivalAirportCode}</div>
-          </div>
-        </div>
-        <div className="flex flex-col gap-3 lg:min-w-[160px] lg:items-end">
-          <div className="text-right">
-            <div className="text-2xl font-semibold tracking-[-0.04em] text-slate-950">{formatCurrency(flight.basePrice)}</div>
-            <div className="mt-1 text-sm text-slate-500">Round trip</div>
-          </div>
-          <Button className="rounded-[14px] bg-slate-950 text-white hover:bg-slate-800" onClick={() => onChoose(flight)} type="button">
-            Select
-            <ArrowRight className="size-4" data-icon="inline-end" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function ReviewComposer({
-  flight,
-  isSubmitting,
-  onSubmit,
+function FlightsSection({
+  dashboardData,
+  handleReviewSubmit,
+  purchaseForm,
+  reviewingKey,
+  searchBusy,
+  searchForm,
+  searchResults,
+  selectedFlight,
+  setSelectedFlight,
 }: {
-  flight: (typeof Route.useLoaderData extends never ? never : any)["pastFlights"][number]
+  dashboardData: Awaited<ReturnType<typeof getCustomerDashboardFn>>
+  handleReviewSubmit: (flight: (typeof dashboardData.pastFlights)[number], values: { comment: string; rating: string }) => Promise<void>
+  purchaseForm: any
+  reviewingKey: string | null
+  searchBusy: boolean
+  searchForm: any
+  searchResults: { outbound: FlightOption[]; returnOptions: FlightOption[]; tripType: "one-way" | "round-trip" } | null
+  selectedFlight: FlightOption | null
+  setSelectedFlight: (flight: FlightOption | null) => void
+}) {
+  return (
+    <>
+      <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+        <div>
+          <h1 className="mb-2 text-3xl font-bold text-slate-950 font-['Manrope']">My Trips</h1>
+          <p className="text-sm text-slate-500">Manage your upcoming itineraries and review past journeys.</p>
+        </div>
+      </div>
+
+      {/* Upcoming Trips */}
+      <section className="mb-12">
+        <h2 className="mb-6 flex items-center gap-2 text-lg font-semibold text-slate-950 font-['Manrope']">
+          <Plane className="size-5 text-slate-950" />
+          Upcoming
+        </h2>
+        <div className="grid gap-6">
+          {dashboardData.upcomingFlights.length ? dashboardData.upcomingFlights.map((flight) => (
+            <UpcomingTripCard flight={flight} key={`${flight.airlineName}-${flight.flightNumber}-${flight.departureDatetime}`} />
+          )) : (
+            <div className="rounded-lg bg-white p-10 text-center shadow-sm">
+              <div className="mx-auto mb-6 flex size-20 items-center justify-center rounded-full bg-slate-100">
+                <Plane className="size-10 text-slate-400" />
+              </div>
+              <h3 className="mb-2 text-xl font-semibold text-slate-950 font-['Manrope']">No upcoming flights</h3>
+              <p className="mx-auto mb-8 max-w-md text-sm text-slate-500">You don't have any flights scheduled. Ready to plan your next destination?</p>
+              <Button className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-slate-950 to-slate-800 text-white hover:opacity-90" onClick={() => {}}>
+                Search Flights <ArrowRight className="size-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Book Flights (inline search) */}
+      <section className="mb-12">
+        <h2 className="mb-6 flex items-center gap-2 text-lg font-semibold text-slate-950 font-['Manrope']">
+          <Plus className="size-5" />
+          Book a Flight
+        </h2>
+        <div className="rounded-lg bg-white p-6 shadow-sm">
+          <form className="grid gap-4 md:grid-cols-[1fr_1fr_180px_180px_auto] md:items-end" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); searchForm.handleSubmit() }}>
+            <div className="space-y-1.5">
+              <label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">From</label>
+              <searchForm.Field name="source">{(field: any) => <input className="w-full rounded bg-slate-50 px-4 py-3 text-sm text-slate-950 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} placeholder="City or airport" value={field.state.value} />}</searchForm.Field>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">To</label>
+              <searchForm.Field name="destination">{(field: any) => <input className="w-full rounded bg-slate-50 px-4 py-3 text-sm text-slate-950 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} placeholder="City or airport" value={field.state.value} />}</searchForm.Field>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">Departure</label>
+              <searchForm.Field name="departureDate">{(field: any) => <input className="w-full rounded bg-slate-50 px-4 py-3 text-sm text-slate-950 focus:outline-none focus:ring-1 focus:ring-slate-300" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} type="date" value={field.state.value} />}</searchForm.Field>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">Return</label>
+              <searchForm.Field name="returnDate">{(field: any) => <input className="w-full rounded bg-slate-50 px-4 py-3 text-sm text-slate-950 focus:outline-none focus:ring-1 focus:ring-slate-300" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} type="date" value={field.state.value} />}</searchForm.Field>
+            </div>
+            <Button className="rounded-lg bg-slate-950 text-white hover:bg-slate-800" disabled={searchBusy} type="submit">{searchBusy ? "Searching…" : "Search"}</Button>
+          </form>
+        </div>
+
+        {/* Search Results */}
+        {searchResults ? (
+          <div className="mt-6 space-y-4">
+            {searchResults.outbound.map((flight) => (
+              <SearchResultCard flight={flight} key={`${flight.airlineName}-${flight.flightNumber}-${flight.departureDatetime}`} onChoose={setSelectedFlight} />
+            ))}
+          </div>
+        ) : null}
+
+        {/* Purchase Form */}
+        {selectedFlight ? (
+          <div className="mt-6 rounded-lg bg-slate-950 p-6 text-white">
+            <h3 className="mb-4 text-2xl font-bold font-['Manrope']">Complete your booking</h3>
+            <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+              <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); purchaseForm.handleSubmit() }}>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-white/60">Name on Card</label>
+                    <purchaseForm.Field name="nameOnCard">{(field: any) => <input className="w-full rounded bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-white/30" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} value={field.state.value} />}</purchaseForm.Field>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-white/60">Card Number</label>
+                    <purchaseForm.Field name="cardNumber">{(field: any) => <input className="w-full rounded bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-white/30" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} value={field.state.value} />}</purchaseForm.Field>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-white/60">Expiration</label>
+                    <purchaseForm.Field name="cardExpiration">{(field: any) => <input className="w-full rounded bg-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/30" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} type="date" value={field.state.value} />}</purchaseForm.Field>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-white/60">Card Type</label>
+                    <purchaseForm.Field name="cardType">{(field: any) => <select className="w-full rounded bg-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/30" onChange={(e: any) => field.handleChange(e.target.value)} value={field.state.value}><option value="credit">Credit</option><option value="debit">Debit</option></select>}</purchaseForm.Field>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <Button className="rounded-lg bg-white text-slate-950 hover:bg-slate-100" type="submit">Confirm & Pay</Button>
+                  <Button className="rounded-lg border-white/20 text-white hover:bg-white/10" onClick={() => setSelectedFlight(null)} type="button" variant="outline">Cancel</Button>
+                </div>
+              </form>
+              <div className="rounded-lg bg-white/10 p-5">
+                <div className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-white/45">Selected Route</div>
+                <div className="mt-3 text-2xl font-bold font-['Manrope']">{selectedFlight.departureAirportCode} → {selectedFlight.arrivalAirportCode}</div>
+                <div className="mt-2 text-sm text-white/70">{formatDateTime(selectedFlight.departureDatetime)}</div>
+                <div className="mt-6 text-3xl font-bold font-['Manrope']">{formatCurrency(selectedFlight.basePrice)}</div>
+                <div className="mt-1 text-sm text-white/70">Total per traveler</div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      {/* Past Journeys */}
+      <section>
+        <h2 className="mb-6 flex items-center gap-2 text-lg font-semibold text-slate-950 font-['Manrope']">
+          <History className="size-5 text-slate-500" />
+          Past Journeys
+        </h2>
+        <div className="rounded-lg bg-slate-50 p-2">
+          <div className="flex flex-col gap-2">
+            {dashboardData.pastFlights.length ? dashboardData.pastFlights.map((flight) => {
+              const key = `${flight.airlineName}:${flight.flightNumber}:${flight.departureDatetime}`
+              return (
+                <div className="rounded bg-white p-4 shadow-sm" key={key}>
+                  <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                    <div className="flex items-center gap-4">
+                      <div className="flex size-12 shrink-0 items-center justify-center rounded bg-slate-100">
+                        <Plane className="size-5 text-slate-500" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-950 font-['Manrope']">{flight.departureAirportCode} → {flight.arrivalAirportCode}</h4>
+                        <p className="text-xs font-medium text-slate-500">{formatDateTime(flight.departureDatetime)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {flight.canReview ? (
+                        <span className="text-xs font-bold uppercase tracking-widest text-slate-500">Review available</span>
+                      ) : flight.rating ? (
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star className={cn("size-4", i < flight.rating! ? "fill-slate-950 text-slate-950" : "text-slate-300")} key={i} />
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-500">Completed</span>
+                      )}
+                    </div>
+                  </div>
+                  {flight.canReview ? (
+                    <ReviewComposer flight={flight} isSubmitting={reviewingKey === key} onSubmit={handleReviewSubmit} />
+                  ) : flight.comment ? (
+                    <div className="mt-4 rounded bg-slate-50 px-4 py-3 text-sm text-slate-600 italic">"{flight.comment}"</div>
+                  ) : null}
+                </div>
+              )
+            }) : (
+              <div className="rounded bg-white p-8 text-center text-sm text-slate-500">No past journeys yet.</div>
+            )}
+          </div>
+          <div className="mt-6 text-center">
+            <button className="flex items-center justify-center gap-1 text-sm font-medium text-slate-500 transition-colors hover:text-slate-950">
+              Load more history <Star className="size-4" />
+            </button>
+          </div>
+        </div>
+      </section>
+    </>
+  )
+}
+
+/* ─── Upcoming Trip Card ─── */
+
+function UpcomingTripCard({ flight }: { flight: any }) {
+  return (
+    <div className="flex flex-col gap-6 rounded bg-white p-6 shadow-sm transition-transform duration-300 hover:-translate-y-1 md:flex-row">
+      <div className="relative w-full shrink-0 overflow-hidden rounded md:w-48">
+        <div className="flex aspect-video items-center justify-center bg-slate-200">
+          <Plane className="size-8 text-slate-400" />
+        </div>
+        <span className="absolute bottom-2 left-2 text-lg font-bold text-white drop-shadow-md font-['Manrope']">{flight.arrivalAirportCode}</span>
+      </div>
+      <div className="flex-1">
+        <div className="mb-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Badge className="rounded-sm bg-[#cde5ff] px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[#004b74]" variant="secondary">Managed</Badge>
+            <span className="text-xs font-medium text-slate-500">Confirmation: {flight.flightNumber}</span>
+          </div>
+          <span className="text-sm font-semibold text-slate-950">{formatDate(flight.departureDatetime)}</span>
+        </div>
+        <h3 className="mb-1 text-xl font-bold text-slate-950 font-['Manrope']">{flight.arrivalCity ?? flight.arrivalAirportCode}</h3>
+        <p className="mb-4 text-sm text-slate-500">Direct flight · Economy</p>
+        <div className="flex flex-wrap gap-2">
+          <Button className="rounded bg-gradient-to-r from-slate-950 to-slate-800 text-white hover:opacity-90" size="sm">View Itinerary</Button>
+          <Button className="rounded" size="sm" variant="outline">Modify Options</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Search Result Card ─── */
+
+function SearchResultCard({ flight, onChoose }: { flight: FlightOption; onChoose: (f: FlightOption) => void }) {
+  const dep = new Date(flight.departureDatetime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  const arr = new Date(flight.arrivalDatetime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  return (
+    <div className="flex flex-col items-center gap-6 rounded-lg bg-white p-6 shadow-sm md:flex-row">
+      <div className="w-full flex-1 space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-slate-950">{flight.airlineName} {flight.flightNumber}</span>
+          <Badge className={cn("rounded-sm px-2 py-1 text-[0.6875rem] font-bold uppercase tracking-[0.05em]", flight.status === "on_time" ? "bg-[#cde5ff] text-[#004b74]" : "bg-red-100 text-red-700")} variant="secondary">
+            {titleCaseStatus(flight.status)}
+          </Badge>
+        </div>
+        <div className="flex w-full items-center justify-between">
+          <div>
+            <div className="text-2xl font-bold text-slate-950 font-['Manrope']">{dep}</div>
+            <div className="text-sm font-medium text-slate-500">{flight.departureAirportCode}</div>
+          </div>
+          <div className="flex flex-1 flex-col items-center px-8">
+            <div className="flex w-full items-center">
+              <div className="h-[2px] flex-1 bg-slate-200" />
+              <Plane className="mx-2 size-4 rotate-90 text-slate-400" />
+              <div className="h-[2px] flex-1 bg-slate-200" />
+            </div>
+            <div className="mt-1 text-xs text-slate-500">Nonstop</div>
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-bold text-slate-950 font-['Manrope']">{arr}</div>
+            <div className="text-sm font-medium text-slate-500">{flight.arrivalAirportCode}</div>
+          </div>
+        </div>
+      </div>
+      <div className="flex w-full flex-row items-center justify-between md:w-auto md:flex-col md:items-end md:gap-4">
+        <div className="text-left md:text-right">
+          <div className="text-3xl font-bold text-slate-950 font-['Manrope']">{formatCurrency(flight.basePrice)}</div>
+          <div className="text-xs text-slate-500">Round trip</div>
+        </div>
+        <Button className="rounded-lg bg-slate-950 text-white hover:bg-slate-800" onClick={() => onChoose(flight)}>Select</Button>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Review Composer ─── */
+
+function ReviewComposer({ flight, isSubmitting, onSubmit }: {
+  flight: any
   isSubmitting: boolean
-  onSubmit: (
-    flight: (typeof Route.useLoaderData extends never ? never : any)["pastFlights"][number],
-    values: { comment: string; rating: string },
-  ) => Promise<void>
+  onSubmit: (flight: any, values: { comment: string; rating: string }) => Promise<void>
 }) {
   const form = useForm({
-    defaultValues: {
-      comment: flight.comment ?? "",
-      rating: "",
-    },
+    defaultValues: { comment: flight.comment ?? "", rating: "" },
     onSubmit: async ({ value }) => onSubmit(flight, value),
   })
 
   return (
-    <div className="grid gap-4 rounded-[20px] bg-slate-50 p-4 md:grid-cols-[120px_1fr_auto] md:items-end">
+    <div className="mt-4 rounded-lg bg-slate-50 p-5">
+      <h4 className="mb-3 text-sm font-semibold text-slate-950 font-['Manrope']">Rate your experience</h4>
       <form.Field name="rating">
-        {(field) => (
-          <Field>
-            <FieldLabel>Rating</FieldLabel>
-            <Select onValueChange={(value) => field.handleChange(value ?? "")} value={field.state.value}>
-              <SelectTrigger className="rounded-[14px] border-0 bg-white"><SelectValue placeholder="Stars" /></SelectTrigger>
-              <SelectContent>{[1, 2, 3, 4, 5].map((value) => <SelectItem key={value} value={String(value)}>{value} / 5</SelectItem>)}</SelectContent>
-            </Select>
-          </Field>
+        {(field: any) => (
+          <div className="mb-4 flex items-center gap-2">
+            {[1, 2, 3, 4, 5].map((v) => (
+              <button
+                className={cn("text-2xl transition-colors", Number(field.state.value) >= v ? "text-slate-950" : "text-slate-300 hover:text-slate-500")}
+                key={v}
+                onClick={() => field.handleChange(String(v))}
+                type="button"
+              >
+                <Star className={cn("size-6", Number(field.state.value) >= v && "fill-slate-950")} />
+              </button>
+            ))}
+          </div>
         )}
       </form.Field>
       <form.Field name="comment">
-        {(field) => (
-          <Field>
-            <FieldLabel>Share details</FieldLabel>
-            <Textarea className="min-h-[110px] rounded-[16px] border-0 bg-white" onBlur={field.handleBlur} onChange={(event) => field.handleChange(event.target.value)} placeholder="Tell me about the service, comfort, and punctuality." value={field.state.value} />
-          </Field>
+        {(field: any) => (
+          <textarea
+            className="mb-4 h-24 w-full resize-none rounded border border-slate-200 bg-white p-3 text-sm text-slate-950 placeholder-slate-400 focus:border-slate-950 focus:outline-none focus:ring-0"
+            onBlur={field.handleBlur}
+            onChange={(e) => field.handleChange(e.target.value)}
+            placeholder="Share your feedback on the flight, crew, or amenities..."
+            value={field.state.value}
+          />
         )}
       </form.Field>
-      <Button className="h-11 rounded-[16px] bg-slate-950 text-white hover:bg-slate-800" disabled={isSubmitting} onClick={() => form.handleSubmit()} type="button">
-        {isSubmitting ? "Saving…" : "Submit review"}
+      <Button className="rounded bg-slate-950 text-white hover:bg-slate-800" disabled={isSubmitting} onClick={() => form.handleSubmit()} size="sm" type="button">
+        {isSubmitting ? "Saving…" : "Submit Review"}
       </Button>
     </div>
   )
 }
 
-function PaymentCard({ label, last4 }: { label: string; last4: string }) {
+/* ─── Payments Section ─── */
+
+function PaymentsSection() {
   return (
-    <div className="rounded-[20px] bg-white p-4 shadow-sm ring-1 ring-slate-200/80">
-      <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{label}</div>
-      <div className="mt-3 text-lg font-semibold tracking-[-0.03em] text-slate-950">•••• {last4}</div>
-      <div className="mt-1 text-sm text-slate-500">Visa ending in {last4}</div>
-    </div>
+    <>
+      <h1 className="mb-2 text-3xl font-bold text-slate-950 font-['Manrope']">Payment Methods</h1>
+      <p className="mb-8 text-sm text-slate-500">Manage your saved cards and billing information for seamless bookings.</p>
+      <div className="grid gap-8 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <h2 className="text-xl font-bold text-slate-950 font-['Manrope']">Saved Cards</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded bg-white p-6 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <CreditCard className="size-5 text-slate-950" />
+                <Badge className="rounded-sm bg-slate-200 text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-700" variant="secondary">Default</Badge>
+              </div>
+              <div className="text-sm text-slate-500">Corporate Card</div>
+              <div className="mt-1 text-lg font-bold tracking-wider text-slate-950 font-['Manrope']">•••• •••• •••• 4242</div>
+              <div className="mt-2 flex justify-between text-xs text-slate-500"><span>Exp: 12/26</span><span className="font-bold">Visa</span></div>
+            </div>
+            <div className="rounded bg-slate-50 p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <CreditCard className="size-5 text-slate-500" />
+              </div>
+              <div className="text-sm text-slate-500">Personal Rewards Card</div>
+              <div className="mt-1 text-lg font-bold tracking-wider text-slate-950 font-['Manrope']">•••• •••• •••• 5555</div>
+              <div className="mt-2 flex justify-between text-xs text-slate-500"><span>Exp: 08/25</span><span className="font-bold">Mastercard</span></div>
+            </div>
+          </div>
+        </div>
+        <div className="rounded bg-slate-50 p-6">
+          <h2 className="mb-4 text-lg font-bold text-slate-950 font-['Manrope']">Billing Address</h2>
+          <div className="text-sm leading-relaxed text-slate-600">
+            John Doe<br />
+            123 Aviation Parkway<br />
+            Suite 400<br />
+            Seattle, WA 98101
+          </div>
+        </div>
+      </div>
+    </>
   )
 }
 
-function EmptyCard({ description, title }: { description: string; title: string }) {
+/* ─── Security Section ─── */
+
+function SecuritySection() {
   return (
-    <div className="rounded-[24px] bg-slate-50 p-8 text-center">
-      <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm"><Star className="size-5" /></div>
-      <h3 className="mt-4 text-xl font-semibold tracking-[-0.03em] text-slate-950">{title}</h3>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">{description}</p>
-    </div>
+    <>
+      <h1 className="mb-2 text-3xl font-bold text-slate-950 font-['Manrope']">Security Settings</h1>
+      <p className="mb-8 text-sm text-slate-500">Manage your account access and security preferences.</p>
+      <div className="space-y-8">
+        <div className="rounded-lg bg-white p-8 shadow-sm">
+          <h2 className="mb-6 flex items-center gap-2 text-xl font-bold text-slate-950 font-['Manrope']">
+            <Lock className="size-5 text-slate-400" /> Change Password
+          </h2>
+          <div className="space-y-5">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-950">Current Password</label>
+              <input className="w-full border-b-2 border-slate-200 bg-white px-0 py-2 text-slate-950 transition-colors focus:border-slate-950 focus:outline-none focus:ring-0" placeholder="••••••••" type="password" />
+            </div>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-950">New Password</label>
+                <input className="w-full border-b-2 border-slate-200 bg-white px-0 py-2 text-slate-950 transition-colors focus:border-slate-950 focus:outline-none focus:ring-0" placeholder="Enter new password" type="password" />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-950">Confirm New Password</label>
+                <input className="w-full border-b-2 border-slate-200 bg-white px-0 py-2 text-slate-950 transition-colors focus:border-slate-950 focus:outline-none focus:ring-0" placeholder="Confirm new password" type="password" />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button className="rounded-lg" variant="secondary">Cancel</Button>
+              <Button className="rounded-lg bg-gradient-to-r from-slate-950 to-slate-800 text-white hover:opacity-90">Update Password</Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+/* ─── Preferences Section ─── */
+
+function PreferencesSection() {
+  return (
+    <>
+      <h1 className="mb-2 text-3xl font-bold text-slate-950 font-['Manrope']">Preferences</h1>
+      <p className="mb-8 text-sm text-slate-500">Customize your travel experience.</p>
+      <div className="rounded-lg bg-white p-8 text-sm text-slate-500 shadow-sm">
+        Preferences will be available in a future update.
+      </div>
+    </>
   )
 }
