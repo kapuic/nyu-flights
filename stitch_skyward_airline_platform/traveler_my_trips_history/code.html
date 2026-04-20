@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AeroPrecision - My Trips</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary-fixed-variant": "#3a485b",
+                      "surface-container-high": "#e6e8ea",
+                      "on-surface": "#191c1e",
+                      "error": "#ba1a1a",
+                      "surface-container-low": "#f2f4f6",
+                      "error-container": "#ffdad6",
+                      "tertiary-fixed": "#cde5ff",
+                      "inverse-primary": "#bec6e0",
+                      "primary": "#000000",
+                      "inverse-on-surface": "#eff1f3",
+                      "secondary-fixed": "#d5e3fc",
+                      "on-tertiary-fixed-variant": "#004b74",
+                      "on-error": "#ffffff",
+                      "surface-bright": "#f7f9fb",
+                      "secondary": "#515f74",
+                      "secondary-container": "#d5e3fc",
+                      "on-background": "#191c1e",
+                      "on-primary-fixed-variant": "#3f465c",
+                      "on-surface-variant": "#45464d",
+                      "on-tertiary-container": "#3d89c3",
+                      "inverse-surface": "#2d3133",
+                      "outline": "#76777d",
+                      "on-tertiary-fixed": "#001d32",
+                      "outline-variant": "#c6c6cd",
+                      "background": "#f7f9fb",
+                      "primary-container": "#131b2e",
+                      "tertiary-container": "#001d32",
+                      "on-primary-fixed": "#131b2e",
+                      "surface-tint": "#565e74",
+                      "on-secondary": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "tertiary": "#000000",
+                      "on-error-container": "#93000a",
+                      "on-secondary-container": "#57657a",
+                      "on-primary-container": "#7c839b",
+                      "on-tertiary": "#ffffff",
+                      "primary-fixed": "#dae2fd",
+                      "on-secondary-fixed": "#0d1c2e",
+                      "surface-variant": "#e0e3e5",
+                      "surface-dim": "#d8dadc",
+                      "surface-container-highest": "#e0e3e5",
+                      "primary-fixed-dim": "#bec6e0",
+                      "tertiary-fixed-dim": "#94ccff",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary-fixed-dim": "#b9c7df",
+                      "surface": "#f7f9fb",
+                      "surface-container": "#eceef0"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {},
+              "fontFamily": {
+                      "headline": [
+                              "Manrope"
+                      ],
+                      "body": [
+                              "Inter"
+                      ],
+                      "label": [
+                              "Inter"
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: theme('colors.background'); color: theme('colors.on-surface'); }
+        h1, h2, h3, h4, h5, h6, .font-headline { font-family: 'Manrope', sans-serif; }
+        .gradient-text { background: linear-gradient(to right, theme('colors.primary'), theme('colors.primary-container')); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .btn-gradient { background: linear-gradient(to right, theme('colors.primary'), theme('colors.primary-container')); color: theme('colors.on-primary'); }
+        
+        /* Shared Components Styles */
+        .top-nav { @apply fixed top-0 w-full z-50 bg-slate-50 text-slate-900 font-manrope tracking-tight font-semibold flex justify-between items-center px-8 h-16 max-w-screen-2xl mx-auto border-b-0 shadow-none; }
+        .top-nav-sep { @apply bg-slate-200/10 h-[1px] w-full absolute bottom-0 left-0; }
+        .bottom-nav { @apply fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 pb-safe bg-white/95 backdrop-blur-md rounded-t-lg border-t border-slate-200 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]; }
+        .bottom-nav-item { @apply flex flex-col items-center justify-center font-inter text-[10px] uppercase tracking-widest text-slate-400 opacity-100 transition-all duration-200; }
+        .bottom-nav-item.active { @apply text-slate-900 font-bold scale-90; }
+        .bottom-nav-item:hover { @apply opacity-80; }
+    </style>
+</head>
+<body class="antialiased min-h-screen pb-24 md:pb-0 pt-16">
+<!-- Top Navigation (Web) -->
+<header class="hidden md:block fixed top-0 w-full z-50 bg-slate-50 text-slate-900 font-manrope tracking-tight font-semibold border-b-0 shadow-none">
+<div class="flex justify-between items-center px-8 h-16 w-full max-w-screen-2xl mx-auto">
+<div class="text-xl font-bold tracking-tighter text-slate-900">AeroPrecision</div>
+<nav class="flex space-x-6">
+<a class="text-slate-500 font-medium hover:text-slate-900 transition-colors" href="#">Explore</a>
+<a class="text-slate-900 border-b-2 border-slate-900 pb-1 opacity-80 transition-all duration-200" href="#">Bookings</a>
+<a class="text-slate-500 font-medium hover:text-slate-900 transition-colors" href="#">Support</a>
+</nav>
+<div class="flex items-center space-x-4">
+<button class="text-slate-900">Sign In</button>
+<button class="bg-primary text-on-primary px-4 py-2 rounded-lg text-sm">Join</button>
+</div>
+</div>
+<div class="bg-slate-200/10 h-[1px] w-full absolute bottom-0 left-0"></div>
+</header>
+<!-- Main Content -->
+<main class="max-w-screen-xl mx-auto px-4 md:px-8 py-8 md:py-12">
+<div class="mb-12">
+<h1 class="text-4xl md:text-5xl font-headline font-bold tracking-tight text-on-surface mb-2">My Trips</h1>
+<p class="text-on-surface-variant font-body text-lg">Manage your upcoming journeys and review past flights.</p>
+</div>
+<div class="flex flex-col lg:flex-row gap-8 items-start">
+<!-- Left Column: Upcoming & Past Lists -->
+<div class="w-full lg:w-2/3 space-y-12">
+<!-- Upcoming Trips -->
+<section>
+<h2 class="text-2xl font-headline font-semibold mb-6 text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-outline" style="font-variation-settings: 'FILL' 1;">flight_takeoff</span>
+                        Upcoming
+                    </h2>
+<div class="space-y-4">
+<!-- Upcoming Card 1 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl flex flex-col md:flex-row gap-6 relative overflow-hidden group">
+<!-- Date Block -->
+<div class="bg-surface-container-low rounded-lg p-4 flex flex-col items-center justify-center min-w-[100px] shrink-0 border-l-4 border-primary">
+<span class="text-sm font-label text-on-surface-variant uppercase tracking-widest">Oct</span>
+<span class="text-3xl font-headline font-bold text-on-surface">14</span>
+<span class="text-xs text-on-surface-variant mt-1">2024</span>
+</div>
+<!-- Flight Info -->
+<div class="flex-grow flex flex-col justify-between">
+<div class="flex justify-between items-start mb-4">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed text-[10px] font-label px-2 py-0.5 rounded-sm uppercase tracking-widest font-semibold">Confirmed</span>
+<span class="text-sm text-on-surface-variant font-medium">AP-402</span>
+</div>
+<h3 class="text-xl font-headline font-bold">LHR <span class="material-symbols-outlined text-sm align-middle mx-1 text-outline">arrow_forward</span> JFK</h3>
+</div>
+<div class="text-right">
+<div class="text-sm text-on-surface-variant">Seat</div>
+<div class="font-headline font-bold text-lg">12A</div>
+</div>
+</div>
+<div class="flex gap-4 border-t border-surface-container-high pt-4 mt-auto">
+<button class="text-sm font-medium hover:text-on-surface-variant transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">confirmation_number</span> View Boarding Pass
+                                    </button>
+<button class="text-sm font-medium hover:text-on-surface-variant transition-colors flex items-center gap-1 ml-auto">
+<span class="material-symbols-outlined text-sm">edit</span> Manage
+                                    </button>
+</div>
+</div>
+</div>
+<!-- Upcoming Card 2 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl flex flex-col md:flex-row gap-6 relative overflow-hidden group">
+<!-- Date Block -->
+<div class="bg-surface-container-low rounded-lg p-4 flex flex-col items-center justify-center min-w-[100px] shrink-0 border-l-4 border-primary">
+<span class="text-sm font-label text-on-surface-variant uppercase tracking-widest">Nov</span>
+<span class="text-3xl font-headline font-bold text-on-surface">02</span>
+<span class="text-xs text-on-surface-variant mt-1">2024</span>
+</div>
+<!-- Flight Info -->
+<div class="flex-grow flex flex-col justify-between">
+<div class="flex justify-between items-start mb-4">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="bg-surface-container-highest text-on-surface text-[10px] font-label px-2 py-0.5 rounded-sm uppercase tracking-widest font-semibold">Standby</span>
+<span class="text-sm text-on-surface-variant font-medium">AP-811</span>
+</div>
+<h3 class="text-xl font-headline font-bold">JFK <span class="material-symbols-outlined text-sm align-middle mx-1 text-outline">arrow_forward</span> CDG</h3>
+</div>
+<div class="text-right">
+<div class="text-sm text-on-surface-variant">Seat</div>
+<div class="font-headline font-bold text-lg text-outline">--</div>
+</div>
+</div>
+<div class="flex gap-4 border-t border-surface-container-high pt-4 mt-auto">
+<button class="text-sm font-medium text-outline cursor-not-allowed flex items-center gap-1" disabled="">
+<span class="material-symbols-outlined text-sm">hourglass_empty</span> Check-in Opens 24h Prior
+                                    </button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Past Trips -->
+<section>
+<h2 class="text-2xl font-headline font-semibold mb-6 text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-outline" style="font-variation-settings: 'FILL' 1;">history</span>
+                        Past
+                    </h2>
+<div class="space-y-4 opacity-90">
+<!-- Past Card 1 (Needs Review) -->
+<div class="bg-surface-container-low p-5 rounded-xl flex flex-col sm:flex-row items-center gap-4 border-l-4 border-transparent hover:bg-surface-container-highest transition-colors cursor-pointer group">
+<div class="text-center sm:text-left min-w-[80px]">
+<div class="text-xs font-label text-on-surface-variant uppercase tracking-wider">Sep 12</div>
+<div class="font-headline font-bold">AP-204</div>
+</div>
+<div class="flex-grow text-center sm:text-left">
+<div class="font-medium">SFO <span class="material-symbols-outlined text-xs align-middle mx-1 text-outline">arrow_forward</span> LHR</div>
+</div>
+<div class="shrink-0">
+<button class="bg-primary text-on-primary text-sm px-4 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity whitespace-nowrap shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
+                                     Review Flight
+                                 </button>
+</div>
+</div>
+<!-- Past Card 2 (Reviewed) -->
+<div class="bg-surface-container-low p-5 rounded-xl flex flex-col sm:flex-row items-center gap-4 border-l-4 border-transparent hover:bg-surface-container-highest transition-colors group">
+<div class="text-center sm:text-left min-w-[80px]">
+<div class="text-xs font-label text-on-surface-variant uppercase tracking-wider">Aug 05</div>
+<div class="font-headline font-bold text-on-surface-variant">AP-110</div>
+</div>
+<div class="flex-grow text-center sm:text-left text-on-surface-variant">
+<div class="font-medium">LHR <span class="material-symbols-outlined text-xs align-middle mx-1 text-outline">arrow_forward</span> DXB</div>
+</div>
+<div class="shrink-0 flex items-center gap-1 text-outline">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-sm font-medium">4.0</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Active Review Form Panel -->
+<div class="w-full lg:w-1/3 sticky top-24">
+<div class="bg-surface-container-lowest rounded-xl p-6 shadow-[0_20px_40px_-10px_rgba(25,28,30,0.08)]">
+<div class="mb-6 pb-6 border-b border-surface-container-high">
+<div class="text-xs font-label text-on-surface-variant uppercase tracking-widest mb-1">Reviewing</div>
+<h3 class="text-lg font-headline font-bold">SFO to LHR</h3>
+<div class="text-sm text-on-surface-variant">Flight AP-204 • Sep 12, 2024</div>
+</div>
+<form>
+<!-- Rating -->
+<div class="mb-6">
+<label class="block text-sm font-medium mb-3">How was your experience?</label>
+<div class="flex justify-between items-center bg-surface-container-low p-3 rounded-lg">
+<!-- Interactive Stars (Visual representation) -->
+<button class="text-outline hover:text-primary transition-colors" type="button"><span class="material-symbols-outlined text-3xl">star</span></button>
+<button class="text-outline hover:text-primary transition-colors" type="button"><span class="material-symbols-outlined text-3xl">star</span></button>
+<button class="text-outline hover:text-primary transition-colors" type="button"><span class="material-symbols-outlined text-3xl">star</span></button>
+<button class="text-outline hover:text-primary transition-colors" type="button"><span class="material-symbols-outlined text-3xl">star</span></button>
+<button class="text-outline hover:text-primary transition-colors" type="button"><span class="material-symbols-outlined text-3xl">star</span></button>
+</div>
+</div>
+<!-- Comment -->
+<div class="mb-6">
+<label class="block text-sm font-medium mb-2" for="review-comment">Share details</label>
+<textarea class="w-full bg-surface-container-low border-transparent focus:border-primary focus:ring-0 rounded-lg text-sm resize-none" id="review-comment" placeholder="Tell us about the service, comfort, and punctuality..." rows="4"></textarea>
+</div>
+<!-- Submit -->
+<button class="w-full btn-gradient py-3 rounded-lg font-medium text-sm shadow-[0_8px_16px_-4px_rgba(0,0,0,0.2)] hover:opacity-90 transition-opacity" type="submit">
+                            Submit Feedback
+                        </button>
+<button class="w-full mt-3 py-2 text-sm font-medium text-on-surface-variant hover:text-on-surface transition-colors" type="button">
+                            Cancel
+                        </button>
+</form>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation (Mobile) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 pb-safe bg-white/95 backdrop-blur-md rounded-t-lg border-t border-slate-200 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+<a class="flex flex-col items-center justify-center font-inter text-[10px] uppercase tracking-widest text-slate-400 opacity-100 transition-all duration-200 hover:opacity-80" href="#">
+<span class="material-symbols-outlined mb-1 text-[20px]">search</span>
+            Search
+        </a>
+<a class="flex flex-col items-center justify-center font-inter text-[10px] uppercase tracking-widest text-slate-900 font-bold scale-90 transition-all duration-200 opacity-80" href="#">
+<span class="material-symbols-outlined mb-1 text-[20px]" style="font-variation-settings: 'FILL' 1;">luggage</span>
+            Trips
+        </a>
+<a class="flex flex-col items-center justify-center font-inter text-[10px] uppercase tracking-widest text-slate-400 opacity-100 transition-all duration-200 hover:opacity-80" href="#">
+<span class="material-symbols-outlined mb-1 text-[20px]">account_balance_wallet</span>
+            Wallet
+        </a>
+<a class="flex flex-col items-center justify-center font-inter text-[10px] uppercase tracking-widest text-slate-400 opacity-100 transition-all duration-200 hover:opacity-80" href="#">
+<span class="material-symbols-outlined mb-1 text-[20px]">person</span>
+            Profile
+        </a>
+</nav>
+</body></html>

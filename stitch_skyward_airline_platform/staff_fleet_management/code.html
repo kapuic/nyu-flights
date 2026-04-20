@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Fleet Management Workspace</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "secondary": "#515f74",
+                        "on-background": "#191c1e",
+                        "secondary-container": "#d5e3fc",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "on-secondary-container": "#57657a",
+                        "primary-container": "#131b2e",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-tertiary-fixed": "#001d32",
+                        "on-surface-variant": "#45464d",
+                        "inverse-surface": "#2d3133",
+                        "surface-dim": "#d8dadc",
+                        "surface": "#f7f9fb",
+                        "primary-fixed-dim": "#bec6e0",
+                        "primary-fixed": "#dae2fd",
+                        "error-container": "#ffdad6",
+                        "primary": "#000000",
+                        "tertiary": "#000000",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-container-high": "#e6e8ea",
+                        "on-primary": "#ffffff",
+                        "inverse-primary": "#bec6e0",
+                        "secondary-fixed": "#d5e3fc",
+                        "on-tertiary-container": "#3d89c3",
+                        "on-secondary": "#ffffff",
+                        "on-primary-container": "#7c839b",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "surface-variant": "#e0e3e5",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "outline": "#76777d",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "outline-variant": "#c6c6cd",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-container": "#001d32",
+                        "surface-container": "#eceef0",
+                        "on-primary-fixed": "#131b2e",
+                        "background": "#f7f9fb",
+                        "surface-bright": "#f7f9fb",
+                        "on-tertiary": "#ffffff",
+                        "surface-tint": "#565e74",
+                        "on-error": "#ffffff",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed": "#cde5ff",
+                        "on-surface": "#191c1e",
+                        "inverse-on-surface": "#eff1f3"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body antialiased min-h-screen flex selection:bg-primary-container selection:text-on-primary-container">
+<!-- SideNavBar (Staff Concept) -->
+<nav class="bg-surface-container-low w-64 fixed left-0 top-0 flex flex-col h-full p-4 space-y-2 z-40">
+<!-- Header -->
+<div class="flex items-center gap-3 mb-8 px-2 py-2">
+<div class="h-10 w-10 bg-surface-container-high rounded-full overflow-hidden flex items-center justify-center border border-outline-variant/30">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-variation-settings: 'FILL' 1;">badge</span>
+</div>
+<div>
+<h2 class="font-headline font-black text-slate-900 tracking-tight text-base">Operations</h2>
+<p class="font-body text-xs text-on-surface-variant font-medium">Terminal 3 Control</p>
+</div>
+</div>
+<!-- Primary Navigation -->
+<div class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-sm font-label text-sm" href="#">
+<span class="material-symbols-outlined text-lg">dashboard</span>
+<span class="font-medium">Dashboard</span>
+</a>
+<!-- ACTIVE: Fleet -->
+<a class="flex items-center gap-3 px-3 py-2.5 bg-surface-container-high text-on-surface font-semibold rounded-sm transition-all font-label text-sm relative" href="#">
+<!-- Ghost indicator for active state in staff mode -->
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-sm"></div>
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">flight_takeoff</span>
+<span>Fleet</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-sm font-label text-sm" href="#">
+<span class="material-symbols-outlined text-lg">calendar_month</span>
+<span class="font-medium">Schedules</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-sm font-label text-sm" href="#">
+<span class="material-symbols-outlined text-lg">group</span>
+<span class="font-medium">Staffing</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-sm font-label text-sm" href="#">
+<span class="material-symbols-outlined text-lg">monitoring</span>
+<span class="font-medium">Analytics</span>
+</a>
+</div>
+<!-- Footer / Secondary Actions -->
+<div class="mt-auto space-y-1 pt-6 pb-2 border-t border-surface-container-high border-solid">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-sm font-label text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="font-medium">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-sm font-label text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]">help</span>
+<span class="font-medium">Help</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="ml-64 flex-1 flex flex-col min-h-screen">
+<!-- Top Action Bar -->
+<header class="h-20 px-8 flex items-center justify-between bg-surface z-10 sticky top-0">
+<div>
+<h1 class="font-headline text-2xl font-bold tracking-tight text-on-surface">Fleet Management Workspace</h1>
+<p class="font-body text-sm text-on-surface-variant mt-0.5">Active monitoring and asset control</p>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">search</span>
+<input class="h-9 pl-10 pr-4 bg-surface-variant border-none rounded-DEFAULT font-body text-sm text-on-surface placeholder:text-outline focus:ring-1 focus:ring-outline w-64 transition-shadow" placeholder="Search tail number..." type="text"/>
+</div>
+<button class="h-9 px-4 bg-primary text-on-primary rounded-lg font-label text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    Add Aircraft
+                </button>
+</div>
+</header>
+<!-- Workspace Grid Layout -->
+<div class="flex-1 p-8 pt-4 flex gap-8">
+<!-- Main Pane: Data Table -->
+<div class="flex-1 flex flex-col gap-4">
+<!-- Table Controls/Filters -->
+<div class="flex items-center justify-between bg-surface-container-lowest p-2 rounded-lg border border-outline-variant/15 shadow-[0_20px_40px_-10px_rgba(25,28,30,0.04)]">
+<div class="flex gap-1">
+<button class="px-3 py-1.5 bg-surface-container-high text-on-surface rounded-DEFAULT font-label text-xs font-semibold">All Aircraft</button>
+<button class="px-3 py-1.5 text-on-surface-variant hover:bg-surface-container-high/50 rounded-DEFAULT font-label text-xs font-medium transition-colors">Active</button>
+<button class="px-3 py-1.5 text-on-surface-variant hover:bg-surface-container-high/50 rounded-DEFAULT font-label text-xs font-medium transition-colors">Maintenance</button>
+</div>
+<button class="p-1.5 text-on-surface-variant hover:bg-surface-container-high rounded-DEFAULT transition-colors">
+<span class="material-symbols-outlined text-[20px]">filter_list</span>
+</button>
+</div>
+<!-- The Data Table -->
+<div class="bg-surface-container-lowest rounded-lg border border-outline-variant/15 shadow-[0_20px_40px_-10px_rgba(25,28,30,0.04)] overflow-hidden flex-1">
+<table class="w-full text-left font-body text-sm">
+<thead class="bg-surface-container-high text-on-surface-variant font-label text-xs uppercase tracking-wider sticky top-0">
+<tr>
+<th class="px-6 py-4 font-semibold w-12 text-center">
+<input class="rounded-[2px] border-outline text-primary focus:ring-primary w-4 h-4" type="checkbox"/>
+</th>
+<th class="px-6 py-4 font-semibold">Tail Number</th>
+<th class="px-6 py-4 font-semibold">Model</th>
+<th class="px-6 py-4 font-semibold">Capacity</th>
+<th class="px-6 py-4 font-semibold">Manufacturer</th>
+<th class="px-6 py-4 font-semibold">Mfg Date</th>
+<th class="px-6 py-4 font-semibold">Status</th>
+<th class="px-6 py-4 font-semibold text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-transparent"> <!-- No line rule for rows, using background shifts -->
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-3.5 text-center">
+<input class="rounded-[2px] border-outline-variant text-primary focus:ring-primary w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" type="checkbox"/>
+</td>
+<td class="px-6 py-3.5 font-label font-bold text-on-surface">N123AP</td>
+<td class="px-6 py-3.5 text-on-surface-variant">A320neo</td>
+<td class="px-6 py-3.5 text-on-surface-variant">186</td>
+<td class="px-6 py-3.5 text-on-surface-variant">Airbus</td>
+<td class="px-6 py-3.5 text-on-surface-variant">Oct 2021</td>
+<td class="px-6 py-3.5">
+<span class="inline-flex items-center px-2 py-0.5 rounded-DEFAULT bg-tertiary-fixed text-on-tertiary-fixed font-label text-[10px] font-bold uppercase tracking-wide">Active</span>
+</td>
+<td class="px-6 py-3.5 text-right">
+<button class="text-on-surface-variant hover:text-on-surface p-1 rounded-DEFAULT hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 (Alternating subtle bg) -->
+<tr class="bg-surface-container-low/50 hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-3.5 text-center">
+<input class="rounded-[2px] border-outline-variant text-primary focus:ring-primary w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" type="checkbox"/>
+</td>
+<td class="px-6 py-3.5 font-label font-bold text-on-surface">N456AP</td>
+<td class="px-6 py-3.5 text-on-surface-variant">737 MAX 8</td>
+<td class="px-6 py-3.5 text-on-surface-variant">178</td>
+<td class="px-6 py-3.5 text-on-surface-variant">Boeing</td>
+<td class="px-6 py-3.5 text-on-surface-variant">Mar 2020</td>
+<td class="px-6 py-3.5">
+<span class="inline-flex items-center px-2 py-0.5 rounded-DEFAULT bg-error-container text-on-error-container font-label text-[10px] font-bold uppercase tracking-wide">Maintenance</span>
+</td>
+<td class="px-6 py-3.5 text-right">
+<button class="text-on-surface-variant hover:text-on-surface p-1 rounded-DEFAULT hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-3.5 text-center">
+<input class="rounded-[2px] border-outline-variant text-primary focus:ring-primary w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" type="checkbox"/>
+</td>
+<td class="px-6 py-3.5 font-label font-bold text-on-surface">N789AP</td>
+<td class="px-6 py-3.5 text-on-surface-variant">A350-900</td>
+<td class="px-6 py-3.5 text-on-surface-variant">315</td>
+<td class="px-6 py-3.5 text-on-surface-variant">Airbus</td>
+<td class="px-6 py-3.5 text-on-surface-variant">Jan 2023</td>
+<td class="px-6 py-3.5">
+<span class="inline-flex items-center px-2 py-0.5 rounded-DEFAULT bg-tertiary-fixed text-on-tertiary-fixed font-label text-[10px] font-bold uppercase tracking-wide">Active</span>
+</td>
+<td class="px-6 py-3.5 text-right">
+<button class="text-on-surface-variant hover:text-on-surface p-1 rounded-DEFAULT hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 (Alternating subtle bg) -->
+<tr class="bg-surface-container-low/50 hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-3.5 text-center">
+<input class="rounded-[2px] border-outline-variant text-primary focus:ring-primary w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" type="checkbox"/>
+</td>
+<td class="px-6 py-3.5 font-label font-bold text-on-surface">N234AP</td>
+<td class="px-6 py-3.5 text-on-surface-variant">A320neo</td>
+<td class="px-6 py-3.5 text-on-surface-variant">186</td>
+<td class="px-6 py-3.5 text-on-surface-variant">Airbus</td>
+<td class="px-6 py-3.5 text-on-surface-variant">Nov 2021</td>
+<td class="px-6 py-3.5">
+<span class="inline-flex items-center px-2 py-0.5 rounded-DEFAULT bg-tertiary-fixed text-on-tertiary-fixed font-label text-[10px] font-bold uppercase tracking-wide">Active</span>
+</td>
+<td class="px-6 py-3.5 text-right">
+<button class="text-on-surface-variant hover:text-on-surface p-1 rounded-DEFAULT hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-6 py-3.5 text-center">
+<input class="rounded-[2px] border-outline-variant text-primary focus:ring-primary w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" type="checkbox"/>
+</td>
+<td class="px-6 py-3.5 font-label font-bold text-on-surface">N567AP</td>
+<td class="px-6 py-3.5 text-on-surface-variant">787-9 Dreamliner</td>
+<td class="px-6 py-3.5 text-on-surface-variant">290</td>
+<td class="px-6 py-3.5 text-on-surface-variant">Boeing</td>
+<td class="px-6 py-3.5 text-on-surface-variant">Jul 2019</td>
+<td class="px-6 py-3.5">
+<span class="inline-flex items-center px-2 py-0.5 rounded-DEFAULT bg-error-container text-on-error-container font-label text-[10px] font-bold uppercase tracking-wide">AOG</span>
+</td>
+<td class="px-6 py-3.5 text-right">
+<button class="text-on-surface-variant hover:text-on-surface p-1 rounded-DEFAULT hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Side Rail: Analytics & Context (Asymmetric Layout) -->
+<aside class="w-80 flex flex-col gap-6">
+<!-- KPI Card 1: Fleet Health -->
+<div class="bg-surface-container-low rounded-lg p-5 flex flex-col gap-4">
+<div class="flex justify-between items-start">
+<h3 class="font-headline font-bold text-on-surface text-sm">Fleet Health Status</h3>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-[20px]">open_in_new</span>
+</button>
+</div>
+<div class="flex items-end gap-2">
+<span class="font-headline font-bold text-4xl text-on-surface tracking-tighter">84</span>
+<span class="font-label font-bold text-on-surface-variant text-sm mb-1">%</span>
+</div>
+<div class="h-2 w-full bg-surface-container-high rounded-full overflow-hidden flex">
+<div class="h-full bg-tertiary-fixed w-[84%]"></div>
+<div class="h-full bg-error-container w-[16%]"></div>
+</div>
+<div class="flex justify-between font-body text-xs mt-1">
+<div class="flex items-center gap-1.5">
+<div class="w-2 h-2 rounded-sm bg-tertiary-fixed"></div>
+<span class="text-on-surface-variant">Operational (142)</span>
+</div>
+<div class="flex items-center gap-1.5">
+<div class="w-2 h-2 rounded-sm bg-error-container"></div>
+<span class="text-on-surface-variant">Grounded (27)</span>
+</div>
+</div>
+</div>
+<!-- KPI Card 2: Age Distribution -->
+<div class="bg-surface-container-lowest border border-outline-variant/15 rounded-lg p-5 flex flex-col gap-4 shadow-[0_20px_40px_-10px_rgba(25,28,30,0.04)]">
+<h3 class="font-headline font-bold text-on-surface text-sm">Age Distribution</h3>
+<!-- Faux Bar Chart utilizing background colors instead of images/SVG -->
+<div class="h-32 flex items-end gap-2 pt-4">
+<!-- Bar 1 -->
+<div class="flex-1 flex flex-col items-center gap-2 group">
+<div class="w-full bg-surface-container-high group-hover:bg-primary-fixed transition-colors rounded-t-sm h-[80%] relative">
+<span class="absolute -top-6 left-1/2 -translate-x-1/2 font-label text-[10px] font-bold text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">45</span>
+</div>
+<span class="font-label text-[10px] text-on-surface-variant">0-5y</span>
+</div>
+<!-- Bar 2 -->
+<div class="flex-1 flex flex-col items-center gap-2 group">
+<div class="w-full bg-surface-container-high group-hover:bg-primary-fixed transition-colors rounded-t-sm h-[100%] relative">
+<span class="absolute -top-6 left-1/2 -translate-x-1/2 font-label text-[10px] font-bold text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">62</span>
+</div>
+<span class="font-label text-[10px] text-on-surface-variant">6-10y</span>
+</div>
+<!-- Bar 3 -->
+<div class="flex-1 flex flex-col items-center gap-2 group">
+<div class="w-full bg-surface-container-high group-hover:bg-primary-fixed transition-colors rounded-t-sm h-[60%] relative">
+<span class="absolute -top-6 left-1/2 -translate-x-1/2 font-label text-[10px] font-bold text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">38</span>
+</div>
+<span class="font-label text-[10px] text-on-surface-variant">11-15y</span>
+</div>
+<!-- Bar 4 -->
+<div class="flex-1 flex flex-col items-center gap-2 group">
+<div class="w-full bg-surface-container-high group-hover:bg-primary-fixed transition-colors rounded-t-sm h-[30%] relative">
+<span class="absolute -top-6 left-1/2 -translate-x-1/2 font-label text-[10px] font-bold text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">24</span>
+</div>
+<span class="font-label text-[10px] text-on-surface-variant">15y+</span>
+</div>
+</div>
+<div class="pt-4 border-t border-surface-container-high/50 flex justify-between items-center mt-2">
+<span class="font-body text-xs text-on-surface-variant">Avg Fleet Age</span>
+<span class="font-label font-bold text-sm text-on-surface">8.4 yrs</span>
+</div>
+</div>
+<!-- Quick Action Context (e.g. recent alerts) -->
+<div class="bg-surface-container-low rounded-lg p-5 flex flex-col gap-3 flex-1">
+<h3 class="font-headline font-bold text-on-surface text-sm mb-1">Maintenance Alerts</h3>
+<div class="flex items-start gap-3 p-3 bg-surface-container-lowest rounded-md border border-outline-variant/10">
+<span class="material-symbols-outlined text-error text-[20px] mt-0.5">warning</span>
+<div>
+<p class="font-label text-xs font-bold text-on-surface">N567AP • Engine Sync</p>
+<p class="font-body text-[11px] text-on-surface-variant mt-0.5">AOG declared at LHR. Part requested.</p>
+</div>
+</div>
+<div class="flex items-start gap-3 p-3 hover:bg-surface-container-high/50 rounded-md transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px] mt-0.5">info</span>
+<div>
+<p class="font-label text-xs font-bold text-on-surface">N123AP • C-Check Due</p>
+<p class="font-body text-[11px] text-on-surface-variant mt-0.5">Scheduled in 14 days (MIA facility).</p>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</main>
+</body></html>

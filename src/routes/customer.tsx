@@ -7,6 +7,16 @@ import { toast } from "sonner"
 import { TravelerShell } from "@/components/traveler-shell"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { getCurrentUserFn, logoutFn } from "@/lib/auth"
 import { formatCurrency, formatDate, formatDateTime, titleCaseStatus } from "@/lib/format"
 import { type FlightOption, getCustomerDashboardFn, purchaseTicketFn, searchFlightsFn, submitReviewFn } from "@/lib/queries"
@@ -230,20 +240,20 @@ function FlightsSection({
         <div className="rounded-lg bg-white p-6 shadow-sm">
           <form className="grid gap-4 md:grid-cols-[1fr_1fr_180px_180px_auto] md:items-end" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); searchForm.handleSubmit() }}>
             <div className="space-y-1.5">
-              <label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">From</label>
-              <searchForm.Field name="source">{(field: any) => <input className="w-full rounded bg-slate-50 px-4 py-3 text-sm text-slate-950 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} placeholder="City or airport" value={field.state.value} />}</searchForm.Field>
+              <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">From</Label>
+              <searchForm.Field name="source">{(field: any) => <Input className="rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} placeholder="City or airport" value={field.state.value} />}</searchForm.Field>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">To</label>
-              <searchForm.Field name="destination">{(field: any) => <input className="w-full rounded bg-slate-50 px-4 py-3 text-sm text-slate-950 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-300" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} placeholder="City or airport" value={field.state.value} />}</searchForm.Field>
+              <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">To</Label>
+              <searchForm.Field name="destination">{(field: any) => <Input className="rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} placeholder="City or airport" value={field.state.value} />}</searchForm.Field>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">Departure</label>
-              <searchForm.Field name="departureDate">{(field: any) => <input className="w-full rounded bg-slate-50 px-4 py-3 text-sm text-slate-950 focus:outline-none focus:ring-1 focus:ring-slate-300" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} type="date" value={field.state.value} />}</searchForm.Field>
+              <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">Departure</Label>
+              <searchForm.Field name="departureDate">{(field: any) => <Input className="rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} type="date" value={field.state.value} />}</searchForm.Field>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">Return</label>
-              <searchForm.Field name="returnDate">{(field: any) => <input className="w-full rounded bg-slate-50 px-4 py-3 text-sm text-slate-950 focus:outline-none focus:ring-1 focus:ring-slate-300" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} type="date" value={field.state.value} />}</searchForm.Field>
+              <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">Return</Label>
+              <searchForm.Field name="returnDate">{(field: any) => <Input className="rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} type="date" value={field.state.value} />}</searchForm.Field>
             </div>
             <Button className="rounded-lg bg-slate-950 text-white hover:bg-slate-800" disabled={searchBusy} type="submit">{searchBusy ? "Searching…" : "Search"}</Button>
           </form>
@@ -266,20 +276,28 @@ function FlightsSection({
               <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); purchaseForm.handleSubmit() }}>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1.5">
-                    <label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-white/60">Name on Card</label>
-                    <purchaseForm.Field name="nameOnCard">{(field: any) => <input className="w-full rounded bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-white/30" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} value={field.state.value} />}</purchaseForm.Field>
+                    <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-white/60">Name on Card</Label>
+                    <purchaseForm.Field name="nameOnCard">{(field: any) => <Input className="rounded-lg bg-white/10 text-white placeholder:text-white/40" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} value={field.state.value} />}</purchaseForm.Field>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-white/60">Card Number</label>
-                    <purchaseForm.Field name="cardNumber">{(field: any) => <input className="w-full rounded bg-white/10 px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-1 focus:ring-white/30" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} value={field.state.value} />}</purchaseForm.Field>
+                    <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-white/60">Card Number</Label>
+                    <purchaseForm.Field name="cardNumber">{(field: any) => <Input className="rounded-lg bg-white/10 text-white placeholder:text-white/40" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} value={field.state.value} />}</purchaseForm.Field>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-white/60">Expiration</label>
-                    <purchaseForm.Field name="cardExpiration">{(field: any) => <input className="w-full rounded bg-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/30" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} type="date" value={field.state.value} />}</purchaseForm.Field>
+                    <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-white/60">Expiration</Label>
+                    <purchaseForm.Field name="cardExpiration">{(field: any) => <Input className="rounded-lg bg-white/10 text-white" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} type="date" value={field.state.value} />}</purchaseForm.Field>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-white/60">Card Type</label>
-                    <purchaseForm.Field name="cardType">{(field: any) => <select className="w-full rounded bg-white/10 px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/30" onChange={(e: any) => field.handleChange(e.target.value)} value={field.state.value}><option value="credit">Credit</option><option value="debit">Debit</option></select>}</purchaseForm.Field>
+                    <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-white/60">Card Type</Label>
+                    <purchaseForm.Field name="cardType">{(field: any) => (
+                      <Select onValueChange={(v) => field.handleChange(v ?? field.state.value)} value={field.state.value}>
+                        <SelectTrigger className="w-full rounded-lg bg-white/10 text-white"><SelectValue placeholder="Select type" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="credit">Credit</SelectItem>
+                          <SelectItem value="debit">Debit</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}</purchaseForm.Field>
                   </div>
                 </div>
                 <div className="flex gap-3">
@@ -347,9 +365,9 @@ function FlightsSection({
             )}
           </div>
           <div className="mt-6 text-center">
-            <button className="flex items-center justify-center gap-1 text-sm font-medium text-slate-500 transition-colors hover:text-slate-950">
+            <Button className="text-slate-500 hover:text-slate-950" size="sm" variant="ghost">
               Load more history <Star className="size-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </section>
@@ -464,11 +482,12 @@ function ReviewComposer({ flight, isSubmitting, onSubmit }: {
       </form.Field>
       <form.Field name="comment">
         {(field: any) => (
-          <textarea
-            className="mb-4 h-24 w-full resize-none rounded border border-slate-200 bg-white p-3 text-sm text-slate-950 placeholder-slate-400 focus:border-slate-950 focus:outline-none focus:ring-0"
+          <Textarea
+            className="mb-4 resize-none"
             onBlur={field.handleBlur}
             onChange={(e) => field.handleChange(e.target.value)}
             placeholder="Share your feedback on the flight, crew, or amenities..."
+            rows={3}
             value={field.state.value}
           />
         )}
@@ -538,17 +557,17 @@ function SecuritySection() {
           </h2>
           <div className="space-y-5">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-950">Current Password</label>
-              <input className="w-full border-b-2 border-slate-200 bg-white px-0 py-2 text-slate-950 transition-colors focus:border-slate-950 focus:outline-none focus:ring-0" placeholder="••••••••" type="password" />
+              <Label className="mb-1 block text-sm font-medium text-slate-950">Current Password</Label>
+              <Input className="border-b-2 border-slate-200 bg-white px-0 shadow-none focus-visible:ring-0" placeholder="••••••••" type="password" />
             </div>
             <div className="grid gap-6 md:grid-cols-2">
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-950">New Password</label>
-                <input className="w-full border-b-2 border-slate-200 bg-white px-0 py-2 text-slate-950 transition-colors focus:border-slate-950 focus:outline-none focus:ring-0" placeholder="Enter new password" type="password" />
+                <Label className="mb-1 block text-sm font-medium text-slate-950">New Password</Label>
+                <Input className="border-b-2 border-slate-200 bg-white px-0 shadow-none focus-visible:ring-0" placeholder="Enter new password" type="password" />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-950">Confirm New Password</label>
-                <input className="w-full border-b-2 border-slate-200 bg-white px-0 py-2 text-slate-950 transition-colors focus:border-slate-950 focus:outline-none focus:ring-0" placeholder="Confirm new password" type="password" />
+                <Label className="mb-1 block text-sm font-medium text-slate-950">Confirm New Password</Label>
+                <Input className="border-b-2 border-slate-200 bg-white px-0 shadow-none focus-visible:ring-0" placeholder="Confirm new password" type="password" />
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-4">

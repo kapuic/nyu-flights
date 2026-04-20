@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AeroPrecision - Flight Search</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary-fixed-variant": "#3a485b",
+                      "surface-container-high": "#e6e8ea",
+                      "on-surface": "#191c1e",
+                      "error": "#ba1a1a",
+                      "surface-container-low": "#f2f4f6",
+                      "error-container": "#ffdad6",
+                      "tertiary-fixed": "#cde5ff",
+                      "inverse-primary": "#bec6e0",
+                      "primary": "#000000",
+                      "inverse-on-surface": "#eff1f3",
+                      "secondary-fixed": "#d5e3fc",
+                      "on-tertiary-fixed-variant": "#004b74",
+                      "on-error": "#ffffff",
+                      "surface-bright": "#f7f9fb",
+                      "secondary": "#515f74",
+                      "secondary-container": "#d5e3fc",
+                      "on-background": "#191c1e",
+                      "on-primary-fixed-variant": "#3f465c",
+                      "on-surface-variant": "#45464d",
+                      "on-tertiary-container": "#3d89c3",
+                      "inverse-surface": "#2d3133",
+                      "outline": "#76777d",
+                      "on-tertiary-fixed": "#001d32",
+                      "outline-variant": "#c6c6cd",
+                      "background": "#f7f9fb",
+                      "primary-container": "#131b2e",
+                      "tertiary-container": "#001d32",
+                      "on-primary-fixed": "#131b2e",
+                      "surface-tint": "#565e74",
+                      "on-secondary": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "tertiary": "#000000",
+                      "on-error-container": "#93000a",
+                      "on-secondary-container": "#57657a",
+                      "on-primary-container": "#7c839b",
+                      "on-tertiary": "#ffffff",
+                      "primary-fixed": "#dae2fd",
+                      "on-secondary-fixed": "#0d1c2e",
+                      "surface-variant": "#e0e3e5",
+                      "surface-dim": "#d8dadc",
+                      "surface-container-highest": "#e0e3e5",
+                      "primary-fixed-dim": "#bec6e0",
+                      "tertiary-fixed-dim": "#94ccff",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary-fixed-dim": "#b9c7df",
+                      "surface": "#f7f9fb",
+                      "surface-container": "#eceef0"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "fontFamily": {
+                      "headline": ["Manrope", "sans-serif"],
+                      "body": ["Inter", "sans-serif"],
+                      "label": ["Inter", "sans-serif"]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4, h5, h6, .font-headline { font-family: 'Manrope', sans-serif; letter-spacing: -0.02em; }
+        .text-display-lg { font-size: 3.5rem; line-height: 1.1; }
+        .text-label-sm { font-size: 0.6875rem; letter-spacing: 0.05em; text-transform: uppercase; }
+        .shadow-ambient { box-shadow: 0 20px 40px -10px rgba(25, 28, 30, 0.08); }
+    </style>
+</head>
+<body class="bg-surface text-on-surface antialiased min-h-screen flex flex-col pt-16 pb-20 md:pb-0">
+<!-- TopNavBar (Web) -->
+<header class="fixed top-0 w-full z-50 bg-slate-50 dark:bg-slate-950 font-manrope tracking-tight font-semibold hidden md:block">
+<div class="flex justify-between items-center px-8 h-16 w-full max-w-screen-2xl mx-auto">
+<div class="text-xl font-bold tracking-tighter text-slate-900 dark:text-slate-50 flex items-center gap-2">
+<span class="material-symbols-outlined" data-icon="flight" data-weight="fill" style="font-variation-settings: 'FILL' 1;">flight</span>
+                AeroPrecision
+            </div>
+<nav class="flex space-x-8">
+<a class="text-slate-900 dark:text-white border-b-2 border-slate-900 dark:border-white pb-1 active:opacity-80 transition-all duration-200" href="#">Explore</a>
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-900 dark:hover:text-white transition-colors" href="#">Bookings</a>
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-900 dark:hover:text-white transition-colors" href="#">Support</a>
+</nav>
+<div class="flex items-center space-x-4">
+<a class="text-slate-900 dark:text-slate-50 font-medium hover:opacity-80 transition-opacity" href="#">Sign In</a>
+<a class="bg-primary text-on-primary px-4 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity bg-gradient-to-b from-primary to-primary-container" href="#">Join</a>
+</div>
+</div>
+<div class="bg-slate-200/10 dark:bg-slate-800/10 h-[1px] w-full"></div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow w-full max-w-screen-2xl mx-auto px-4 md:px-8 py-8 md:py-12 flex flex-col gap-12">
+<!-- Hero Search Area -->
+<section class="bg-surface-container-low rounded-xl p-8 md:p-12 relative overflow-hidden">
+<div class="relative z-10 max-w-4xl mx-auto text-center md:text-left">
+<h1 class="text-display-lg font-headline font-bold text-on-surface mb-4">Where to next?</h1>
+<p class="text-lg text-on-surface-variant font-body mb-8">Precision routing for the modern traveler.</p>
+<!-- Search Box Component -->
+<div class="bg-surface-container-lowest rounded-lg p-2 md:p-4 shadow-ambient w-full flex flex-col md:flex-row items-center gap-2 md:gap-4 relative z-20">
+<div class="flex-1 w-full border-b-2 border-surface-container md:border-b-0 md:border-r-2 md:border-surface-container pb-2 md:pb-0 px-2 md:px-4">
+<label class="block text-label-sm text-on-surface-variant mb-1">From</label>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline" data-icon="flight_takeoff">flight_takeoff</span>
+<input class="w-full bg-transparent border-none text-on-surface font-body font-medium focus:ring-0 focus:outline-none placeholder-outline-variant py-1" placeholder="JFK - New York" type="text"/>
+</div>
+</div>
+<button class="bg-surface-container-high rounded-full p-2 text-on-surface-variant hover:bg-surface-variant transition-colors z-30 transform -rotate-90 md:rotate-0 my-[-16px] md:my-0 md:mx-[-24px] relative">
+<span class="material-symbols-outlined" data-icon="swap_horiz">swap_horiz</span>
+</button>
+<div class="flex-1 w-full border-b-2 border-surface-container md:border-b-0 md:border-r-2 md:border-surface-container pb-2 md:pb-0 pt-4 md:pt-0 px-2 md:px-4">
+<label class="block text-label-sm text-on-surface-variant mb-1">To</label>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline" data-icon="flight_land">flight_land</span>
+<input class="w-full bg-transparent border-none text-on-surface font-body font-medium focus:ring-0 focus:outline-none placeholder-outline-variant py-1" placeholder="LHR - London" type="text"/>
+</div>
+</div>
+<div class="flex-1 w-full pt-4 md:pt-0 px-2 md:px-4">
+<label class="block text-label-sm text-on-surface-variant mb-1">Dates</label>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline" data-icon="calendar_today">calendar_today</span>
+<input class="w-full bg-transparent border-none text-on-surface font-body font-medium focus:ring-0 focus:outline-none placeholder-outline-variant py-1 cursor-pointer" readonly="" type="text" value="Oct 12 - Oct 26"/>
+</div>
+</div>
+<button class="w-full md:w-auto bg-primary text-on-primary px-8 py-4 rounded-lg font-medium hover:opacity-90 transition-opacity bg-gradient-to-b from-primary to-primary-container mt-4 md:mt-0 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" data-icon="search" data-weight="fill" style="font-variation-settings: 'FILL' 1;">search</span>
+                        Search
+                    </button>
+</div>
+<div class="flex flex-wrap gap-4 mt-6 justify-center md:justify-start">
+<label class="flex items-center gap-2 cursor-pointer">
+<input checked="" class="text-primary focus:ring-primary h-4 w-4 rounded-sm border-outline-variant" name="tripType" type="radio"/>
+<span class="text-sm font-medium text-on-surface">Round Trip</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer">
+<input class="text-primary focus:ring-primary h-4 w-4 rounded-sm border-outline-variant" name="tripType" type="radio"/>
+<span class="text-sm font-medium text-on-surface-variant">One Way</span>
+</label>
+<div class="h-4 w-px bg-outline-variant mx-2 hidden md:block"></div>
+<button class="text-sm font-medium text-on-surface flex items-center gap-1 hover:text-primary transition-colors">
+                        1 Passenger <span class="material-symbols-outlined text-sm" data-icon="expand_more">expand_more</span>
+</button>
+<button class="text-sm font-medium text-on-surface flex items-center gap-1 hover:text-primary transition-colors">
+                        Economy <span class="material-symbols-outlined text-sm" data-icon="expand_more">expand_more</span>
+</button>
+</div>
+</div>
+<!-- Decorative background element -->
+<div class="absolute right-0 bottom-0 opacity-5 pointer-events-none transform translate-x-1/4 translate-y-1/4 hidden md:block">
+<span class="material-symbols-outlined" data-icon="flight" style="font-size: 400px; line-height: 1;">flight</span>
+</div>
+</section>
+<!-- Search Results Area (Editorial Asymmetry) -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
+<!-- Filters Sidebar -->
+<aside class="lg:col-span-3 space-y-8 hidden md:block">
+<div>
+<h3 class="font-headline font-bold text-on-surface text-lg mb-4">Filters</h3>
+<div class="space-y-6">
+<!-- Stops -->
+<div>
+<h4 class="text-sm font-medium text-on-surface mb-3">Stops</h4>
+<div class="space-y-2">
+<label class="flex items-center justify-between cursor-pointer group">
+<div class="flex items-center gap-2">
+<input checked="" class="rounded-sm text-primary focus:ring-primary h-4 w-4 border-outline-variant" type="checkbox"/>
+<span class="text-sm text-on-surface-variant group-hover:text-on-surface transition-colors">Nonstop</span>
+</div>
+<span class="text-xs text-on-surface-variant">$450</span>
+</label>
+<label class="flex items-center justify-between cursor-pointer group">
+<div class="flex items-center gap-2">
+<input class="rounded-sm text-primary focus:ring-primary h-4 w-4 border-outline-variant" type="checkbox"/>
+<span class="text-sm text-on-surface-variant group-hover:text-on-surface transition-colors">1 Stop</span>
+</div>
+<span class="text-xs text-on-surface-variant">$380</span>
+</label>
+</div>
+</div>
+<!-- Airlines -->
+<div>
+<h4 class="text-sm font-medium text-on-surface mb-3">Airlines</h4>
+<div class="space-y-2">
+<label class="flex items-center justify-between cursor-pointer group">
+<div class="flex items-center gap-2">
+<input checked="" class="rounded-sm text-primary focus:ring-primary h-4 w-4 border-outline-variant" type="checkbox"/>
+<span class="text-sm text-on-surface-variant group-hover:text-on-surface transition-colors">AeroPrecision</span>
+</div>
+</label>
+<label class="flex items-center justify-between cursor-pointer group">
+<div class="flex items-center gap-2">
+<input checked="" class="rounded-sm text-primary focus:ring-primary h-4 w-4 border-outline-variant" type="checkbox"/>
+<span class="text-sm text-on-surface-variant group-hover:text-on-surface transition-colors">Global Airways</span>
+</div>
+</label>
+<label class="flex items-center justify-between cursor-pointer group">
+<div class="flex items-center gap-2">
+<input class="rounded-sm text-primary focus:ring-primary h-4 w-4 border-outline-variant" type="checkbox"/>
+<span class="text-sm text-on-surface-variant group-hover:text-on-surface transition-colors">SkyNet Connect</span>
+</div>
+</label>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- Results List -->
+<div class="lg:col-span-9 space-y-6">
+<div class="flex justify-between items-end mb-6">
+<div>
+<h2 class="font-headline font-bold text-2xl text-on-surface">New York to London</h2>
+<p class="text-sm text-on-surface-variant">Oct 12 - Oct 26 • 1 Adult • Economy</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-sm text-on-surface-variant">Sort by:</span>
+<button class="text-sm font-medium text-on-surface flex items-center gap-1">
+                            Best <span class="material-symbols-outlined text-sm" data-icon="expand_more">expand_more</span>
+</button>
+</div>
+</div>
+<!-- Flight Card 1 -->
+<article class="bg-surface-container-lowest rounded-lg p-6 flex flex-col md:flex-row items-center gap-6 shadow-[0_4px_16px_rgba(0,0,0,0.02)] transition-transform hover:-translate-y-1 duration-300">
+<div class="flex-1 w-full space-y-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="h-6 w-6 rounded-sm bg-primary-container flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-xs" data-icon="flight">flight</span>
+</div>
+<span class="text-sm font-medium text-on-surface">AeroPrecision AP-102</span>
+</div>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant px-2 py-1 rounded-sm text-label-sm font-bold tracking-widest">ON TIME</span>
+</div>
+<div class="flex items-center justify-between w-full">
+<div class="text-left">
+<div class="text-2xl font-headline font-bold text-on-surface">18:30</div>
+<div class="text-sm text-on-surface-variant font-medium">JFK</div>
+</div>
+<div class="flex-1 px-8 flex flex-col items-center">
+<div class="text-xs text-on-surface-variant mb-1">7h 10m</div>
+<div class="w-full flex items-center">
+<div class="h-[2px] bg-outline-variant flex-1"></div>
+<span class="material-symbols-outlined text-outline-variant text-sm mx-2 transform rotate-90" data-icon="flight">flight</span>
+<div class="h-[2px] bg-outline-variant flex-1"></div>
+</div>
+<div class="text-xs text-on-surface-variant mt-1">Nonstop</div>
+</div>
+<div class="text-right">
+<div class="text-2xl font-headline font-bold text-on-surface flex items-start justify-end gap-1">06:40 <sup class="text-xs text-on-surface-variant mt-2">+1</sup></div>
+<div class="text-sm text-on-surface-variant font-medium">LHR</div>
+</div>
+</div>
+</div>
+<!-- Vertical Divider (Desktop) -->
+<div class="hidden md:block w-[1px] h-24 bg-surface-container-high mx-2"></div>
+<!-- Horizontal Divider (Mobile) -->
+<div class="md:hidden w-full h-[1px] bg-surface-container-high my-2"></div>
+<div class="w-full md:w-auto flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-4 min-w-[140px]">
+<div class="text-left md:text-right">
+<div class="text-display-lg text-3xl font-headline font-bold text-on-surface">$450</div>
+<div class="text-xs text-on-surface-variant">Round trip</div>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity whitespace-nowrap">Select</button>
+</div>
+</article>
+<!-- Flight Card 2 -->
+<article class="bg-surface-container-lowest rounded-lg p-6 flex flex-col md:flex-row items-center gap-6 shadow-[0_4px_16px_rgba(0,0,0,0.02)] transition-transform hover:-translate-y-1 duration-300">
+<div class="flex-1 w-full space-y-4">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="h-6 w-6 rounded-sm bg-surface-container-high flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined text-xs" data-icon="flight">flight</span>
+</div>
+<span class="text-sm font-medium text-on-surface">Global Airways GA-44</span>
+</div>
+<span class="bg-surface-container-high text-on-surface-variant px-2 py-1 rounded-sm text-label-sm font-bold tracking-widest flex items-center gap-1">
+<span class="material-symbols-outlined text-[10px]" data-icon="info">info</span> 3 SEATS LEFT
+                            </span>
+</div>
+<div class="flex items-center justify-between w-full">
+<div class="text-left">
+<div class="text-2xl font-headline font-bold text-on-surface">21:00</div>
+<div class="text-sm text-on-surface-variant font-medium">JFK</div>
+</div>
+<div class="flex-1 px-8 flex flex-col items-center">
+<div class="text-xs text-on-surface-variant mb-1">6h 55m</div>
+<div class="w-full flex items-center">
+<div class="h-[2px] bg-outline-variant flex-1"></div>
+<span class="material-symbols-outlined text-outline-variant text-sm mx-2 transform rotate-90" data-icon="flight">flight</span>
+<div class="h-[2px] bg-outline-variant flex-1"></div>
+</div>
+<div class="text-xs text-on-surface-variant mt-1">Nonstop</div>
+</div>
+<div class="text-right">
+<div class="text-2xl font-headline font-bold text-on-surface flex items-start justify-end gap-1">08:55 <sup class="text-xs text-on-surface-variant mt-2">+1</sup></div>
+<div class="text-sm text-on-surface-variant font-medium">LHR</div>
+</div>
+</div>
+</div>
+<div class="hidden md:block w-[1px] h-24 bg-surface-container-high mx-2"></div>
+<div class="md:hidden w-full h-[1px] bg-surface-container-high my-2"></div>
+<div class="w-full md:w-auto flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-4 min-w-[140px]">
+<div class="text-left md:text-right">
+<div class="text-display-lg text-3xl font-headline font-bold text-on-surface">$520</div>
+<div class="text-xs text-on-surface-variant">Round trip</div>
+</div>
+<button class="bg-surface-container-high text-on-surface px-6 py-2 rounded-lg font-medium hover:bg-surface-variant transition-colors whitespace-nowrap">Select</button>
+</div>
+</article>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 pb-safe bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] md:hidden">
+<a class="flex flex-col items-center justify-center text-slate-900 dark:text-white font-bold opacity-80 active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="search" data-weight="fill" style="font-variation-settings: 'FILL' 1;">search</span>
+<span class="font-inter text-[10px] uppercase tracking-widest mt-1">Search</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 opacity-80" href="#">
+<span class="material-symbols-outlined" data-icon="luggage">luggage</span>
+<span class="font-inter text-[10px] uppercase tracking-widest mt-1">Trips</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 opacity-80" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="font-inter text-[10px] uppercase tracking-widest mt-1">Wallet</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 opacity-80" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-inter text-[10px] uppercase tracking-widest mt-1">Profile</span>
+</a>
+</nav>
+</body></html>

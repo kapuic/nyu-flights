@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AeroPrecision - Flight Selection</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary": "#515f74",
+                        "on-background": "#191c1e",
+                        "secondary-container": "#d5e3fc",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "on-secondary-container": "#57657a",
+                        "primary-container": "#131b2e",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-tertiary-fixed": "#001d32",
+                        "on-surface-variant": "#45464d",
+                        "inverse-surface": "#2d3133",
+                        "surface-dim": "#d8dadc",
+                        "surface": "#f7f9fb",
+                        "primary-fixed-dim": "#bec6e0",
+                        "primary-fixed": "#dae2fd",
+                        "error-container": "#ffdad6",
+                        "primary": "#000000",
+                        "tertiary": "#000000",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-container-high": "#e6e8ea",
+                        "on-primary": "#ffffff",
+                        "inverse-primary": "#bec6e0",
+                        "secondary-fixed": "#d5e3fc",
+                        "on-tertiary-container": "#3d89c3",
+                        "on-secondary": "#ffffff",
+                        "on-primary-container": "#7c839b",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "surface-variant": "#e0e3e5",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "outline": "#76777d",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "outline-variant": "#c6c6cd",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-container": "#001d32",
+                        "surface-container": "#eceef0",
+                        "on-primary-fixed": "#131b2e",
+                        "background": "#f7f9fb",
+                        "surface-bright": "#f7f9fb",
+                        "on-tertiary": "#ffffff",
+                        "surface-tint": "#565e74",
+                        "on-error": "#ffffff",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed": "#cde5ff",
+                        "on-surface": "#191c1e",
+                        "inverse-on-surface": "#eff1f3"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4, h5, h6, .font-headline { font-family: 'Manrope', sans-serif; letter-spacing: -0.02em; }
+        .text-label-sm { font-size: 0.6875rem; letter-spacing: 0.05em; text-transform: uppercase; }
+        .text-display-lg { font-size: 3.5rem; line-height: 1.1; }
+        .text-headline-sm { font-size: 1.5rem; line-height: 1.2; }
+        
+        /* Signature Gradient for CTAs in Traveler mode */
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, #000000 0%, #131b2e 100%);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background antialiased selection:bg-primary-container selection:text-on-primary-container pb-24 md:pb-0">
+<!-- Top Navigation (Web) / Hidden on Mobile -->
+<nav class="hidden md:flex justify-between items-center px-8 h-16 w-full max-w-screen-2xl mx-auto bg-slate-50 border-b-0 sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<span class="text-xl font-bold tracking-tighter text-slate-900 font-headline">AeroPrecision</span>
+<div class="hidden lg:flex items-center gap-6">
+<a class="text-slate-500 font-medium font-label hover:text-slate-900 transition-colors" href="#">Explore</a>
+<a class="text-slate-900 border-b-2 border-slate-900 pb-1 font-semibold font-label" href="#">Bookings</a>
+<a class="text-slate-500 font-medium font-label hover:text-slate-900 transition-colors" href="#">Support</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-sm font-body text-on-surface-variant flex items-center gap-1 cursor-pointer hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm">login</span> Sign in for faster booking
+            </span>
+<button class="font-body text-sm font-medium text-slate-900 hover:text-slate-600 px-4 py-2 transition-colors">Sign In</button>
+<button class="bg-gradient-primary text-white font-body text-sm font-medium px-4 py-2 rounded shadow-sm hover:opacity-90 transition-opacity">Join</button>
+</div>
+</nav>
+<div class="hidden md:block bg-slate-200/10 h-[1px] w-full"></div>
+<main class="max-w-screen-xl mx-auto px-4 md:px-8 py-8 md:py-12">
+<!-- Header & Route -->
+<header class="mb-12">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-4">
+<div>
+<p class="text-on-surface-variant font-label text-sm mb-2 flex items-center gap-2">
+<span>Round Trip</span>
+<span class="material-symbols-outlined text-xs">circle</span>
+<span>1 Passenger</span>
+<span class="material-symbols-outlined text-xs">circle</span>
+<span>Economy</span>
+</p>
+<h1 class="text-headline-sm font-headline text-on-background flex items-center gap-4">
+<span>New York (JFK)</span>
+<span class="material-symbols-outlined text-primary-container">sync_alt</span>
+<span>London (LHR)</span>
+</h1>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 bg-surface-container-high text-on-surface px-4 py-2 rounded font-body text-sm hover:bg-surface-dim transition-colors">
+<span class="material-symbols-outlined text-sm">edit</span> Edit Search
+                    </button>
+</div>
+</div>
+</header>
+<!-- Progress Indicator -->
+<div class="flex items-center mb-10 text-sm font-label w-full max-w-2xl">
+<div class="flex items-center gap-2 text-primary font-semibold">
+<div class="w-6 h-6 rounded bg-primary text-on-primary flex items-center justify-center text-xs">1</div>
+<span>Outbound</span>
+</div>
+<div class="flex-1 h-[2px] bg-primary mx-4"></div>
+<div class="flex items-center gap-2 text-on-surface font-semibold">
+<div class="w-6 h-6 rounded border-2 border-primary text-primary flex items-center justify-center text-xs">2</div>
+<span>Return</span>
+</div>
+<div class="flex-1 h-[2px] bg-surface-container-high mx-4"></div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<div class="w-6 h-6 rounded border-2 border-surface-container-high text-surface-tint flex items-center justify-center text-xs">3</div>
+<span>Review</span>
+</div>
+</div>
+<!-- Layout Grid: Selected Outbound & Return Results -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+<!-- Left Column: Summary (Span 4) -->
+<div class="lg:col-span-4 flex flex-col gap-6 sticky top-24">
+<!-- Selected Outbound Summary Card -->
+<div class="bg-surface-container-low rounded-lg p-1">
+<div class="bg-surface-container-lowest rounded-md p-6 shadow-[0_20px_40px_-10px_rgba(25,28,30,0.04)]">
+<div class="flex items-center justify-between mb-4">
+<h2 class="font-headline font-semibold text-lg text-on-background">Selected Outbound</h2>
+<button class="text-primary text-sm font-label hover:underline">Change</button>
+</div>
+<div class="flex justify-between items-start mb-4 border-b border-surface-container-high pb-4">
+<div>
+<p class="text-label-sm text-on-surface-variant mb-1">Thu, Oct 12</p>
+<p class="font-headline font-bold text-xl text-on-background">18:30</p>
+<p class="font-body text-sm text-on-surface-variant">JFK</p>
+</div>
+<div class="flex flex-col items-center justify-center px-4">
+<span class="text-xs font-body text-on-surface-variant mb-1">7h 10m</span>
+<div class="flex items-center w-16">
+<div class="h-[1px] bg-outline-variant flex-1"></div>
+<span class="material-symbols-outlined text-outline text-[16px] mx-1">flight_takeoff</span>
+<div class="h-[1px] bg-outline-variant flex-1"></div>
+</div>
+<span class="text-[10px] font-label text-on-surface-variant mt-1 uppercase tracking-wider">Non-stop</span>
+</div>
+<div class="text-right">
+<p class="text-label-sm text-on-surface-variant mb-1">Fri, Oct 13</p>
+<p class="font-headline font-bold text-xl text-on-background">06:40<sup class="text-xs text-primary">+1</sup></p>
+<p class="font-body text-sm text-on-surface-variant">LHR</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center">
+<img alt="Airline Logo" class="w-6 h-6 object-cover rounded-sm" data-alt="AeroPrecision airline tail fin logo with minimalist geometric design" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9369BQ53lQm7atuSmpfGR_tbNbvLzBNDCU6doFJk5WGuTGZLulQREBs6nQIxq2MRgAvluy4F_wwTTrihxPyFlnZ_y_Drab74oHC7MOLGRD6eYUFMl5mpRwrkrjgZlKf1wA1FGUxBdx4ayh8nv4Om0IU00UKWIxk64hT4SPb_MXf9lrWMrWrRGGO---ANLKXdLFc76rCrxTolrufpBLVppvDkYhB_1UhX8NU-99Z0WvIG4QdvI0DEtxk1MVcm8E_9JRrDQqf1wLVc"/>
+</div>
+<div>
+<p class="font-body text-sm font-medium text-on-background">AeroPrecision Flight 112</p>
+<p class="text-xs font-body text-on-surface-variant">Boeing 777-300ER</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Price Summary (Temporary) -->
+<div class="bg-surface-container-lowest rounded-lg p-6 flex items-center justify-between shadow-[0_20px_40px_-10px_rgba(25,28,30,0.04)] border border-surface-container-high/50">
+<div>
+<p class="text-label-sm text-on-surface-variant mb-1">Current Total</p>
+<p class="font-headline text-2xl font-bold text-on-background">$450</p>
+</div>
+<div class="text-right">
+<p class="text-xs font-body text-on-surface-variant">per passenger</p>
+</div>
+</div>
+</div>
+<!-- Right Column: Return Selection (Span 8) -->
+<div class="lg:col-span-8 flex flex-col gap-4">
+<div class="flex items-center justify-between mb-2">
+<h2 class="font-headline text-xl font-semibold text-on-background">Select Return Flight</h2>
+<p class="text-sm font-body text-on-surface-variant">Sun, Oct 22</p>
+</div>
+<!-- Filter Bar (Minimal) -->
+<div class="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+<button class="bg-surface-container-high text-on-surface px-4 py-2 rounded-full font-body text-sm whitespace-nowrap hover:bg-surface-dim transition-colors flex items-center gap-1">
+                        Non-stop
+                    </button>
+<button class="bg-surface-container-high text-on-surface px-4 py-2 rounded-full font-body text-sm whitespace-nowrap hover:bg-surface-dim transition-colors flex items-center gap-1">
+                        AeroPrecision Only
+                    </button>
+<button class="bg-surface-container-highest text-on-surface px-4 py-2 rounded-full font-body text-sm whitespace-nowrap hover:bg-surface-dim transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">sort</span> Sort: Recommended
+                    </button>
+</div>
+<!-- Flight Card 1 (Recommended) -->
+<div class="bg-surface-container-lowest rounded-lg overflow-hidden group hover:shadow-[0_20px_40px_-10px_rgba(25,28,30,0.08)] transition-all duration-300 relative border border-transparent hover:border-surface-container-high">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary"></div>
+<div class="p-6">
+<div class="flex flex-col md:flex-row justify-between gap-6">
+<!-- Flight Details -->
+<div class="flex-1">
+<div class="flex items-center gap-2 mb-4">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed px-2 py-0.5 rounded-sm text-label-sm font-semibold">Recommended</span>
+<span class="text-xs font-body text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-tertiary-container">eco</span> Lower CO2
+                                    </span>
+</div>
+<div class="flex justify-between items-center max-w-md">
+<div>
+<p class="font-headline font-bold text-2xl text-on-background">10:15</p>
+<p class="font-body text-sm text-on-surface-variant">LHR</p>
+</div>
+<div class="flex flex-col items-center justify-center px-4 flex-1">
+<span class="text-xs font-body text-on-surface-variant mb-1">8h 20m</span>
+<div class="flex items-center w-full">
+<div class="h-[1px] bg-outline-variant flex-1"></div>
+<span class="material-symbols-outlined text-outline text-[16px] mx-2">flight_land</span>
+<div class="h-[1px] bg-outline-variant flex-1"></div>
+</div>
+<span class="text-[10px] font-label text-on-surface-variant mt-1 uppercase tracking-wider">Non-stop</span>
+</div>
+<div class="text-right">
+<p class="font-headline font-bold text-2xl text-on-background">13:35</p>
+<p class="font-body text-sm text-on-surface-variant">JFK</p>
+</div>
+</div>
+<div class="mt-6 flex items-center gap-4 text-sm font-body text-on-surface-variant">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded bg-surface-container-high flex items-center justify-center">
+<img alt="Airline Logo" class="w-4 h-4 object-cover rounded-sm" data-alt="AeroPrecision airline tail fin logo with minimalist geometric design" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAj0FIJ1IsC8OrAysd4nRBFuPhTUhZx5y5TDgTpL7BmN7Og-x48UQ3mU4OSVAII5sbl_L9pg19phNm1NEmlWxfo_70MSz--gxW1juCR923FjCcYx5Lpq6_UO_ScTOr4LvATrRFEgCAeWNLZbohomJOPN-jmTIAECpV5aVNSiw0Cz0BmU0Hah9gswu1UflPSmS39yiUiZgfaN6moqV_eTzcJbQzV91XJF3BZPu_ruUZ2kKA67_4ZxtIuc-GQKztKFrdUYJXj1kvONbU"/>
+</div>
+<span>AeroPrecision AP-204</span>
+</div>
+<div class="w-[1px] h-4 bg-outline-variant"></div>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">star</span> 4.8</span>
+<div class="w-[1px] h-4 bg-outline-variant"></div>
+<span class="text-secondary">Few seats left</span>
+</div>
+</div>
+<!-- Pricing & Action -->
+<div class="flex flex-col justify-between items-end md:w-48 pl-6 md:border-l border-surface-container-high pt-4 md:pt-0">
+<div class="text-right mb-4">
+<p class="text-xs font-body text-on-surface-variant mb-1">from</p>
+<p class="font-headline text-3xl font-bold text-on-background">+$380</p>
+</div>
+<button class="w-full bg-gradient-primary text-white font-body text-sm font-medium px-4 py-3 rounded hover:opacity-90 transition-opacity">
+                                    Select
+                                </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Flight Card 2 -->
+<div class="bg-surface-container-lowest rounded-lg overflow-hidden group hover:shadow-[0_20px_40px_-10px_rgba(25,28,30,0.08)] transition-all duration-300 relative border border-transparent hover:border-surface-container-high mt-4">
+<div class="p-6">
+<div class="flex flex-col md:flex-row justify-between gap-6">
+<!-- Flight Details -->
+<div class="flex-1">
+<div class="flex items-center gap-2 mb-4 h-6">
+<!-- Empty space to align with card 1 -->
+</div>
+<div class="flex justify-between items-center max-w-md">
+<div>
+<p class="font-headline font-bold text-2xl text-on-background">14:00</p>
+<p class="font-body text-sm text-on-surface-variant">LHR</p>
+</div>
+<div class="flex flex-col items-center justify-center px-4 flex-1">
+<span class="text-xs font-body text-on-surface-variant mb-1">8h 15m</span>
+<div class="flex items-center w-full">
+<div class="h-[1px] bg-outline-variant flex-1"></div>
+<span class="material-symbols-outlined text-outline text-[16px] mx-2">flight_land</span>
+<div class="h-[1px] bg-outline-variant flex-1"></div>
+</div>
+<span class="text-[10px] font-label text-on-surface-variant mt-1 uppercase tracking-wider">Non-stop</span>
+</div>
+<div class="text-right">
+<p class="font-headline font-bold text-2xl text-on-background">17:15</p>
+<p class="font-body text-sm text-on-surface-variant">JFK</p>
+</div>
+</div>
+<div class="mt-6 flex items-center gap-4 text-sm font-body text-on-surface-variant">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded bg-surface-container-high flex items-center justify-center">
+<img alt="Airline Logo" class="w-4 h-4 object-cover rounded-sm" data-alt="AeroPrecision airline tail fin logo with minimalist geometric design" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD5ZXT_Qzpua3ayVlE97t64R_6P1Tc81Tu5li7AfP_cW5BAYeoYu9QaEpgIHxWoZ-58yZxNq6HtrK0VheqPWWSNOj8XNTpZudZw3bjSq8AMTXm2HSYfwj6qih8CNJn_sGulrcNv73xYxMtFfS9b81OKAATHqLDcO26UxavSD7vLeQYurwNzHtpOv88at2i_6GTbj3MCfb4woWZ8g0n2EH3iOqN-L0xCEevTXxwv4OQ2XfVakHBD5Ksputn_-XtQGvNZi4RpXYnpWJw"/>
+</div>
+<span>AeroPrecision AP-206</span>
+</div>
+<div class="w-[1px] h-4 bg-outline-variant"></div>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">star</span> 4.7</span>
+</div>
+</div>
+<!-- Pricing & Action -->
+<div class="flex flex-col justify-between items-end md:w-48 pl-6 md:border-l border-surface-container-high pt-4 md:pt-0">
+<div class="text-right mb-4">
+<p class="text-xs font-body text-on-surface-variant mb-1">from</p>
+<p class="font-headline text-3xl font-bold text-on-background">+$420</p>
+</div>
+<button class="w-full bg-surface-container-highest text-on-surface font-body text-sm font-medium px-4 py-3 rounded hover:bg-surface-dim transition-colors">
+                                    Select
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation (Mobile) / Hidden on Web -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 pb-safe bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] rounded-t-lg">
+<a class="flex flex-col items-center justify-center text-slate-400 font-inter text-[10px] uppercase tracking-widest opacity-80 hover:opacity-100 transition-opacity" href="#">
+<span class="material-symbols-outlined mb-1 text-[20px]">search</span>
+<span>Search</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-900 font-bold font-inter text-[10px] uppercase tracking-widest scale-90 duration-200" href="#">
+<span class="material-symbols-outlined mb-1 text-[20px]" style="font-variation-settings: 'FILL' 1;">luggage</span>
+<span>Trips</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 font-inter text-[10px] uppercase tracking-widest opacity-80 hover:opacity-100 transition-opacity" href="#">
+<span class="material-symbols-outlined mb-1 text-[20px]">account_balance_wallet</span>
+<span>Wallet</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 font-inter text-[10px] uppercase tracking-widest opacity-80 hover:opacity-100 transition-opacity" href="#">
+<span class="material-symbols-outlined mb-1 text-[20px]">person</span>
+<span>Profile</span>
+</a>
+</nav>
+</body></html>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Account Settings - AeroPrecision</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary": "#000000",
+                      "on-primary-fixed": "#131b2e",
+                      "primary": "#000000",
+                      "inverse-surface": "#2d3133",
+                      "on-tertiary-container": "#3d89c3",
+                      "inverse-primary": "#bec6e0",
+                      "surface-dim": "#d8dadc",
+                      "on-surface-variant": "#45464d",
+                      "on-tertiary-fixed-variant": "#004b74",
+                      "on-tertiary": "#ffffff",
+                      "secondary": "#515f74",
+                      "background": "#f7f9fb",
+                      "surface-container-low": "#f2f4f6",
+                      "secondary-fixed-dim": "#b9c7df",
+                      "on-secondary-container": "#57657a",
+                      "on-primary": "#ffffff",
+                      "on-background": "#191c1e",
+                      "surface-variant": "#e0e3e5",
+                      "secondary-fixed": "#d5e3fc",
+                      "primary-fixed-dim": "#bec6e0",
+                      "on-secondary-fixed-variant": "#3a485b",
+                      "surface": "#f7f9fb",
+                      "outline": "#76777d",
+                      "on-tertiary-fixed": "#001d32",
+                      "error": "#ba1a1a",
+                      "on-primary-container": "#7c839b",
+                      "surface-tint": "#565e74",
+                      "surface-container": "#eceef0",
+                      "on-primary-fixed-variant": "#3f465c",
+                      "error-container": "#ffdad6",
+                      "on-secondary-fixed": "#0d1c2e",
+                      "on-secondary": "#ffffff",
+                      "surface-bright": "#f7f9fb",
+                      "primary-fixed": "#dae2fd",
+                      "tertiary-fixed-dim": "#94ccff",
+                      "tertiary-container": "#001d32",
+                      "on-error": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-container-highest": "#e0e3e5",
+                      "surface-container-high": "#e6e8ea",
+                      "on-error-container": "#93000a",
+                      "tertiary-fixed": "#cde5ff",
+                      "inverse-on-surface": "#eff1f3",
+                      "primary-container": "#131b2e",
+                      "secondary-container": "#d5e3fc",
+                      "outline-variant": "#c6c6cd",
+                      "on-surface": "#191c1e"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "fontFamily": {
+                      "headline": [
+                              "Manrope", "sans-serif"
+                      ],
+                      "body": [
+                              "Inter", "sans-serif"
+                      ],
+                      "label": [
+                              "Inter", "sans-serif"
+                      ]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4, h5, h6, .font-headline { font-family: 'Manrope', sans-serif; letter-spacing: -0.02em; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .fill-icon { font-variation-settings: 'FILL' 1; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<nav class="bg-white dark:bg-slate-950 font-['Manrope'] font-bold tracking-tight text-sm docked full-width top-0 bg-slate-50 dark:bg-slate-900 flex justify-between items-center px-8 h-16 w-full max-w-screen-2xl mx-auto shadow-sm sticky z-50">
+<div class="flex items-center gap-8">
+<div class="text-lg font-black tracking-tighter text-slate-900 dark:text-slate-50">
+                AeroPrecision
+            </div>
+<div class="hidden md:flex items-center gap-6">
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors duration-200 py-5" href="#">Explore</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors duration-200 py-5" href="#">Bookings</a>
+<a class="text-slate-900 dark:text-white border-b-2 border-slate-900 dark:border-white pb-1 py-5" href="#">Support</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-slate-900 dark:text-slate-100 font-bold hover:opacity-70 transition-opacity">Sign In</button>
+<button class="bg-primary text-on-primary px-4 py-2 rounded-lg font-bold hover:opacity-90 transition-opacity bg-gradient-to-r from-primary to-primary-container">Join</button>
+</div>
+</nav>
+<div class="flex-1 flex max-w-screen-2xl mx-auto w-full">
+<!-- SideNavBar -->
+<aside class="hidden md:flex flex-col gap-2 p-4 border-r-0 bg-slate-50 dark:bg-slate-900/50 h-[calc(100vh-4rem)] w-64 rounded-none sticky top-16 bg-slate-100 dark:bg-slate-800 shrink-0">
+<div class="px-4 py-6 mb-4">
+<div class="flex items-center gap-3 mb-1">
+<img alt="Traveler Profile" class="w-10 h-10 rounded-full object-cover" data-alt="close up portrait of a man in professional attire smiling softly" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXspK0zX1r3jZyZr6LD3yNrUj4yu2tDJYPKJ2sni_EaLCD-tsw4PSvMgKrDOR1k8rXzUAS6dVXcUWvFvCYZCBzfu8v4nFui8wMmpZhGO5N5p8fy_SMbGr-F5SETP3CLIY179jxqN4Ehr3GOTey_qQiyfqQGDgTIDbX1GWvgdrZ4Yiz7wO39fmpCXNwc02nPx2ormMkqeiN7xseG-UNuEYNh0djL6pQmxUdaxG-3g-vwHT3K2kqDMoiX8UByM0loUoRb7rMAIhv9cU"/>
+<div>
+<h2 class="font-headline font-bold text-slate-900">Traveler Hub</h2>
+<p class="text-xs text-on-surface-variant font-medium">Silver Status</p>
+</div>
+</div>
+</div>
+<nav class="flex flex-col gap-1 font-['Inter'] text-sm font-medium">
+<a class="flex items-center gap-3 px-4 py-3 rounded-sm text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors" href="#">
+<span class="material-symbols-outlined">flight_takeoff</span>
+                    My Trips
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-sm text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors" href="#">
+<span class="material-symbols-outlined">credit_card</span>
+                    Payment Methods
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold rounded-sm shadow-sm scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined fill-icon">lock</span>
+                    Security
+                </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-sm text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+                    Preferences
+                </a>
+</nav>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 p-8 md:p-12 overflow-y-auto">
+<div class="max-w-3xl">
+<header class="mb-10">
+<h1 class="text-3xl font-headline font-extrabold text-on-background mb-2">Security Settings</h1>
+<p class="text-on-surface-variant text-sm font-body">Manage your account access and security preferences.</p>
+</header>
+<div class="space-y-12">
+<!-- Password Section -->
+<section class="bg-surface-container-lowest p-8 rounded-lg shadow-[0_4px_20px_-10px_rgba(25,28,30,0.05)] border-t-[4px] border-surface-container-low">
+<h2 class="text-xl font-headline font-bold text-on-background mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-outline">key</span>
+                            Change Password
+                        </h2>
+<form class="space-y-5">
+<div>
+<label class="block text-sm font-medium text-on-background mb-1">Current Password</label>
+<input class="w-full bg-surface-container-lowest border-b-2 border-surface-variant focus:border-primary focus:ring-0 px-0 py-2 transition-colors text-on-background font-body" placeholder="••••••••" type="password"/>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div>
+<label class="block text-sm font-medium text-on-background mb-1">New Password</label>
+<input class="w-full bg-surface-container-lowest border-b-2 border-surface-variant focus:border-primary focus:ring-0 px-0 py-2 transition-colors text-on-background font-body" placeholder="Enter new password" type="password"/>
+</div>
+<div>
+<label class="block text-sm font-medium text-on-background mb-1">Confirm New Password</label>
+<input class="w-full bg-surface-container-lowest border-b-2 border-surface-variant focus:border-primary focus:ring-0 px-0 py-2 transition-colors text-on-background font-body" placeholder="Confirm new password" type="password"/>
+</div>
+</div>
+<div class="pt-4 flex justify-end">
+<button class="bg-surface-container-high text-on-surface px-6 py-2.5 rounded-lg font-medium text-sm hover:bg-surface-variant transition-colors mr-3" type="button">Cancel</button>
+<button class="bg-primary text-on-primary px-6 py-2.5 rounded-lg font-bold text-sm bg-gradient-to-r from-primary to-primary-container hover:opacity-90 transition-opacity" type="submit">Update Password</button>
+</div>
+</form>
+</section>
+<!-- 2FA Section -->
+<section class="bg-surface-container-lowest p-8 rounded-lg shadow-[0_4px_20px_-10px_rgba(25,28,30,0.05)] border-t-[4px] border-surface-container-low">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h2 class="text-xl font-headline font-bold text-on-background mb-1 flex items-center gap-2">
+<span class="material-symbols-outlined text-outline">verified_user</span>
+                                    Two-Factor Authentication (2FA)
+                                </h2>
+<p class="text-sm text-on-surface-variant">Add an extra layer of security to your account.</p>
+</div>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-sm text-xs font-medium bg-error-container text-on-error-container">
+                                Disabled
+                            </span>
+</div>
+<div class="bg-surface-container-low p-5 rounded-lg flex items-center gap-4 mb-6">
+<div class="bg-white p-3 rounded-md shadow-sm">
+<span class="material-symbols-outlined text-primary text-3xl">smartphone</span>
+</div>
+<div class="flex-1">
+<h3 class="font-medium text-on-background text-sm mb-1">Authenticator App</h3>
+<p class="text-xs text-on-surface-variant">Use an app like Google Authenticator to get verification codes.</p>
+</div>
+<button class="bg-surface-container-high text-on-surface px-4 py-2 rounded-lg font-medium text-sm hover:bg-surface-variant transition-colors">Setup</button>
+</div>
+</section>
+</div>
+</div>
+</main>
+</div>
+</body></html>

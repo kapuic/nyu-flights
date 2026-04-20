@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router"
-import { Luggage, PersonStanding, Search, Wallet } from "lucide-react"
+import { Luggage, PersonStanding, Plane, Search, Wallet } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -31,7 +31,7 @@ export function TravelerShell({ children, currentUser, onLogout, section = "expl
         <div className="mx-auto flex h-16 w-full max-w-screen-2xl items-center justify-between px-8">
           <div className="flex items-center gap-8">
             <Link className="flex items-center gap-2 text-xl font-bold tracking-tighter text-slate-900" to="/">
-              <svg className="size-5" fill="currentColor" viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0 0 11.5 2 1.5 1.5 0 0 0 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z" /></svg>
+              <Plane className="size-5" />
               AeroPrecision
             </Link>
             <nav className="flex gap-8">

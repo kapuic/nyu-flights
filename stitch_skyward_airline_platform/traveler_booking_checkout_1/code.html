@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AeroPrecision - Secure Checkout</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary": "#515f74",
+                        "on-background": "#191c1e",
+                        "secondary-container": "#d5e3fc",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "on-secondary-container": "#57657a",
+                        "primary-container": "#131b2e",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-tertiary-fixed": "#001d32",
+                        "on-surface-variant": "#45464d",
+                        "inverse-surface": "#2d3133",
+                        "surface-dim": "#d8dadc",
+                        "surface": "#f7f9fb",
+                        "primary-fixed-dim": "#bec6e0",
+                        "primary-fixed": "#dae2fd",
+                        "error-container": "#ffdad6",
+                        "primary": "#000000",
+                        "tertiary": "#000000",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-container-high": "#e6e8ea",
+                        "on-primary": "#ffffff",
+                        "inverse-primary": "#bec6e0",
+                        "secondary-fixed": "#d5e3fc",
+                        "on-tertiary-container": "#3d89c3",
+                        "on-secondary": "#ffffff",
+                        "on-primary-container": "#7c839b",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "surface-variant": "#e0e3e5",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "outline": "#76777d",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "outline-variant": "#c6c6cd",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-container": "#001d32",
+                        "surface-container": "#eceef0",
+                        "on-primary-fixed": "#131b2e",
+                        "background": "#f7f9fb",
+                        "surface-bright": "#f7f9fb",
+                        "on-tertiary": "#ffffff",
+                        "surface-tint": "#565e74",
+                        "on-error": "#ffffff",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed": "#cde5ff",
+                        "on-surface": "#191c1e",
+                        "inverse-on-surface": "#eff1f3"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {},
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body antialiased selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopNavBar: Checkout is a transactional screen, so TopNavBar is technically suppressed based on rules, 
+         but we often need a minimal brand header for trust during checkout. 
+         Following "Linear/Transactional: suppress navigation shell", we provide a minimal custom header instead of the full JSON nav. -->
+<header class="bg-surface-container-lowest py-4 px-6 md:px-12 flex items-center justify-between shadow-[0_2px_10px_-4px_rgba(25,28,30,0.05)] sticky top-0 z-50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-2xl" data-weight="fill" style="font-variation-settings: 'FILL' 1;">flight_takeoff</span>
+<span class="font-headline font-extrabold tracking-tighter text-xl text-primary">AeroPrecision</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant font-medium text-sm">
+<span class="material-symbols-outlined text-lg">lock</span>
+            Secure Checkout
+        </div>
+</header>
+<main class="max-w-screen-xl mx-auto px-4 md:px-8 py-8 md:py-12 lg:py-16">
+<div class="mb-10 md:mb-16">
+<h1 class="font-headline text-3xl md:text-5xl font-bold tracking-tight text-primary mb-3">Complete Your Booking</h1>
+<p class="text-on-surface-variant text-base md:text-lg">Please review your flight details and provide passenger information.</p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
+<!-- Left Column: Forms (Asymmetric wider column) -->
+<div class="lg:col-span-7 space-y-12">
+<!-- Progressive Auth Nudge -->
+<section class="bg-surface-container-low p-6 md:p-8 rounded-lg relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-r from-primary-container/5 to-transparent pointer-events-none"></div>
+<div class="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<h2 class="font-headline text-lg font-bold text-primary mb-1">Already have an account?</h2>
+<p class="text-on-surface-variant text-sm">Sign in to access saved passengers and payment methods.</p>
+</div>
+<button class="bg-surface-container-highest text-on-surface font-semibold py-2.5 px-5 rounded-DEFAULT text-sm hover:bg-surface-dim transition-colors whitespace-nowrap">
+                            Sign In
+                        </button>
+</div>
+</section>
+<!-- Passenger Details -->
+<section class="space-y-6">
+<div class="flex items-center gap-3 mb-6">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-sm">1</div>
+<h2 class="font-headline text-2xl font-bold text-primary tracking-tight">Passenger Details</h2>
+</div>
+<div class="bg-surface-container-lowest p-6 md:p-8 rounded-lg shadow-[0_4px_20px_-8px_rgba(25,28,30,0.06)] space-y-6">
+<h3 class="font-headline text-base font-bold border-b border-surface-container-highest pb-3">Primary Traveler (Adult)</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+<div class="space-y-1.5">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">First Name</label>
+<input class="w-full bg-surface-variant border-none rounded-DEFAULT px-4 py-3 text-sm focus:ring-0 focus:border-b-2 focus:border-primary transition-all" placeholder="As it appears on ID" type="text"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Last Name</label>
+<input class="w-full bg-surface-variant border-none rounded-DEFAULT px-4 py-3 text-sm focus:ring-0 focus:border-b-2 focus:border-primary transition-all" placeholder="As it appears on ID" type="text"/>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+<div class="space-y-1.5">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Date of Birth</label>
+<input class="w-full bg-surface-variant border-none rounded-DEFAULT px-4 py-3 text-sm text-on-surface focus:ring-0 focus:border-b-2 focus:border-primary transition-all" type="date"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Nationality</label>
+<select class="w-full bg-surface-variant border-none rounded-DEFAULT px-4 py-3 text-sm text-on-surface focus:ring-0 focus:border-b-2 focus:border-primary transition-all appearance-none">
+<option disabled="" selected="" value="">Select Country</option>
+<option value="us">United States</option>
+<option value="uk">United Kingdom</option>
+<option value="ca">Canada</option>
+</select>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5 pt-4">
+<div class="space-y-1.5">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Passport Number</label>
+<input class="w-full bg-surface-variant border-none rounded-DEFAULT px-4 py-3 text-sm focus:ring-0 focus:border-b-2 focus:border-primary transition-all" placeholder="Required for international" type="text"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Known Traveler #</label>
+<input class="w-full bg-surface-variant border-none rounded-DEFAULT px-4 py-3 text-sm focus:ring-0 focus:border-b-2 focus:border-primary transition-all" placeholder="Optional" type="text"/>
+</div>
+</div>
+</div>
+<!-- Contact Details (Nested in Passenger section flow) -->
+<div class="bg-surface-container-lowest p-6 md:p-8 rounded-lg shadow-[0_4px_20px_-8px_rgba(25,28,30,0.06)] space-y-6 mt-6">
+<h3 class="font-headline text-base font-bold border-b border-surface-container-highest pb-3">Contact Information</h3>
+<p class="text-xs text-on-surface-variant mb-4">Where should we send your booking confirmation and updates?</p>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+<div class="space-y-1.5">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Email Address</label>
+<input class="w-full bg-surface-variant border-none rounded-DEFAULT px-4 py-3 text-sm focus:ring-0 focus:border-b-2 focus:border-primary transition-all" placeholder="your@email.com" type="email"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Phone Number</label>
+<div class="flex">
+<select class="bg-surface-variant border-none rounded-l-DEFAULT px-3 py-3 text-sm border-r border-surface-container-highest focus:ring-0 focus:border-b-2 focus:border-primary">
+<option>+1</option>
+<option>+44</option>
+</select>
+<input class="w-full bg-surface-variant border-none rounded-r-DEFAULT px-4 py-3 text-sm focus:ring-0 focus:border-b-2 focus:border-primary transition-all" placeholder="Mobile number" type="tel"/>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Payment Details -->
+<section class="space-y-6">
+<div class="flex items-center gap-3 mb-6">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest text-on-surface-variant flex items-center justify-center font-bold text-sm">2</div>
+<h2 class="font-headline text-2xl font-bold text-primary tracking-tight">Payment</h2>
+</div>
+<div class="bg-surface-container-lowest p-6 md:p-8 rounded-lg shadow-[0_4px_20px_-8px_rgba(25,28,30,0.06)] space-y-6">
+<!-- Payment Method Selector -->
+<div class="flex flex-col sm:flex-row gap-3">
+<label class="flex-1 cursor-pointer">
+<input checked="" class="peer sr-only" name="payment_method" type="radio"/>
+<div class="bg-surface border-2 border-transparent peer-checked:border-primary peer-checked:bg-surface-container-lowest rounded-lg p-4 flex items-center gap-3 transition-all">
+<span class="material-symbols-outlined text-primary">credit_card</span>
+<span class="font-semibold text-sm">Credit Card</span>
+</div>
+</label>
+<label class="flex-1 cursor-pointer">
+<input class="peer sr-only" name="payment_method" type="radio"/>
+<div class="bg-surface border-2 border-transparent peer-checked:border-primary peer-checked:bg-surface-container-lowest rounded-lg p-4 flex items-center gap-3 transition-all opacity-70 hover:opacity-100">
+<span class="material-symbols-outlined text-on-surface-variant">account_balance</span>
+<span class="font-semibold text-sm text-on-surface-variant">Bank Transfer</span>
+</div>
+</label>
+</div>
+<div class="pt-4 space-y-5">
+<div class="space-y-1.5">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Card Number</label>
+<div class="relative">
+<input class="w-full bg-surface-variant border-none rounded-DEFAULT pl-10 pr-4 py-3 text-sm focus:ring-0 focus:border-b-2 focus:border-primary transition-all font-mono tracking-widest" placeholder="0000 0000 0000 0000" type="text"/>
+<span class="material-symbols-outlined absolute left-3 top-3 text-on-surface-variant text-[20px]">credit_card</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-5">
+<div class="space-y-1.5">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Expiration Date</label>
+<input class="w-full bg-surface-variant border-none rounded-DEFAULT px-4 py-3 text-sm focus:ring-0 focus:border-b-2 focus:border-primary transition-all font-mono" placeholder="MM/YY" type="text"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">CVV</label>
+<div class="relative">
+<input class="w-full bg-surface-variant border-none rounded-DEFAULT px-4 py-3 text-sm focus:ring-0 focus:border-b-2 focus:border-primary transition-all font-mono" placeholder="123" type="text"/>
+<span class="material-symbols-outlined absolute right-3 top-3 text-on-surface-variant text-[16px] cursor-help" title="3 or 4 digits on back of card">help</span>
+</div>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Name on Card</label>
+<input class="w-full bg-surface-variant border-none rounded-DEFAULT px-4 py-3 text-sm focus:ring-0 focus:border-b-2 focus:border-primary transition-all" placeholder="Full Name" type="text"/>
+</div>
+</div>
+<div class="mt-6 pt-6 border-t border-surface-container-highest">
+<label class="flex items-start gap-3 cursor-pointer group">
+<input class="mt-1 rounded-sm border-outline-variant text-primary focus:ring-primary w-4 h-4 bg-surface-variant" type="checkbox"/>
+<span class="text-sm text-on-surface-variant group-hover:text-primary transition-colors">
+                                    I agree to the <a class="text-primary underline underline-offset-2" href="#">Terms of Service</a>, <a class="text-primary underline underline-offset-2" href="#">Privacy Policy</a>, and acknowledge the <a class="text-primary underline underline-offset-2" href="#">Cancellation Policy</a>.
+                                </span>
+</label>
+</div>
+</div>
+</section>
+<!-- Primary Action Mobile (Hidden on lg) -->
+<div class="block lg:hidden mt-8">
+<button class="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary font-headline font-bold py-4 px-6 rounded-lg text-lg shadow-[0_8px_16px_-4px_rgba(19,27,46,0.3)] hover:opacity-90 transition-all flex justify-between items-center">
+<span>Confirm &amp; Pay</span>
+<span>$1,245.00</span>
+</button>
+</div>
+</div>
+<!-- Right Column: Flight Summary (Sticky) -->
+<div class="lg:col-span-5 relative">
+<div class="sticky top-24 bg-surface-container-lowest rounded-lg shadow-[0_4px_20px_-8px_rgba(25,28,30,0.06)] overflow-hidden flex flex-col">
+<!-- Destination Header -->
+<div class="relative h-32 md:h-40 w-full overflow-hidden">
+<img alt="Aerial view of New York City skyline at sunset with warm golden light reflecting off skyscrapers" class="absolute inset-0 w-full h-full object-cover z-0" data-alt="Aerial view of New York City skyline at sunset with warm golden light reflecting off skyscrapers" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1wH0zH644cgOIsY2R6yGG8nHlBTzWh7hUWrpYaly4Sa8WBzzfojFzze1hrRRIUt68D-Qvph1hf8YygVYBwmObmS6rv2rNXG4RGH1y0_Wx07LM2NEUrkmE4AXoCu5j9xcZZ1zDcGnT35jl7OPEMpb0UJK8B1W_Y8uQGiqQ2qwLMPSA29upEwuzzf6nNcBBbCyvySxVKIuL8Oh4sB1NqmweqEpJLPwSm2aL4616Gzfec-NLnv68X0cSGPfWZhAOLrG6Ht4XSL-gadA"/>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/50 to-transparent z-10"></div>
+<div class="absolute bottom-4 left-6 z-20 text-on-primary">
+<div class="text-xs font-semibold tracking-widest uppercase mb-1 opacity-80">Round Trip</div>
+<h3 class="font-headline text-2xl font-bold tracking-tight">New York (JFK)</h3>
+</div>
+</div>
+<!-- Flight Itinerary -->
+<div class="p-6 border-b border-surface-container-highest">
+<!-- Outbound -->
+<div class="mb-6 relative">
+<div class="flex items-center gap-2 mb-3">
+<span class="bg-surface-container-high text-on-surface px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-widest">Outbound</span>
+<span class="text-xs text-on-surface-variant font-medium">Oct 12, 2023</span>
+</div>
+<div class="flex justify-between items-center relative z-10">
+<div>
+<div class="font-headline text-xl font-bold text-primary">08:45</div>
+<div class="text-sm text-on-surface-variant">LHR</div>
+</div>
+<div class="flex-1 px-4 flex flex-col items-center">
+<div class="text-[10px] text-on-surface-variant font-medium mb-1">7h 55m • Direct</div>
+<div class="w-full h-px bg-outline-variant relative">
+<span class="material-symbols-outlined absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-surface-tint text-sm bg-surface-container-lowest px-1" style="font-variation-settings: 'FILL' 1;">flight</span>
+</div>
+</div>
+<div class="text-right">
+<div class="font-headline text-xl font-bold text-primary">11:40</div>
+<div class="text-sm text-on-surface-variant">JFK</div>
+</div>
+</div>
+<div class="mt-3 text-xs text-on-surface-variant flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">airline_seat_recline_normal</span>
+                                Seat 12A • Premium Economy
+                            </div>
+</div>
+<!-- Inbound -->
+<div class="relative">
+<div class="flex items-center gap-2 mb-3">
+<span class="bg-surface-container-high text-on-surface px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-widest">Return</span>
+<span class="text-xs text-on-surface-variant font-medium">Oct 19, 2023</span>
+</div>
+<div class="flex justify-between items-center relative z-10">
+<div>
+<div class="font-headline text-xl font-bold text-primary">22:30</div>
+<div class="text-sm text-on-surface-variant">JFK</div>
+</div>
+<div class="flex-1 px-4 flex flex-col items-center">
+<div class="text-[10px] text-on-surface-variant font-medium mb-1">7h 10m • Direct</div>
+<div class="w-full h-px bg-outline-variant relative">
+<span class="material-symbols-outlined absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-surface-tint text-sm bg-surface-container-lowest px-1 transform rotate-180" style="font-variation-settings: 'FILL' 1;">flight</span>
+</div>
+</div>
+<div class="text-right">
+<div class="font-headline text-xl font-bold text-primary">10:40<sup class="text-[10px]">+1</sup></div>
+<div class="text-sm text-on-surface-variant">LHR</div>
+</div>
+</div>
+<div class="mt-3 text-xs text-on-surface-variant flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">airline_seat_recline_normal</span>
+                                Seat 14C • Premium Economy
+                            </div>
+</div>
+</div>
+<!-- Price Breakdown -->
+<div class="p-6 bg-surface-container-low flex-1">
+<h4 class="font-headline text-sm font-bold mb-4 uppercase tracking-wider text-on-surface-variant">Price Summary</h4>
+<div class="space-y-3 text-sm mb-6 border-b border-surface-container-high pb-4">
+<div class="flex justify-between">
+<span class="text-on-surface-variant">1x Adult (Premium Economy)</span>
+<span class="font-semibold">$980.00</span>
+</div>
+<div class="flex justify-between">
+<span class="text-on-surface-variant">Taxes &amp; Fees</span>
+<span class="font-semibold">$215.00</span>
+</div>
+<div class="flex justify-between">
+<span class="text-on-surface-variant">Seat Selection</span>
+<span class="font-semibold">$50.00</span>
+</div>
+</div>
+<div class="flex justify-between items-end mb-6">
+<span class="font-headline text-lg font-bold text-primary">Total</span>
+<span class="font-headline text-3xl font-extrabold text-primary tracking-tight">$1,245.00</span>
+</div>
+<!-- Primary Action Web (Hidden on mobile) -->
+<button class="hidden lg:flex w-full bg-gradient-to-r from-primary to-primary-container text-on-primary font-headline font-bold py-4 px-6 rounded-lg text-lg shadow-[0_8px_16px_-4px_rgba(19,27,46,0.3)] hover:opacity-90 transition-all justify-center items-center gap-2">
+<span class="material-symbols-outlined text-[20px]">lock</span>
+                            Confirm &amp; Pay
+                        </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

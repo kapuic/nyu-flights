@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Aeronautical Precision - Staff Operations Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800;900&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "secondary-fixed": "#d5e3fc",
+                        "surface-container-highest": "#e0e3e5",
+                        "tertiary-fixed": "#cde5ff",
+                        "surface-tint": "#565e74",
+                        "on-tertiary-fixed": "#001d32",
+                        "secondary-container": "#d5e3fc",
+                        "on-primary-fixed": "#131b2e",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "on-surface-variant": "#45464d",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#000000",
+                        "on-secondary": "#ffffff",
+                        "tertiary-container": "#001d32",
+                        "on-error": "#ffffff",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "inverse-primary": "#bec6e0",
+                        "surface-container-lowest": "#ffffff",
+                        "outline": "#76777d",
+                        "surface-dim": "#d8dadc",
+                        "surface-container-high": "#e6e8ea",
+                        "primary-fixed": "#dae2fd",
+                        "on-surface": "#191c1e",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "on-tertiary-container": "#3d89c3",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "background": "#f7f9fb",
+                        "outline-variant": "#c6c6cd",
+                        "on-secondary-container": "#57657a",
+                        "surface-container-low": "#f2f4f6",
+                        "on-background": "#191c1e",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "primary": "#000000",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#2d3133",
+                        "surface-bright": "#f7f9fb",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-container": "#eceef0",
+                        "on-primary-container": "#7c839b",
+                        "on-primary": "#ffffff",
+                        "surface-variant": "#e0e3e5",
+                        "secondary": "#515f74",
+                        "primary-container": "#131b2e",
+                        "surface": "#f7f9fb",
+                        "primary-fixed-dim": "#bec6e0",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "error": "#ba1a1a"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4, h5, h6, .font-headline { font-family: 'Manrope', sans-serif; letter-spacing: -0.02em; }
+        .text-label-sm { font-size: 0.6875rem; letter-spacing: 0.05em; text-transform: uppercase; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .fill-icon { font-variation-settings: 'FILL' 1; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface antialiased min-h-screen flex">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-['Inter'] text-xs uppercase tracking-widest fixed left-0 top-0 h-full w-64 rounded-none p-4 border-r-0 z-40 bg-slate-200 dark:bg-slate-900 shadow-[20px_0_40px_-10px_rgba(25,28,30,0.08)]">
+<div class="mb-8 px-2 flex items-center gap-3">
+<div class="w-10 h-10 rounded-DEFAULT bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined fill-icon">airplanemode_active</span>
+</div>
+<div>
+<h1 class="font-['Manrope'] font-black text-slate-900 dark:text-white text-lg tracking-tighter uppercase m-0 leading-tight">OPS COMMAND</h1>
+<p class="text-[10px] text-slate-500 font-medium">Sector 7G - Active</p>
+</div>
+</div>
+<div class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-white dark:text-slate-950 bg-slate-900 dark:bg-slate-100 rounded-sm font-bold transition-all" href="#">
+<span class="material-symbols-outlined text-lg">dashboard</span>
+                Operations
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-sm transition-all" href="#">
+<span class="material-symbols-outlined text-lg">flight</span>
+                Fleet
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-sm transition-all" href="#">
+<span class="material-symbols-outlined text-lg">calendar_today</span>
+                Scheduling
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-sm transition-all" href="#">
+<span class="material-symbols-outlined text-lg">router</span>
+                Dispatch
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-sm transition-all" href="#">
+<span class="material-symbols-outlined text-lg">inventory_2</span>
+                Inventory
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-sm transition-all" href="#">
+<span class="material-symbols-outlined text-lg">analytics</span>
+                Analytics
+            </a>
+</div>
+<div class="mt-auto space-y-1 pt-4 border-t border-outline-variant/15">
+<button class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-error-container text-on-error-container hover:bg-error/20 rounded-sm transition-all mb-4 font-bold">
+<span class="material-symbols-outlined text-lg">warning</span>
+                Emergency Alert
+            </button>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-sm transition-all" href="#">
+<span class="material-symbols-outlined text-lg">settings</span>
+                Settings
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-sm transition-all" href="#">
+<span class="material-symbols-outlined text-lg">contact_support</span>
+                Support
+            </a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-64 p-6 lg:p-12 max-w-[1440px] mx-auto w-full flex flex-col gap-8">
+<!-- Header -->
+<header class="flex justify-between items-end pb-6 border-b-0 border-outline-variant/15">
+<div>
+<p class="text-label-sm text-on-surface-variant mb-1">Flight Management</p>
+<h2 class="font-headline text-3xl font-bold text-on-surface">Status Edit Flow</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="text-right">
+<p class="text-sm font-semibold text-on-surface">System Time</p>
+<p class="text-xs text-on-surface-variant font-mono">14:32:04 ZULU</p>
+</div>
+</div>
+</header>
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+<!-- Left Column: Flight Selection / Context -->
+<div class="xl:col-span-4 flex flex-col gap-6">
+<!-- Selected Flight Card -->
+<div class="bg-surface-container-highest p-6 rounded-DEFAULT shadow-[0_20px_40px_-10px_rgba(25,28,30,0.08)] outline outline-1 outline-outline-variant/15">
+<div class="flex justify-between items-start mb-4">
+<div>
+<span class="text-label-sm text-on-surface-variant bg-surface px-2 py-1 rounded-sm mb-2 inline-block font-mono">FLT 492</span>
+<h3 class="font-headline text-xl font-bold text-on-surface">JFK <span class="material-symbols-outlined text-sm align-middle mx-1 text-on-surface-variant">arrow_forward</span> LHR</h3>
+</div>
+<span class="bg-error-container text-on-error-container text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-sm">Delayed</span>
+</div>
+<div class="grid grid-cols-2 gap-4 mt-6">
+<div>
+<p class="text-xs text-on-surface-variant mb-1">Scheduled Dep</p>
+<p class="text-sm font-semibold font-mono">18:45 EDT</p>
+</div>
+<div>
+<p class="text-xs text-on-surface-variant mb-1">Estimated Dep</p>
+<p class="text-sm font-semibold font-mono text-error">19:30 EDT</p>
+</div>
+<div>
+<p class="text-xs text-on-surface-variant mb-1">Aircraft</p>
+<p class="text-sm font-semibold">Boeing 777-300ER</p>
+</div>
+<div>
+<p class="text-xs text-on-surface-variant mb-1">Gate</p>
+<p class="text-sm font-semibold font-mono">B24</p>
+</div>
+</div>
+</div>
+<!-- Flight Manifest Quick Stats -->
+<div class="bg-surface-container-high p-4 rounded-DEFAULT">
+<h4 class="text-xs uppercase tracking-widest text-on-surface-variant mb-3 font-semibold">Manifest Overview</h4>
+<ul class="space-y-2">
+<li class="flex justify-between items-center text-sm">
+<span class="text-on-surface-variant">Passengers Checked In</span>
+<span class="font-mono font-semibold">284 / 312</span>
+</li>
+<li class="flex justify-between items-center text-sm">
+<span class="text-on-surface-variant">Bags Loaded</span>
+<span class="font-mono font-semibold">145 / 312</span>
+</li>
+<li class="flex justify-between items-center text-sm">
+<span class="text-on-surface-variant">Crew Status</span>
+<span class="text-tertiary-fixed-dim text-xs font-bold uppercase">Ready</span>
+</li>
+</ul>
+</div>
+</div>
+<!-- Right Column: Status Editor Panel -->
+<div class="xl:col-span-8 flex flex-col gap-6">
+<div class="bg-surface-container-lowest p-8 rounded-DEFAULT shadow-[0_20px_40px_-10px_rgba(25,28,30,0.08)] relative overflow-hidden">
+<!-- Subtle accent bar -->
+<div class="absolute top-0 left-0 w-full h-1 bg-primary"></div>
+<h3 class="font-headline text-2xl font-bold text-on-surface mb-2">Update Flight Status</h3>
+<p class="text-sm text-on-surface-variant mb-8 max-w-lg">Modify the operational status for FLT 492. This action will broadcast to all terminal displays and passenger apps immediately.</p>
+<!-- Status Toggles (Bento-ish Grid) -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+<!-- On Time -->
+<button class="relative bg-surface-container-low hover:bg-surface-container-high p-4 text-left border-none focus:outline-none group">
+<div class="absolute inset-0 outline outline-2 outline-transparent group-focus:outline-outline transition-all"></div>
+<span class="material-symbols-outlined text-tertiary-fixed-dim mb-3 text-3xl">check_circle</span>
+<h5 class="text-sm font-semibold text-on-surface">On-time</h5>
+<p class="text-xs text-on-surface-variant mt-1">Normal ops</p>
+</button>
+<!-- Delayed (Selected State Example) -->
+<button class="relative bg-surface-container-high p-4 text-left border-none focus:outline-none">
+<div class="absolute inset-0 outline outline-2 outline-primary"></div>
+<span class="material-symbols-outlined text-error mb-3 text-3xl fill-icon">schedule</span>
+<h5 class="text-sm font-bold text-on-surface">Delayed</h5>
+<p class="text-xs text-on-surface-variant mt-1">Schedule impacted</p>
+<!-- Selected Indicator -->
+<div class="absolute top-3 right-3 w-2 h-2 rounded-full bg-primary"></div>
+</button>
+<!-- Cancelled -->
+<button class="relative bg-surface-container-low hover:bg-surface-container-high p-4 text-left border-none focus:outline-none group">
+<div class="absolute inset-0 outline outline-2 outline-transparent group-focus:outline-outline transition-all"></div>
+<span class="material-symbols-outlined text-on-surface-variant mb-3 text-3xl">cancel</span>
+<h5 class="text-sm font-semibold text-on-surface">Cancelled</h5>
+<p class="text-xs text-on-surface-variant mt-1">Flight grounded</p>
+</button>
+<!-- Boarding -->
+<button class="relative bg-surface-container-low hover:bg-surface-container-high p-4 text-left border-none focus:outline-none group">
+<div class="absolute inset-0 outline outline-2 outline-transparent group-focus:outline-outline transition-all"></div>
+<span class="material-symbols-outlined text-tertiary-container mb-3 text-3xl">flight_takeoff</span>
+<h5 class="text-sm font-semibold text-on-surface">Boarding</h5>
+<p class="text-xs text-on-surface-variant mt-1">Pax en route</p>
+</button>
+</div>
+<!-- Contextual Inputs for 'Delayed' -->
+<div class="bg-surface p-6 rounded-sm mb-8 border-l-4 border-error">
+<h5 class="text-sm font-bold text-on-surface mb-4">Delay Details Required</h5>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div>
+<label class="block text-xs text-on-surface-variant mb-2 font-semibold uppercase tracking-wider">New Est. Departure</label>
+<input class="w-full bg-surface-variant text-on-surface border-none rounded-sm p-3 text-sm focus:ring-0 focus:outline focus:outline-outline focus:outline-offset-2 font-mono" type="time" value="19:30"/>
+</div>
+<div>
+<label class="block text-xs text-on-surface-variant mb-2 font-semibold uppercase tracking-wider">Delay Reason Code</label>
+<select class="w-full bg-surface-variant text-on-surface border-none rounded-sm p-3 text-sm focus:ring-0 focus:outline focus:outline-outline focus:outline-offset-2">
+<option>WTH - Weather at Origin</option>
+<option selected="">ATC - Air Traffic Control</option>
+<option>MNT - Maintenance</option>
+<option>CRW - Crew Availability</option>
+</select>
+</div>
+<div class="md:col-span-2">
+<label class="block text-xs text-on-surface-variant mb-2 font-semibold uppercase tracking-wider">Internal Notes (Optional)</label>
+<textarea class="w-full bg-surface-variant text-on-surface border-none rounded-sm p-3 text-sm focus:ring-0 focus:outline focus:outline-outline focus:outline-offset-2" placeholder="Enter specific details for dispatch..." rows="2"></textarea>
+</div>
+</div>
+</div>
+<!-- Action Area -->
+<div class="flex items-center justify-end gap-4 border-t border-outline-variant/15 pt-6">
+<button class="px-6 py-3 bg-surface-container-high text-on-surface font-semibold text-sm rounded-DEFAULT hover:bg-surface-variant transition-colors">
+                            Discard Changes
+                        </button>
+<!-- Primary Button with loading state implied -->
+<button class="px-8 py-3 bg-primary text-on-primary font-bold text-sm rounded-DEFAULT hover:bg-primary/90 transition-colors flex items-center gap-2 relative">
+                            Confirm Status Update
+                            <span class="material-symbols-outlined text-sm">send</span>
+</button>
+</div>
+</div>
+<!-- Feedback Examples (Static representation for design purposes) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Success Banner -->
+<div class="bg-tertiary-fixed p-4 rounded-sm flex items-start gap-3 shadow-sm border-l-4 border-primary">
+<span class="material-symbols-outlined text-primary">check_circle</span>
+<div>
+<p class="text-sm font-bold text-on-tertiary-fixed">Status Updated Successfully</p>
+<p class="text-xs text-on-tertiary-fixed/80 mt-1">FLT 492 status changed to 'Delayed'. Broadcast sent to all terminals.</p>
+</div>
+</div>
+<!-- Error Toast -->
+<div class="bg-error-container p-4 rounded-sm flex items-start gap-3 shadow-sm border-l-4 border-error">
+<span class="material-symbols-outlined text-error">error</span>
+<div>
+<p class="text-sm font-bold text-on-error-container">Action Failed: Forbidden</p>
+<p class="text-xs text-on-error-container/80 mt-1">You do not have clearance to alter status for flights in 'Taxiing' phase.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Hidden on md and up) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 pb-safe bg-white/95 dark:bg-slate-950/95 rounded-t-lg shadow-2xl border-t border-slate-200 dark:border-slate-800">
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 font-['Inter'] text-[10px] font-bold uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined mb-1 text-xl">search</span>
+            Search
+        </a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 font-['Inter'] text-[10px] font-bold uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined mb-1 text-xl">luggage</span>
+            Trips
+        </a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 font-['Inter'] text-[10px] font-bold uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined mb-1 text-xl">confirmation_number</span>
+            Boarding
+        </a>
+<a class="flex flex-col items-center justify-center text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 rounded-md px-3 py-1 font-['Inter'] text-[10px] font-bold uppercase tracking-wider" href="#">
+<span class="material-symbols-outlined mb-1 text-xl fill-icon">person</span>
+            Profile
+        </a>
+</nav>
+</body></html>

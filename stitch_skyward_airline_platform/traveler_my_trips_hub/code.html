@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AeroPrecision - My Trips</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary": "#000000",
+                        "on-primary-fixed": "#131b2e",
+                        "primary": "#000000",
+                        "inverse-surface": "#2d3133",
+                        "on-tertiary-container": "#3d89c3",
+                        "inverse-primary": "#bec6e0",
+                        "surface-dim": "#d8dadc",
+                        "on-surface-variant": "#45464d",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "on-tertiary": "#ffffff",
+                        "secondary": "#515f74",
+                        "background": "#f7f9fb",
+                        "surface-container-low": "#f2f4f6",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "on-secondary-container": "#57657a",
+                        "on-primary": "#ffffff",
+                        "on-background": "#191c1e",
+                        "surface-variant": "#e0e3e5",
+                        "secondary-fixed": "#d5e3fc",
+                        "primary-fixed-dim": "#bec6e0",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "surface": "#f7f9fb",
+                        "outline": "#76777d",
+                        "on-tertiary-fixed": "#001d32",
+                        "error": "#ba1a1a",
+                        "on-primary-container": "#7c839b",
+                        "surface-tint": "#565e74",
+                        "surface-container": "#eceef0",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "on-secondary": "#ffffff",
+                        "surface-bright": "#f7f9fb",
+                        "primary-fixed": "#dae2fd",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "tertiary-container": "#001d32",
+                        "on-error": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-container-high": "#e6e8ea",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed": "#cde5ff",
+                        "inverse-on-surface": "#eff1f3",
+                        "primary-container": "#131b2e",
+                        "secondary-container": "#d5e3fc",
+                        "outline-variant": "#c6c6cd",
+                        "on-surface": "#191c1e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {},
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4, h5, h6, .font-headline { font-family: 'Manrope', sans-serif; letter-spacing: -0.02em; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface antialiased min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="bg-white dark:bg-slate-950 docked full-width top-0 sticky z-50 shadow-sm border-b border-surface-container-low hidden md:block">
+<div class="flex justify-between items-center px-8 h-16 w-full max-w-screen-2xl mx-auto">
+<div class="text-lg font-black tracking-tighter text-slate-900 dark:text-slate-50 font-headline">AeroPrecision</div>
+<nav class="flex gap-8 items-center font-['Manrope'] font-bold tracking-tight text-sm">
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors duration-200" href="#">Explore</a>
+<a class="text-slate-900 dark:text-white border-b-2 border-slate-900 dark:border-white pb-1 opacity-70" href="#">Bookings</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors duration-200" href="#">Support</a>
+</nav>
+<div class="flex gap-4 items-center">
+<button class="text-sm font-semibold text-slate-900 dark:text-slate-100 hover:text-slate-500 transition-colors">Sign In</button>
+<button class="bg-gradient-to-r from-primary to-primary-container text-on-primary px-4 py-2 rounded font-medium text-sm hover:opacity-90 transition-opacity">Join</button>
+</div>
+</div>
+</header>
+<div class="flex flex-1 max-w-screen-2xl mx-auto w-full">
+<!-- SideNavBar -->
+<aside class="hidden md:flex flex-col gap-2 p-4 border-r-0 bg-slate-50 dark:bg-slate-900/50 h-[calc(100vh-4rem)] w-64 rounded-none sticky top-16 shrink-0">
+<div class="mb-8 px-2 pt-4">
+<div class="flex items-center gap-3 mb-1">
+<img alt="Traveler Profile" class="w-10 h-10 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrN7GhVLHRa4XEBzdKNTHtkPpu1JZbT5uVYkVmrg0whBY2APMYolkNfd91UZGLGTOywe8jLY0ArtXVDhRpqhyMQmceXCbt3yE3cvhh-OTrUSDuwQNFL1xjh4wiahosa9kjRqdEPuUtaYsLihtYNVkQqai6UyfSJevg_j8vZgl5ykyhOjkQG91grWcoCijHiYe8u2oxAyq6N0FqbOW3YheBm-pk425Yc7pGgXuUC3IsNeryx3SWQzYJgA-STz4QkLzdeD_lJ-BDpZI"/>
+<div>
+<h2 class="font-headline font-bold text-slate-900 dark:text-slate-100 leading-tight">Traveler Hub</h2>
+<p class="text-xs text-slate-500 dark:text-slate-400">Silver Status</p>
+</div>
+</div>
+</div>
+<nav class="flex flex-col gap-1 font-['Inter'] text-sm font-medium">
+<a class="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold rounded-sm shadow-sm scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]">flight_takeoff</span>
+                    My Trips
+                </a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-sm transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">credit_card</span>
+                    Payment Methods
+                </a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-sm transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">lock</span>
+                    Security
+                </a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-sm transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+                    Preferences
+                </a>
+</nav>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 p-6 md:p-12 overflow-y-auto">
+<div class="max-w-4xl mx-auto">
+<div class="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+<div>
+<h1 class="text-3xl font-headline font-bold text-on-background mb-2">My Trips</h1>
+<p class="text-on-surface-variant text-sm">Manage your upcoming itineraries and review past journeys.</p>
+</div>
+<button class="bg-surface-container-high text-on-surface px-4 py-2 rounded text-sm font-medium hover:bg-surface-variant transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                        Add Booking
+                    </button>
+</div>
+<!-- Upcoming Trips -->
+<section class="mb-12">
+<h2 class="font-headline font-semibold text-lg text-on-background mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">schedule</span>
+                        Upcoming
+                    </h2>
+<div class="grid gap-6">
+<!-- Upcoming Trip Card -->
+<div class="bg-surface-container-lowest p-6 rounded shadow-sm flex flex-col md:flex-row gap-6 items-start md:items-center group hover:-translate-y-1 transition-transform duration-300">
+<div class="w-full md:w-48 h-32 md:h-auto aspect-video rounded overflow-hidden shrink-0 bg-surface-container-low relative">
+<img alt="Tokyo cityscape at twilight with neon lights and Tokyo Tower in the distance" class="w-full h-full object-cover" data-alt="Tokyo cityscape at twilight with neon lights and Tokyo Tower in the distance" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCNl44bxNR5n_ANqLSTEx-Td0qE0ApHbBJtNv8WcJMSWhsiEqy3k0sD0-9up77elpKLcX4LtH7C3dpUTwTPe2bOgeTU453nwrgVu3Pdswi9l0vZHDdoI8HPIF8isF8M7Yj_GjrEQUrEy52WGGPVCcu1msLG6eQAA9eULvLa9rgMrEVzCNqp073JYm-BM2inC7GMvWwCytvwAx_pPcl732n1SC_1vAVUttGapqjMiipg2K7-qW55mcjtULdNDp_aQj_SfCl2GOXS_kQ"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+<span class="absolute bottom-2 left-2 text-white font-headline font-bold text-lg drop-shadow-md">NRT</span>
+</div>
+<div class="flex-1 w-full">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 bg-tertiary-fixed text-on-tertiary-fixed text-[10px] uppercase tracking-wider font-bold rounded-sm">Managed</span>
+<span class="text-xs text-on-surface-variant font-medium">Confirmation: AP-882J</span>
+</div>
+<span class="text-sm font-semibold text-on-background">Oct 12 - Oct 20</span>
+</div>
+<h3 class="font-headline font-bold text-xl text-on-background mb-1">Tokyo, Japan</h3>
+<p class="text-sm text-on-surface-variant mb-4">Direct flight · Premium Economy</p>
+<div class="flex flex-wrap gap-2">
+<button class="bg-gradient-to-r from-primary to-primary-container text-on-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90 transition-opacity">View Itinerary</button>
+<button class="bg-surface-container-high text-on-surface px-4 py-2 rounded text-sm font-medium hover:bg-surface-variant transition-colors">Modify Options</button>
+</div>
+</div>
+</div>
+<!-- Another Upcoming Trip -->
+<div class="bg-surface-container-lowest p-6 rounded shadow-sm flex flex-col md:flex-row gap-6 items-start md:items-center group hover:-translate-y-1 transition-transform duration-300">
+<div class="w-full md:w-48 h-32 md:h-auto aspect-video rounded overflow-hidden shrink-0 bg-surface-container-low relative">
+<img alt="London Big Ben and Parliament building against a crisp blue sky" class="w-full h-full object-cover" data-alt="London Big Ben and Parliament building against a crisp blue sky" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJ6ve7HeV-hHXTY4B-gJe9H8l4Q0NdjalitWYaQ_ptkPfSUhxynCXCZEgI8pn69qDacaL9K8dQ-QvBbvX_bA5Y7cfPMtf7lSwCPGOEbLVSMxvEnZVkQsWC1cNSBxcgWwbSA-kjvcAdzuUz-sJ2Y7dC8v96aFOdPuIqA_VIYq_-2qsYZF8hKKbl_qutOeT0m-xnIPE8U5P2ItdyQXutefErR37SNSmbBfpR2rqHDVG9wcVFnyyIHcFCYFBgR8owhv7Ka8l74TlG8RQ"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+<span class="absolute bottom-2 left-2 text-white font-headline font-bold text-lg drop-shadow-md">LHR</span>
+</div>
+<div class="flex-1 w-full">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 bg-tertiary-fixed text-on-tertiary-fixed text-[10px] uppercase tracking-wider font-bold rounded-sm">Managed</span>
+<span class="text-xs text-on-surface-variant font-medium">Confirmation: AP-944X</span>
+</div>
+<span class="text-sm font-semibold text-on-background">Nov 05 - Nov 10</span>
+</div>
+<h3 class="font-headline font-bold text-xl text-on-background mb-1">London, UK</h3>
+<p class="text-sm text-on-surface-variant mb-4">1 Stop · Business Class</p>
+<div class="flex flex-wrap gap-2">
+<button class="bg-gradient-to-r from-primary to-primary-container text-on-primary px-4 py-2 rounded text-sm font-medium hover:opacity-90 transition-opacity">View Itinerary</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Past Trips -->
+<section>
+<h2 class="font-headline font-semibold text-lg text-on-background mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">history</span>
+                        Past Journeys
+                    </h2>
+<div class="bg-surface-container-low rounded p-2 flex flex-col gap-2">
+<!-- Past Trip List Item -->
+<div class="bg-surface-container-lowest p-4 rounded flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-surface-variant rounded flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-surface-variant">flight_land</span>
+</div>
+<div>
+<h4 class="font-headline font-bold text-on-background">New York City, USA</h4>
+<p class="text-xs text-on-surface-variant font-medium">JFK · Sep 12 - Sep 15, 2023</p>
+</div>
+</div>
+<div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+<span class="text-xs text-on-surface-variant hidden sm:inline-block">Completed</span>
+<button class="text-sm font-medium text-primary hover:underline underline-offset-4 decoration-2">Review</button>
+</div>
+</div>
+<!-- Past Trip List Item -->
+<div class="bg-surface-container-lowest p-4 rounded flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-surface-variant rounded flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-surface-variant">flight_land</span>
+</div>
+<div>
+<h4 class="font-headline font-bold text-on-background">Paris, France</h4>
+<p class="text-xs text-on-surface-variant font-medium">CDG · Jul 01 - Jul 10, 2023</p>
+</div>
+</div>
+<div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+<span class="text-xs text-on-surface-variant hidden sm:inline-block">Completed</span>
+<button class="bg-surface-container-high text-on-surface px-3 py-1.5 rounded text-xs font-medium hover:bg-surface-variant transition-colors">Receipt</button>
+</div>
+</div>
+</div>
+<div class="mt-6 text-center">
+<button class="text-sm font-medium text-on-surface-variant hover:text-on-background transition-colors flex items-center justify-center gap-1 mx-auto">
+                            Load more history
+                            <span class="material-symbols-outlined text-[16px]">expand_more</span>
+</button>
+</div>
+</section>
+</div>
+</main>
+</div>
+</body></html>

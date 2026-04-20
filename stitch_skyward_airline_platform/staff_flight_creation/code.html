@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Advanced Flight Creation - AeroPrecision</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary": "#515f74",
+                        "on-background": "#191c1e",
+                        "secondary-container": "#d5e3fc",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "on-secondary-container": "#57657a",
+                        "primary-container": "#131b2e",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-tertiary-fixed": "#001d32",
+                        "on-surface-variant": "#45464d",
+                        "inverse-surface": "#2d3133",
+                        "surface-dim": "#d8dadc",
+                        "surface": "#f7f9fb",
+                        "primary-fixed-dim": "#bec6e0",
+                        "primary-fixed": "#dae2fd",
+                        "error-container": "#ffdad6",
+                        "primary": "#000000",
+                        "tertiary": "#000000",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-container-high": "#e6e8ea",
+                        "on-primary": "#ffffff",
+                        "inverse-primary": "#bec6e0",
+                        "secondary-fixed": "#d5e3fc",
+                        "on-tertiary-container": "#3d89c3",
+                        "on-secondary": "#ffffff",
+                        "on-primary-container": "#7c839b",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "surface-variant": "#e0e3e5",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "outline": "#76777d",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "outline-variant": "#c6c6cd",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-container": "#001d32",
+                        "surface-container": "#eceef0",
+                        "on-primary-fixed": "#131b2e",
+                        "background": "#f7f9fb",
+                        "surface-bright": "#f7f9fb",
+                        "on-tertiary": "#ffffff",
+                        "surface-tint": "#565e74",
+                        "on-error": "#ffffff",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed": "#cde5ff",
+                        "on-surface": "#191c1e",
+                        "inverse-on-surface": "#eff1f3"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {},
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; color: #191c1e; }
+        h1, h2, h3, h4, h5, h6, .font-headline { font-family: 'Manrope', sans-serif; letter-spacing: -0.02em; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .form-input-staff {
+            background-color: #e0e3e5; /* surface-variant */
+            color: #191c1e; /* on-surface */
+            border: 1px solid transparent;
+            border-radius: 0.125rem;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem; /* text-sm */
+            line-height: 1.25rem;
+            transition: all 0.2s ease-in-out;
+            width: 100%;
+        }
+        .form-input-staff:focus {
+            outline: none;
+            border-color: #76777d; /* outline */
+            box-shadow: 0 0 0 1px #76777d;
+        }
+        .form-label-staff {
+            display: block;
+            font-size: 0.75rem; /* text-xs */
+            font-weight: 600;
+            color: #45464d; /* on-surface-variant */
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        /* Hide nav shells as this is a task-focused screen */
+    </style>
+</head>
+<body class="bg-background text-on-surface antialiased min-h-screen flex flex-col">
+<!-- Task Header (Replacing TopNavBar as per task-focus rule) -->
+<header class="bg-surface-container-lowest sticky top-0 z-40 px-6 py-4 flex items-center justify-between shadow-[0_4px_12px_rgba(25,28,30,0.03)]">
+<div class="flex items-center gap-4">
+<button aria-label="Go Back" class="text-on-surface-variant hover:text-on-surface transition-colors p-2 rounded-sm hover:bg-surface-container-low">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div>
+<h1 class="font-headline text-xl font-bold text-on-surface">Create Flight Schedule</h1>
+<p class="font-body text-xs text-on-surface-variant mt-0.5">Terminal 3 Operations • Draft Mode</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 bg-surface-container-high text-on-surface font-body text-sm font-semibold rounded-DEFAULT hover:bg-surface-variant transition-colors">Save Draft</button>
+<!-- Primary Action - Signature Gradient for 'Traveler' feel, but solid primary for staff utility as per rules. Using solid primary here for Staff density. -->
+<button class="px-5 py-2 bg-primary text-on-primary font-body text-sm font-bold rounded-lg hover:bg-on-surface transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">flight_takeoff</span>
+                Schedule Flight
+            </button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow p-6 md:p-8 lg:p-12 max-w-5xl mx-auto w-full">
+<form class="space-y-8">
+<!-- Section 1: Identification & Asset -->
+<section class="bg-surface-container-lowest p-6 rounded-xl shadow-[0_8px_24px_-8px_rgba(25,28,30,0.05)]">
+<h2 class="font-headline text-lg font-bold text-on-surface mb-6 pb-4 border-b border-surface-container-high flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant">tag</span>
+                    Flight Identification
+                </h2>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Flight Number -->
+<div class="relative">
+<label class="form-label-staff" for="flight-number">Flight Number</label>
+<div class="relative">
+<input class="form-input-staff pl-10 uppercase font-mono font-bold text-base" id="flight-number" placeholder="e.g. AP-1234" type="text" value="AP-8492"/>
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">flight</span>
+</div>
+<p class="text-[10px] text-on-surface-variant mt-1.5 flex justify-between">
+<span>Auto-generated sequence available.</span>
+<button class="text-on-tertiary-container hover:underline font-semibold" type="button">Generate Next</button>
+</p>
+</div>
+<!-- Fleet Selection -->
+<div>
+<label class="form-label-staff" for="fleet-select">Assigned Aircraft</label>
+<div class="relative">
+<select class="form-input-staff appearance-none pr-10 bg-surface-variant cursor-pointer font-medium text-base" id="fleet-select">
+<option disabled="" value="">Select from Fleet...</option>
+<option selected="" value="B787-9">Boeing 787-9 Dreamliner (N283AP)</option>
+<option value="A350-900">Airbus A350-900 (N350AP)</option>
+<option value="B737-MAX8">Boeing 737 MAX 8 (N737AP)</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+<p class="text-[10px] text-on-surface-variant mt-1.5 flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-outline">info</span>
+                            Capacity: 290 pax. Range valid for this routing.
+                        </p>
+</div>
+</div>
+</section>
+<!-- Section 2: Routing & Timing (Asymmetric Layout) -->
+<section class="bg-surface-container-low p-6 rounded-xl relative overflow-hidden">
+<!-- Decorative background map to imply routing without being a literal image -->
+<div class="absolute inset-0 opacity-[0.03] pointer-events-none" style="background-image: radial-gradient(#191c1e 1px, transparent 1px); background-size: 20px 20px;"></div>
+<h2 class="font-headline text-lg font-bold text-on-surface mb-6 flex items-center gap-2 relative z-10">
+<span class="material-symbols-outlined text-on-surface-variant">route</span>
+                    Routing &amp; Schedule
+                </h2>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 relative z-10">
+<!-- Departure Column -->
+<div class="lg:col-span-5 space-y-5 bg-surface-container-lowest p-5 rounded-lg shadow-sm border border-surface-container-high/50">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary text-[20px]">flight_takeoff</span>
+<h3 class="font-headline font-semibold text-base text-on-surface">Departure</h3>
+</div>
+<div>
+<label class="form-label-staff" for="dep-airport">Origin Airport</label>
+<div class="relative">
+<input class="form-input-staff font-medium" id="dep-airport" placeholder="Search airport code or city..." type="text" value="JFK - John F. Kennedy International"/>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant cursor-pointer text-[18px]">search</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="form-label-staff" for="dep-date">Date</label>
+<input class="form-input-staff" id="dep-date" type="date" value="2023-11-15"/>
+</div>
+<div>
+<label class="form-label-staff" for="dep-time">Time (Local)</label>
+<input class="form-input-staff" id="dep-time" type="time" value="08:30"/>
+</div>
+</div>
+<div class="bg-surface-variant/50 p-2 rounded text-xs font-mono text-on-surface-variant flex justify-between items-center">
+<span>Gate: TBD</span>
+<span>Terminal 4</span>
+</div>
+</div>
+<!-- Connector Graphic (Desktop) -->
+<div class="hidden lg:flex lg:col-span-2 items-center justify-center flex-col">
+<div class="h-12 w-[2px] bg-outline-variant/30"></div>
+<div class="bg-surface-container-highest rounded-full p-2 my-2 text-on-surface-variant shadow-sm border border-surface-container-highest">
+<span class="material-symbols-outlined text-[20px]">sync_alt</span>
+</div>
+<div class="h-12 w-[2px] bg-outline-variant/30"></div>
+<p class="text-[10px] font-semibold text-on-surface-variant uppercase tracking-widest mt-2">Est. 6h 15m</p>
+</div>
+<!-- Arrival Column -->
+<div class="lg:col-span-5 space-y-5 bg-surface-container-lowest p-5 rounded-lg shadow-sm border border-surface-container-high/50">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary text-[20px]">flight_land</span>
+<h3 class="font-headline font-semibold text-base text-on-surface">Arrival</h3>
+</div>
+<div>
+<label class="form-label-staff" for="arr-airport">Destination Airport</label>
+<div class="relative">
+<input class="form-input-staff font-medium" id="arr-airport" placeholder="Search airport code or city..." type="text" value="LHR - London Heathrow"/>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant cursor-pointer text-[18px]">search</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="form-label-staff" for="arr-date">Date</label>
+<input class="form-input-staff" id="arr-date" type="date" value="2023-11-15"/>
+</div>
+<div>
+<label class="form-label-staff" for="arr-time">Time (Local)</label>
+<div class="relative">
+<input class="form-input-staff" id="arr-time" type="time" value="20:45"/>
+<span class="absolute -right-2 -top-2 text-[10px] bg-tertiary-fixed text-on-tertiary-fixed px-1 rounded-sm font-bold shadow-sm">+1 Day</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-variant/50 p-2 rounded text-xs font-mono text-on-surface-variant flex justify-between items-center">
+<span>Gate: TBD</span>
+<span>Terminal 5</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 3: Commercials & Validation -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Base Pricing -->
+<div class="md:col-span-1 bg-surface-container-lowest p-6 rounded-xl shadow-[0_8px_24px_-8px_rgba(25,28,30,0.05)] border-l-4 border-l-on-tertiary-container">
+<h2 class="font-headline text-sm font-bold text-on-surface mb-4 flex items-center gap-2 uppercase tracking-wide">
+<span class="material-symbols-outlined text-on-tertiary-container text-[18px]">payments</span>
+                        Commercials
+                    </h2>
+<div>
+<label class="form-label-staff" for="base-price">Base Ticket Price (Economy)</label>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface font-medium">$</span>
+<input class="form-input-staff pl-7 font-mono font-bold text-lg" id="base-price" type="number" value="450.00"/>
+</div>
+<p class="text-[10px] text-on-surface-variant mt-2">Premium cabins auto-scaled based on current yield multipliers.</p>
+</div>
+</div>
+<!-- Validation Status Panel -->
+<div class="md:col-span-2 bg-surface-container-high p-6 rounded-xl">
+<h2 class="font-headline text-sm font-bold text-on-surface mb-4 flex items-center gap-2 uppercase tracking-wide">
+<span class="material-symbols-outlined text-outline text-[18px]">verified_user</span>
+                        Pre-Flight Validation
+                    </h2>
+<div class="grid grid-cols-2 gap-3">
+<!-- Valid Status -->
+<div class="flex items-start gap-3 p-3 bg-surface-container-lowest rounded-DEFAULT shadow-sm">
+<span class="material-symbols-outlined text-tertiary-container text-[20px] mt-0.5">check_circle</span>
+<div>
+<p class="text-xs font-bold text-on-surface">Aircraft Availability</p>
+<p class="text-[10px] text-on-surface-variant">B787-9 is clear for selected dates.</p>
+</div>
+</div>
+<!-- Valid Status -->
+<div class="flex items-start gap-3 p-3 bg-surface-container-lowest rounded-DEFAULT shadow-sm">
+<span class="material-symbols-outlined text-tertiary-container text-[20px] mt-0.5">check_circle</span>
+<div>
+<p class="text-xs font-bold text-on-surface">Crew Staffing</p>
+<p class="text-[10px] text-on-surface-variant">Minimum crew requirements met.</p>
+</div>
+</div>
+<!-- Warning Status (Showing error_container as per system) -->
+<div class="flex items-start gap-3 p-3 bg-error-container rounded-DEFAULT shadow-sm col-span-2 border border-error/20">
+<span class="material-symbols-outlined text-error text-[20px] mt-0.5">warning</span>
+<div>
+<p class="text-xs font-bold text-on-surface">Slot Restriction Warning</p>
+<p class="text-[10px] text-on-surface-variant mt-0.5">LHR arrival slot unconfirmed for requested time. Proceeding will queue for approval.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+</form>
+</main>
+</body></html>

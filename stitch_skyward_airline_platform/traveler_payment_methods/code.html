@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AeroPrecision - Payment Methods</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary": "#000000",
+                        "on-primary-fixed": "#131b2e",
+                        "primary": "#000000",
+                        "inverse-surface": "#2d3133",
+                        "on-tertiary-container": "#3d89c3",
+                        "inverse-primary": "#bec6e0",
+                        "surface-dim": "#d8dadc",
+                        "on-surface-variant": "#45464d",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "on-tertiary": "#ffffff",
+                        "secondary": "#515f74",
+                        "background": "#f7f9fb",
+                        "surface-container-low": "#f2f4f6",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "on-secondary-container": "#57657a",
+                        "on-primary": "#ffffff",
+                        "on-background": "#191c1e",
+                        "surface-variant": "#e0e3e5",
+                        "secondary-fixed": "#d5e3fc",
+                        "primary-fixed-dim": "#bec6e0",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "surface": "#f7f9fb",
+                        "outline": "#76777d",
+                        "on-tertiary-fixed": "#001d32",
+                        "error": "#ba1a1a",
+                        "on-primary-container": "#7c839b",
+                        "surface-tint": "#565e74",
+                        "surface-container": "#eceef0",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "on-secondary": "#ffffff",
+                        "surface-bright": "#f7f9fb",
+                        "primary-fixed": "#dae2fd",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "tertiary-container": "#001d32",
+                        "on-error": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-container-high": "#e6e8ea",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed": "#cde5ff",
+                        "inverse-on-surface": "#eff1f3",
+                        "primary-container": "#131b2e",
+                        "secondary-container": "#d5e3fc",
+                        "outline-variant": "#c6c6cd",
+                        "on-surface": "#191c1e"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4, h5, h6, .font-headline { font-family: 'Manrope', sans-serif; letter-spacing: -0.02em; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen antialiased flex flex-col">
+<!-- TopNavBar -->
+<nav class="bg-white dark:bg-slate-950 docked full-width top-0 z-50">
+<div class="bg-slate-50 dark:bg-slate-900 flat no shadows border-b-0 pb-1">
+<div class="flex justify-between items-center px-8 h-16 w-full max-w-screen-2xl mx-auto">
+<div class="flex items-center gap-8">
+<span class="text-lg font-black tracking-tighter text-slate-900 dark:text-slate-50 font-headline">AeroPrecision</span>
+<div class="hidden md:flex gap-6 items-center">
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors duration-200 font-['Manrope'] font-bold tracking-tight text-sm" href="#">Explore</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors duration-200 font-['Manrope'] font-bold tracking-tight text-sm" href="#">Bookings</a>
+<a class="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors duration-200 font-['Manrope'] font-bold tracking-tight text-sm" href="#">Support</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="font-['Manrope'] font-bold tracking-tight text-sm text-slate-900 dark:text-slate-100 hover:opacity-70 transition-opacity">Sign In</button>
+<button class="bg-primary text-on-primary px-4 py-2 rounded font-['Manrope'] font-bold tracking-tight text-sm bg-gradient-to-r from-primary to-primary-container hover:opacity-90 transition-opacity">Join</button>
+</div>
+</div>
+</div>
+</nav>
+<!-- Main Content Layout -->
+<div class="flex flex-1 max-w-screen-2xl mx-auto w-full pt-8 px-4 md:px-8 gap-8">
+<!-- SideNavBar -->
+<aside class="hidden md:flex flex-col w-64 shrink-0 h-[calc(100vh-6rem)] sticky top-24">
+<div class="bg-slate-50 dark:bg-slate-900/50 h-full w-full rounded-none flex flex-col p-4">
+<div class="flex items-center gap-3 mb-8 px-4 mt-2">
+<div class="w-10 h-10 rounded-full bg-surface-container-high overflow-hidden shrink-0">
+<img alt="Traveler Profile" class="w-full h-full object-cover" data-alt="professional portrait of a businessman in a suit against a neutral grey background with soft studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDBH9Hy2Ew7_y1Nwno-9raNANOGJqZcBCSWdeCgIuLtPPdDsPSHn2anXxugOfhweiWGevTdbONDowOgD8j0IQIALUWT1PWHMkVcWjP7K3E1qq2CbLiCK6p46EWqwy8a2RJcLXa-MfbtVCgQU8eP1gmKGYnDJUML6cu8GJXtshjUoQxaFCoyou2UT_vPPYDVMPC6tSq3EU6VGlMW2AWGBdDhqtHXvuB_4GtmwaYH_iFUztQ2_7UAODji_fzah36LkZqxX4zoksFwArw"/>
+</div>
+<div>
+<div class="font-headline font-bold text-slate-900 dark:text-slate-100">Traveler Hub</div>
+<div class="text-xs font-medium text-on-surface-variant uppercase tracking-wider">Silver Status</div>
+</div>
+</div>
+<nav class="flex flex-col gap-2 flex-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-sm text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors duration-200 font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="flight_takeoff">flight_takeoff</span>
+<span>My Trips</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-sm Active: scale-95 transition-transform font-['Inter'] text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="credit_card">credit_card</span>
+<span>Payment Methods</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-sm text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors duration-200 font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="lock">lock</span>
+<span>Security</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-sm text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors duration-200 font-['Inter'] text-sm font-medium" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Preferences</span>
+</a>
+</nav>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 pb-24">
+<header class="mb-12">
+<h1 class="text-4xl font-headline font-extrabold text-on-background mb-2">Payment Methods</h1>
+<p class="text-on-surface-variant text-sm font-body">Manage your saved cards and billing information for seamless bookings.</p>
+</header>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+<!-- Left Column: Saved Cards (Bento style) -->
+<div class="lg:col-span-2 space-y-6">
+<div class="flex items-center justify-between mb-2">
+<h2 class="text-xl font-headline font-bold text-on-background">Saved Cards</h2>
+<button class="text-sm font-bold text-on-tertiary-container hover:text-on-tertiary-fixed-variant transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                            Add New Card
+                        </button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Primary Card -->
+<div class="bg-surface-container-lowest p-6 rounded shadow-[0_20px_40px_-10px_rgba(25,28,30,0.08)] relative overflow-hidden group">
+<div class="absolute top-0 right-0 w-32 h-32 bg-primary-container/5 rounded-full -mr-10 -mt-10 blur-2xl"></div>
+<div class="flex justify-between items-start mb-8 relative z-10">
+<div class="bg-primary/5 p-2 rounded-sm inline-flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">credit_card</span>
+</div>
+<span class="bg-surface-container-high text-on-surface text-[0.6875rem] font-bold uppercase tracking-[0.05em] px-2 py-1 rounded-sm">Default</span>
+</div>
+<div class="space-y-1 relative z-10">
+<div class="text-sm font-medium text-on-surface-variant">Corporate Corporate Card</div>
+<div class="font-headline font-bold text-lg text-on-background tracking-wider">•••• •••• •••• 4242</div>
+<div class="text-xs text-on-surface-variant flex justify-between items-center pt-2">
+<span>Exp: 12/26</span>
+<span class="font-bold">Visa</span>
+</div>
+</div>
+<div class="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-primary to-primary-container opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<!-- Secondary Card -->
+<div class="bg-surface-container-low p-6 rounded border-b-2 border-transparent hover:border-surface-variant transition-colors group relative">
+<div class="flex justify-between items-start mb-8">
+<div class="bg-surface-variant/50 p-2 rounded-sm inline-flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant">credit_card</span>
+</div>
+<button class="text-on-surface-variant hover:text-on-background">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+<div class="space-y-1">
+<div class="text-sm font-medium text-on-surface-variant">Personal Rewards Card</div>
+<div class="font-headline font-bold text-lg text-on-background tracking-wider opacity-80">•••• •••• •••• 5555</div>
+<div class="text-xs text-on-surface-variant flex justify-between items-center pt-2">
+<span>Exp: 08/25</span>
+<span class="font-bold">Mastercard</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Billing Address -->
+<div class="lg:col-span-1">
+<div class="bg-surface-container-low p-6 rounded h-full">
+<div class="flex items-center justify-between mb-6">
+<h2 class="text-lg font-headline font-bold text-on-background">Billing Address</h2>
+<button class="text-on-surface-variant hover:text-on-background">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+</div>
+<div class="space-y-4">
+<div class="text-sm font-medium text-on-background">John Doe</div>
+<div class="text-sm text-on-surface-variant leading-relaxed">
+                                123 Aviation Parkway<br/>
+                                Suite 400<br/>
+                                Seattle, WA 98101<br/>
+                                United States
+                            </div>
+<div class="pt-4 mt-4 bg-surface-variant h-[1px] w-full"></div>
+<div class="text-xs text-on-surface-variant">
+                                This address is used for your default payment method.
+                            </div>
+</div>
+</div>
+</div>
+</div>
+<!-- Recent Transactions Hint -->
+<div class="mt-16 bg-surface-container-high p-8 rounded flex items-center justify-between">
+<div>
+<h3 class="font-headline font-bold text-on-background mb-1">Looking for receipts?</h3>
+<p class="text-sm text-on-surface-variant">View your recent flight charges and download invoices.</p>
+</div>
+<button class="bg-surface-container-lowest text-on-background px-4 py-2 rounded font-bold text-sm shadow-sm hover:bg-surface transition-colors flex items-center gap-2">
+                    View History
+                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</main>
+</div>
+</body></html>

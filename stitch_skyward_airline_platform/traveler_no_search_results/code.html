@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Aeronautical Precision - No Flights Found</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800;900&amp;family=Inter:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed": "#d5e3fc",
+                        "surface-container-highest": "#e0e3e5",
+                        "tertiary-fixed": "#cde5ff",
+                        "surface-tint": "#565e74",
+                        "on-tertiary-fixed": "#001d32",
+                        "secondary-container": "#d5e3fc",
+                        "on-primary-fixed": "#131b2e",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "on-surface-variant": "#45464d",
+                        "error-container": "#ffdad6",
+                        "tertiary": "#000000",
+                        "on-secondary": "#ffffff",
+                        "tertiary-container": "#001d32",
+                        "on-error": "#ffffff",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "inverse-primary": "#bec6e0",
+                        "surface-container-lowest": "#ffffff",
+                        "outline": "#76777d",
+                        "surface-dim": "#d8dadc",
+                        "surface-container-high": "#e6e8ea",
+                        "primary-fixed": "#dae2fd",
+                        "on-surface": "#191c1e",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "on-tertiary-container": "#3d89c3",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "background": "#f7f9fb",
+                        "outline-variant": "#c6c6cd",
+                        "on-secondary-container": "#57657a",
+                        "surface-container-low": "#f2f4f6",
+                        "on-background": "#191c1e",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "primary": "#000000",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#2d3133",
+                        "surface-bright": "#f7f9fb",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-container": "#eceef0",
+                        "on-primary-container": "#7c839b",
+                        "on-primary": "#ffffff",
+                        "surface-variant": "#e0e3e5",
+                        "secondary": "#515f74",
+                        "primary-container": "#131b2e",
+                        "surface": "#f7f9fb",
+                        "primary-fixed-dim": "#bec6e0",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "error": "#ba1a1a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {},
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4, h5, h6, .font-headline { font-family: 'Manrope', sans-serif; letter-spacing: -0.02em; }
+        .bg-gradient-primary { background: linear-gradient(to bottom right, #000000, #131b2e); }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen flex flex-col antialiased selection:bg-secondary-fixed selection:text-on-secondary-fixed">
+<!-- TopNavBar (Shared Component) -->
+<nav class="bg-slate-50 dark:bg-slate-900 font-['Manrope'] tracking-tight font-bold text-sm docked full-width top-0 border-none bg-slate-100 dark:bg-slate-800 flat no shadows tonal layering flex justify-between items-center w-full px-8 py-4 max-w-[1440px] mx-auto hidden md:flex z-50 relative">
+<div class="flex items-center gap-8">
+<span class="text-lg font-black tracking-tighter text-slate-950 dark:text-white uppercase">Aeronautical Precision</span>
+<div class="flex items-center gap-6">
+<!-- 'Book' is active since this is a search flow -->
+<a class="text-slate-900 dark:text-white border-b-2 border-slate-900 dark:border-white pb-1 hover:text-slate-950 dark:hover:text-white transition-colors opacity-80 transition-all duration-150" href="#">Book</a>
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-950 dark:hover:text-white transition-colors" href="#">My Trips</a>
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-950 dark:hover:text-white transition-colors" href="#">Flight Status</a>
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-950 dark:hover:text-white transition-colors" href="#">Check-in</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" data-icon="search">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-lowest border-b-2 border-transparent focus:border-primary focus:ring-0 text-sm font-body w-48 transition-colors rounded-none placeholder:text-on-surface-variant" placeholder="Search..." type="text"/>
+</div>
+<button class="text-slate-500 hover:text-slate-950 transition-colors">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<button class="text-slate-500 hover:text-slate-950 transition-colors">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+<button class="bg-surface-container-high text-on-surface px-4 py-2 rounded-lg font-medium hover:bg-surface-dim transition-colors ml-2">Staff Login</button>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex flex-col px-4 md:px-8 py-8 max-w-[1440px] mx-auto w-full pb-32 md:pb-8">
+<!-- Editable Search Header (Traveler Mode) -->
+<section class="bg-surface-container-lowest p-6 md:p-8 rounded-lg mb-8" style="box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 items-end">
+<div class="col-span-1 md:col-span-1">
+<label class="block text-[0.6875rem] font-bold uppercase tracking-wider text-on-surface-variant mb-2 font-label">Origin</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" data-icon="flight_takeoff">flight_takeoff</span>
+<input class="w-full pl-10 pr-4 py-3 bg-surface border-b-2 border-transparent focus:border-primary focus:ring-0 text-base font-body text-on-surface rounded-none transition-colors" type="text" value="JFK - New York"/>
+</div>
+</div>
+<div class="col-span-1 md:col-span-1">
+<label class="block text-[0.6875rem] font-bold uppercase tracking-wider text-on-surface-variant mb-2 font-label">Destination</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" data-icon="flight_land">flight_land</span>
+<input class="w-full pl-10 pr-4 py-3 bg-surface border-b-2 border-transparent focus:border-primary focus:ring-0 text-base font-body text-on-surface rounded-none transition-colors" type="text" value="HND - Tokyo"/>
+</div>
+</div>
+<div class="col-span-1 md:col-span-1">
+<label class="block text-[0.6875rem] font-bold uppercase tracking-wider text-on-surface-variant mb-2 font-label">Dates</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" data-icon="calendar_today">calendar_today</span>
+<input class="w-full pl-10 pr-4 py-3 bg-surface border-b-2 border-transparent focus:border-primary focus:ring-0 text-base font-body text-on-surface rounded-none transition-colors" type="text" value="Oct 12 - Oct 24"/>
+</div>
+</div>
+<div class="col-span-1 md:col-span-1">
+<button class="w-full bg-gradient-primary text-on-primary font-bold py-3 px-6 rounded-lg hover:opacity-90 transition-opacity">
+                        Modify Search
+                    </button>
+</div>
+</div>
+</section>
+<!-- No Results State (Editorial Asymmetry) -->
+<section class="flex-grow flex items-center justify-center py-16 md:py-24">
+<div class="max-w-2xl w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center bg-surface-container-low p-8 md:p-12 rounded-none" style="box-shadow: 0 20px 40px -10px rgba(25, 28, 30, 0.08);">
+<!-- Iconography / Visual Anchor (Offset) -->
+<div class="md:col-span-4 flex justify-center md:justify-end">
+<div class="bg-surface-container-highest w-32 h-32 flex items-center justify-center rounded-DEFAULT">
+<span class="material-symbols-outlined text-[64px] text-on-surface-variant opacity-50" data-icon="flight_off" style="font-variation-settings: 'FILL' 0, 'wght' 200;">flight</span>
+</div>
+</div>
+<!-- Messaging (Authoritative) -->
+<div class="md:col-span-8 space-y-6 text-center md:text-left">
+<div>
+<h1 class="text-3xl md:text-4xl font-headline font-bold text-on-surface mb-2">No flights found</h1>
+<p class="text-base text-on-surface-variant font-body">We are unable to locate active flight schedules for the selected route and parameters.</p>
+</div>
+<!-- Suggestions Data Table Style -->
+<div class="bg-surface-container-highest p-6 rounded-DEFAULT border-l-4 border-outline-variant space-y-4">
+<h3 class="text-[0.6875rem] font-bold uppercase tracking-wider text-on-surface-variant font-label">Recommended Actions</h3>
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-on-surface-variant mt-0.5" data-icon="calendar_month">calendar_month</span>
+<div>
+<p class="text-sm font-bold text-on-surface font-body">Adjust your travel dates</p>
+<p class="text-xs text-on-surface-variant font-body">Try searching +/- 3 days from your original selection.</p>
+</div>
+</div>
+<div class="flex items-start gap-4 pt-3 border-t border-outline-variant/15">
+<span class="material-symbols-outlined text-on-surface-variant mt-0.5" data-icon="pin_drop">pin_drop</span>
+<div>
+<p class="text-sm font-bold text-on-surface font-body">Search nearby airports</p>
+<p class="text-xs text-on-surface-variant font-body">Consider flying into NRT instead of HND for broader availability.</p>
+</div>
+</div>
+</div>
+<div class="pt-4 flex flex-wrap gap-4 justify-center md:justify-start">
+<button class="bg-surface-container-high text-on-surface font-bold py-2 px-6 rounded-lg hover:bg-surface-dim transition-colors text-sm font-body">
+                            Clear Filters
+                        </button>
+<button class="bg-surface-container-lowest text-on-surface font-bold py-2 px-6 rounded-lg hover:bg-surface-dim transition-colors text-sm font-body" style="box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                            Return Home
+                        </button>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Shared Component) - Visible only on mobile -->
+<nav class="bg-white/95 dark:bg-slate-950/95 backdrop-blur-none text-slate-900 dark:text-slate-50 font-['Inter'] text-[10px] font-bold uppercase tracking-wider fixed bottom-0 w-full rounded-t-lg border-t border-slate-200 dark:border-slate-800 shadow-2xl fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 pb-safe md:hidden">
+<!-- Search is active -->
+<a class="flex flex-col items-center justify-center text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 rounded-md px-3 py-1" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="search">search</span>
+            Search
+        </a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="luggage">luggage</span>
+            Trips
+        </a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="confirmation_number">confirmation_number</span>
+            Boarding
+        </a>
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="person">person</span>
+            Profile
+        </a>
+</nav>
+</body></html>

@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Passenger Manifest - Aeronautical Precision</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary": "#515f74",
+                        "on-background": "#191c1e",
+                        "secondary-container": "#d5e3fc",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "on-secondary-container": "#57657a",
+                        "primary-container": "#131b2e",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-tertiary-fixed": "#001d32",
+                        "on-surface-variant": "#45464d",
+                        "inverse-surface": "#2d3133",
+                        "surface-dim": "#d8dadc",
+                        "surface": "#f7f9fb",
+                        "primary-fixed-dim": "#bec6e0",
+                        "primary-fixed": "#dae2fd",
+                        "error-container": "#ffdad6",
+                        "primary": "#000000",
+                        "tertiary": "#000000",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-container-high": "#e6e8ea",
+                        "on-primary": "#ffffff",
+                        "inverse-primary": "#bec6e0",
+                        "secondary-fixed": "#d5e3fc",
+                        "on-tertiary-container": "#3d89c3",
+                        "on-secondary": "#ffffff",
+                        "on-primary-container": "#7c839b",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "surface-variant": "#e0e3e5",
+                        "on-tertiary-fixed-variant": "#004b74",
+                        "outline": "#76777d",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "tertiary-fixed-dim": "#94ccff",
+                        "outline-variant": "#c6c6cd",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-container": "#001d32",
+                        "surface-container": "#eceef0",
+                        "on-primary-fixed": "#131b2e",
+                        "background": "#f7f9fb",
+                        "surface-bright": "#f7f9fb",
+                        "on-tertiary": "#ffffff",
+                        "surface-tint": "#565e74",
+                        "on-error": "#ffffff",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed": "#cde5ff",
+                        "on-surface": "#191c1e",
+                        "inverse-on-surface": "#eff1f3"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {},
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3, h4, h5, h6, .font-headline { font-family: 'Manrope', sans-serif; letter-spacing: -0.02em; }
+    </style>
+</head>
+<body class="bg-background text-on-surface antialiased flex h-screen overflow-hidden">
+<!-- SideNavBar -->
+<nav aria-label="Sidebar Navigation" class="h-screen w-64 fixed left-0 top-0 bg-surface-container-low flex flex-col p-4 space-y-2 z-40 hidden md:flex">
+<div class="mb-8 px-2">
+<h1 class="font-headline font-black text-on-surface text-xl">AeroPrecision</h1>
+<p class="font-body text-xs text-on-surface-variant mt-1">Terminal 3 Control</p>
+</div>
+<div class="flex-grow space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-DEFAULT font-label text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-surface-container-high text-on-surface font-semibold rounded-DEFAULT font-label text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">flight_takeoff</span>
+<span>Fleet</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-DEFAULT font-label text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]">calendar_month</span>
+<span>Schedules</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-DEFAULT font-label text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]">group</span>
+<span>Staffing</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-DEFAULT font-label text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]">monitoring</span>
+<span>Analytics</span>
+</a>
+</div>
+<div class="mt-auto pt-4 space-y-1">
+<button class="w-full bg-surface-container-highest text-on-surface hover:bg-surface-dim transition-colors py-2 px-4 rounded-lg font-label text-sm font-medium mb-4">
+                Create Flight
+            </button>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-DEFAULT font-label text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high transition-all rounded-DEFAULT font-label text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]">help</span>
+<span>Help</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 ml-0 md:ml-64 flex flex-col h-screen overflow-hidden bg-background">
+<!-- Header: Flight Context -->
+<header class="bg-surface-container-lowest px-8 py-6 z-10 flex-shrink-0 flex items-end justify-between">
+<div>
+<div class="flex items-center gap-2 mb-2 text-on-surface-variant font-label text-sm tracking-wide uppercase">
+<span class="material-symbols-outlined text-[16px]">flight</span>
+<span>Flight AP-402</span>
+<span class="mx-2 text-outline-variant">•</span>
+<span class="text-tertiary-fixed-variant font-semibold">18:30 Dep</span>
+</div>
+<h2 class="font-headline text-3xl font-bold text-on-surface flex items-center gap-4">
+                    JFK
+                    <span class="material-symbols-outlined text-on-surface-variant">arrow_right_alt</span>
+                    LHR
+                </h2>
+</div>
+<div class="flex gap-3">
+<button class="bg-surface-container-high text-on-surface px-4 py-2 rounded-lg font-label text-sm font-medium hover:bg-surface-dim transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">print</span>
+                    Print Manifest
+                </button>
+<button class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">mail</span>
+                    Message All
+                </button>
+</div>
+</header>
+<!-- Main Workspace -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Passenger List Pane -->
+<section class="flex-1 flex flex-col bg-surface p-8 overflow-hidden">
+<!-- Toolbar -->
+<div class="flex justify-between items-center mb-6 flex-shrink-0">
+<h3 class="font-headline text-xl font-bold text-on-surface">Passenger Manifest</h3>
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
+<input class="bg-surface-variant border-none rounded-lg pl-10 pr-4 py-2 text-sm font-body text-on-surface placeholder:text-outline focus:ring-1 focus:ring-outline w-64 h-9" placeholder="Search by name or ID" type="text"/>
+</div>
+<button class="bg-surface-container-high text-on-surface px-3 py-2 rounded-lg text-sm font-label flex items-center gap-2 hover:bg-surface-dim h-9">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                            Filter
+                        </button>
+</div>
+</div>
+<!-- Data Table -->
+<div class="flex-1 overflow-auto bg-surface-container-lowest rounded-xl shadow-[0_20px_40px_-10px_rgba(25,28,30,0.08)]">
+<table class="w-full text-left border-collapse whitespace-nowrap">
+<thead class="bg-surface-container-high sticky top-0 z-10">
+<tr>
+<th class="font-label text-xs font-semibold text-on-surface-variant py-3 px-6 uppercase tracking-wider">Passenger Name</th>
+<th class="font-label text-xs font-semibold text-on-surface-variant py-3 px-6 uppercase tracking-wider">Ticket ID</th>
+<th class="font-label text-xs font-semibold text-on-surface-variant py-3 px-6 uppercase tracking-wider">Seat</th>
+<th class="font-label text-xs font-semibold text-on-surface-variant py-3 px-6 uppercase tracking-wider">Status</th>
+<th class="font-label text-xs font-semibold text-on-surface-variant py-3 px-6 uppercase tracking-wider">Passport Info</th>
+<th class="font-label text-xs font-semibold text-on-surface-variant py-3 px-6 uppercase tracking-wider">Purchased</th>
+</tr>
+</thead>
+<tbody class="font-body text-sm text-on-surface">
+<!-- Row 1 -->
+<tr class="bg-surface-container-lowest hover:bg-surface-container-low transition-colors cursor-pointer group">
+<td class="py-3 px-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-xs">JD</div>
+<div class="font-medium">Doe, Jane</div>
+</td>
+<td class="py-3 px-6 font-mono text-on-surface-variant">TKT-8921-A</td>
+<td class="py-3 px-6 font-semibold text-primary">12A</td>
+<td class="py-3 px-6">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant px-2 py-1 rounded-DEFAULT text-xs font-semibold uppercase tracking-wider">Boarded</span>
+</td>
+<td class="py-3 px-6 text-on-surface-variant">US ••••4521 <span class="material-symbols-outlined text-[14px] text-tertiary-fixed-variant align-middle ml-1">check_circle</span></td>
+<td class="py-3 px-6 text-on-surface-variant text-xs">2023-10-24 09:12Z</td>
+</tr>
+<!-- Row 2 -->
+<tr class="bg-surface-container-low hover:bg-surface-container transition-colors cursor-pointer group">
+<td class="py-3 px-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center font-bold text-xs">AS</div>
+<div class="font-medium">Smith, Alex</div>
+</td>
+<td class="py-3 px-6 font-mono text-on-surface-variant">TKT-8922-B</td>
+<td class="py-3 px-6 font-semibold text-primary">12B</td>
+<td class="py-3 px-6">
+<span class="bg-surface-container-highest text-on-surface px-2 py-1 rounded-DEFAULT text-xs font-semibold uppercase tracking-wider">Checked In</span>
+</td>
+<td class="py-3 px-6 text-on-surface-variant">UK ••••9932 <span class="material-symbols-outlined text-[14px] text-tertiary-fixed-variant align-middle ml-1">check_circle</span></td>
+<td class="py-3 px-6 text-on-surface-variant text-xs">2023-10-25 14:30Z</td>
+</tr>
+<!-- Row 3 -->
+<tr class="bg-surface-container-lowest hover:bg-surface-container-low transition-colors cursor-pointer group">
+<td class="py-3 px-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-error-container text-on-error-container flex items-center justify-center font-bold text-xs">MW</div>
+<div class="font-medium text-error">Wong, Michael</div>
+</td>
+<td class="py-3 px-6 font-mono text-on-surface-variant">TKT-8945-F</td>
+<td class="py-3 px-6 font-semibold text-primary">04C</td>
+<td class="py-3 px-6">
+<span class="bg-error-container text-on-error-container px-2 py-1 rounded-DEFAULT text-xs font-semibold uppercase tracking-wider">Missing Docs</span>
+</td>
+<td class="py-3 px-6 text-error">SG ••••1109 <span class="material-symbols-outlined text-[14px] align-middle ml-1">warning</span></td>
+<td class="py-3 px-6 text-on-surface-variant text-xs">2023-10-22 11:45Z</td>
+</tr>
+<!-- Row 4 -->
+<tr class="bg-surface-container-low hover:bg-surface-container transition-colors cursor-pointer group">
+<td class="py-3 px-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center font-bold text-xs">EL</div>
+<div class="font-medium">Lee, Emma</div>
+</td>
+<td class="py-3 px-6 font-mono text-on-surface-variant">TKT-8977-C</td>
+<td class="py-3 px-6 font-semibold text-primary">22F</td>
+<td class="py-3 px-6">
+<span class="bg-surface-container-highest text-on-surface px-2 py-1 rounded-DEFAULT text-xs font-semibold uppercase tracking-wider">Checked In</span>
+</td>
+<td class="py-3 px-6 text-on-surface-variant">CA ••••8821 <span class="material-symbols-outlined text-[14px] text-tertiary-fixed-variant align-middle ml-1">check_circle</span></td>
+<td class="py-3 px-6 text-on-surface-variant text-xs">2023-10-26 08:20Z</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- Side Rail: Flight KPIs -->
+<aside class="w-80 bg-surface-container-low border-l border-surface-container-highest flex-shrink-0 flex flex-col p-6 overflow-y-auto">
+<h4 class="font-headline text-lg font-bold text-on-surface mb-6">Flight Overview</h4>
+<div class="space-y-6">
+<!-- KPI Card 1 -->
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-[0_20px_40px_-10px_rgba(25,28,30,0.05)]">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Load Factor</span>
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">airline_seat_recline_normal</span>
+</div>
+<div class="font-headline text-3xl font-bold text-on-surface">92%</div>
+<div class="mt-3 w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 92%"></div>
+</div>
+<div class="flex justify-between mt-2 font-label text-xs text-on-surface-variant">
+<span>285 Booked</span>
+<span>310 Capacity</span>
+</div>
+</div>
+<!-- KPI Card 2 -->
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-[0_20px_40px_-10px_rgba(25,28,30,0.05)]">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Boarding Status</span>
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">how_to_reg</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-headline text-3xl font-bold text-on-surface">142</span>
+<span class="font-label text-sm text-on-surface-variant">/ 285</span>
+</div>
+<div class="mt-4 space-y-2">
+<div class="flex justify-between font-label text-xs">
+<span class="text-tertiary-fixed-variant font-medium flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-tertiary-fixed-variant"></span> Boarded</span>
+<span class="text-on-surface font-semibold">142</span>
+</div>
+<div class="flex justify-between font-label text-xs">
+<span class="text-on-surface-variant flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-surface-variant"></span> Checked In</span>
+<span class="text-on-surface font-semibold">138</span>
+</div>
+<div class="flex justify-between font-label text-xs">
+<span class="text-error flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-error"></span> Pending</span>
+<span class="text-on-surface font-semibold">5</span>
+</div>
+</div>
+</div>
+<!-- KPI Card 3 -->
+<div class="bg-surface-container-lowest p-5 rounded-xl shadow-[0_20px_40px_-10px_rgba(25,28,30,0.05)]">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Est. Revenue</span>
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">payments</span>
+</div>
+<div class="font-headline text-3xl font-bold text-on-surface">$128.4k</div>
+<div class="mt-2 font-label text-xs text-on-surface-variant">
+                            +4.2% vs Route Avg.
+                        </div>
+</div>
+</div>
+</aside>
+</div>
+</main>
+</body></html>

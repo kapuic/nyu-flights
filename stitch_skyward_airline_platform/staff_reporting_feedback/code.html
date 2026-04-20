@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Analytics - AeroPrecision</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-fixed-variant": "#3a485b",
+                    "surface-container-high": "#e6e8ea",
+                    "on-surface": "#191c1e",
+                    "error": "#ba1a1a",
+                    "surface-container-low": "#f2f4f6",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed": "#cde5ff",
+                    "inverse-primary": "#bec6e0",
+                    "primary": "#000000",
+                    "inverse-on-surface": "#eff1f3",
+                    "secondary-fixed": "#d5e3fc",
+                    "on-tertiary-fixed-variant": "#004b74",
+                    "on-error": "#ffffff",
+                    "surface-bright": "#f7f9fb",
+                    "secondary": "#515f74",
+                    "secondary-container": "#d5e3fc",
+                    "on-background": "#191c1e",
+                    "on-primary-fixed-variant": "#3f465c",
+                    "on-surface-variant": "#45464d",
+                    "on-tertiary-container": "#3d89c3",
+                    "inverse-surface": "#2d3133",
+                    "outline": "#76777d",
+                    "on-tertiary-fixed": "#001d32",
+                    "outline-variant": "#c6c6cd",
+                    "background": "#f7f9fb",
+                    "primary-container": "#131b2e",
+                    "tertiary-container": "#001d32",
+                    "on-primary-fixed": "#131b2e",
+                    "surface-tint": "#565e74",
+                    "on-secondary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "tertiary": "#000000",
+                    "on-error-container": "#93000a",
+                    "on-secondary-container": "#57657a",
+                    "on-primary-container": "#7c839b",
+                    "on-tertiary": "#ffffff",
+                    "primary-fixed": "#dae2fd",
+                    "on-secondary-fixed": "#0d1c2e",
+                    "surface-variant": "#e0e3e5",
+                    "surface-dim": "#d8dadc",
+                    "surface-container-highest": "#e0e3e5",
+                    "primary-fixed-dim": "#bec6e0",
+                    "tertiary-fixed-dim": "#94ccff",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-fixed-dim": "#b9c7df",
+                    "surface": "#f7f9fb",
+                    "surface-container": "#eceef0"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {},
+            "fontFamily": {
+                    "headline": [
+                            "Manrope"
+                    ],
+                    "body": [
+                            "Inter"
+                    ],
+                    "label": [
+                            "Inter"
+                    ]
+            }
+        },
+        },
+      }
+    </script>
+</head>
+<body class="bg-background text-on-surface font-body antialiased flex">
+<!-- SideNavBar (Staff Concept) -->
+<nav class="hidden md:flex flex-col bg-surface-container-highest h-screen w-64 fixed left-0 top-0 p-4 space-y-2 z-40">
+<div class="mb-8 px-2 flex items-center space-x-3">
+<div class="w-10 h-10 bg-primary-container rounded flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined" data-icon="flight_takeoff">flight_takeoff</span>
+</div>
+<div>
+<h1 class="font-headline font-black text-on-surface tracking-tighter text-lg leading-tight">Operations</h1>
+<p class="text-xs text-on-surface-variant font-label uppercase tracking-widest">Terminal 3 Control</p>
+</div>
+</div>
+<div class="flex-1 space-y-1">
+<!-- Navigation Items based on JSON -->
+<a class="flex items-center space-x-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-low transition-all rounded-sm font-label text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="dashboard">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-low transition-all rounded-sm font-label text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="flight_takeoff">flight_takeoff</span>
+<span>Fleet</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-low transition-all rounded-sm font-label text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="calendar_month">calendar_month</span>
+<span>Schedules</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-low transition-all rounded-sm font-label text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="group">group</span>
+<span>Staffing</span>
+</a>
+<!-- Active State -->
+<a class="flex items-center space-x-3 px-3 py-2 bg-surface-container-low text-on-surface font-semibold rounded-sm font-label text-sm scale-95 duration-75" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="monitoring" style="font-variation-settings: 'FILL' 1;">monitoring</span>
+<span>Analytics</span>
+</a>
+</div>
+<div class="mt-auto space-y-1 pt-4 border-t border-surface-container-low">
+<button class="w-full flex items-center justify-center space-x-2 bg-primary text-on-primary py-2.5 rounded text-sm font-semibold hover:bg-primary-container transition-colors mb-4">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span>Create Flight</span>
+</button>
+<a class="flex items-center space-x-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-low transition-all rounded-sm font-label text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center space-x-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-low transition-all rounded-sm font-label text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="help">help</span>
+<span>Help</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-64 p-6 lg:p-10 bg-background min-h-screen">
+<!-- Header Section -->
+<header class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+<div>
+<h2 class="font-headline text-3xl font-bold tracking-tight text-on-surface">Reporting &amp; Analytics</h2>
+<p class="text-on-surface-variant mt-1 text-sm">Terminal 3 performance metrics and passenger sentiment.</p>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center bg-surface-variant rounded px-3 py-2">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px] mr-2">calendar_today</span>
+<select class="bg-transparent border-none text-sm font-medium text-on-surface focus:ring-0 p-0 outline-none cursor-pointer">
+<option>Last 30 Days</option>
+<option>This Quarter</option>
+<option>Year to Date</option>
+</select>
+</div>
+<button class="bg-surface-container-high text-on-surface px-4 py-2 rounded text-sm font-medium hover:bg-surface-dim transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">download</span>
+                    Export
+                </button>
+</div>
+</header>
+<!-- Two Panel Layout -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+<!-- Left Panel: Metrics & Charts (Spans 2 cols) -->
+<div class="xl:col-span-2 space-y-8">
+<!-- KPI Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+<!-- KPI Card 1 -->
+<div class="bg-surface-container-lowest p-5 rounded shadow-[0_4px_12px_rgba(0,0,0,0.02)]">
+<div class="flex justify-between items-start mb-2">
+<span class="text-sm font-label text-on-surface-variant">Total Ticket Revenue</span>
+<span class="material-symbols-outlined text-tertiary-container text-[20px]">account_balance_wallet</span>
+</div>
+<div class="font-headline text-3xl font-bold tracking-tight text-on-surface">$2.4M</div>
+<div class="mt-2 flex items-center text-xs font-medium text-on-surface-variant">
+<span class="text-tertiary-container flex items-center mr-1">
+<span class="material-symbols-outlined text-[14px]">trending_up</span>
+                                12.5%
+                            </span>
+                            vs last period
+                        </div>
+</div>
+<!-- KPI Card 2 -->
+<div class="bg-surface-container-lowest p-5 rounded shadow-[0_4px_12px_rgba(0,0,0,0.02)]">
+<div class="flex justify-between items-start mb-2">
+<span class="text-sm font-label text-on-surface-variant">Passengers Boarded</span>
+<span class="material-symbols-outlined text-tertiary-container text-[20px]">group</span>
+</div>
+<div class="font-headline text-3xl font-bold tracking-tight text-on-surface">45,280</div>
+<div class="mt-2 flex items-center text-xs font-medium text-on-surface-variant">
+<span class="text-tertiary-container flex items-center mr-1">
+<span class="material-symbols-outlined text-[14px]">trending_up</span>
+                                4.2%
+                            </span>
+                            vs last period
+                        </div>
+</div>
+<!-- KPI Card 3 -->
+<div class="bg-surface-container-lowest p-5 rounded shadow-[0_4px_12px_rgba(0,0,0,0.02)]">
+<div class="flex justify-between items-start mb-2">
+<span class="text-sm font-label text-on-surface-variant">On-Time Performance</span>
+<span class="material-symbols-outlined text-tertiary-container text-[20px]">schedule</span>
+</div>
+<div class="font-headline text-3xl font-bold tracking-tight text-on-surface">94.8%</div>
+<div class="mt-2 flex items-center text-xs font-medium text-on-surface-variant">
+<span class="text-error flex items-center mr-1">
+<span class="material-symbols-outlined text-[14px]">trending_down</span>
+                                1.1%
+                            </span>
+                            vs last period
+                        </div>
+</div>
+</div>
+<!-- Monthly Trend Chart Area -->
+<div class="bg-surface-container-lowest p-6 rounded shadow-[0_4px_12px_rgba(0,0,0,0.02)]">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline font-semibold text-lg text-on-surface">Revenue &amp; Volume Trends</h3>
+<div class="flex space-x-2">
+<button class="px-3 py-1 text-xs font-medium rounded bg-surface-container-high text-on-surface">Monthly</button>
+<button class="px-3 py-1 text-xs font-medium rounded text-on-surface-variant hover:bg-surface-variant transition-colors">Quarterly</button>
+</div>
+</div>
+<!-- Faux Chart Representation using layout -->
+<div class="h-64 flex items-end justify-between space-x-2 pb-6 border-b border-surface-variant relative">
+<!-- Y-axis labels -->
+<div class="absolute left-0 top-0 h-full flex flex-col justify-between text-[10px] text-on-surface-variant pb-6">
+<span>$1M</span>
+<span>$750k</span>
+<span>$500k</span>
+<span>$250k</span>
+</div>
+<!-- Bars -->
+<div class="w-full flex justify-between items-end pl-10 h-full">
+<div class="w-1/12 bg-surface-container-high hover:bg-primary-fixed-dim transition-colors h-[40%] rounded-t-sm relative group">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">$400k</div>
+</div>
+<div class="w-1/12 bg-surface-container-high hover:bg-primary-fixed-dim transition-colors h-[55%] rounded-t-sm relative group"></div>
+<div class="w-1/12 bg-surface-container-high hover:bg-primary-fixed-dim transition-colors h-[45%] rounded-t-sm relative group"></div>
+<div class="w-1/12 bg-surface-container-high hover:bg-primary-fixed-dim transition-colors h-[70%] rounded-t-sm relative group"></div>
+<div class="w-1/12 bg-surface-container-high hover:bg-primary-fixed-dim transition-colors h-[85%] rounded-t-sm relative group"></div>
+<div class="w-1/12 bg-primary-container h-[95%] rounded-t-sm relative group shadow-sm">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">$950k</div>
+</div>
+</div>
+</div>
+<!-- X-axis labels -->
+<div class="flex justify-between pl-10 mt-3 text-[10px] font-label text-on-surface-variant uppercase tracking-wider">
+<span>Jan</span>
+<span>Feb</span>
+<span>Mar</span>
+<span>Apr</span>
+<span>May</span>
+<span class="font-bold text-on-surface">Jun</span>
+</div>
+</div>
+<!-- Dense Data Table (Staff Format) -->
+<div class="bg-surface-container-low rounded">
+<div class="px-5 py-4 border-b border-surface-variant flex justify-between items-center bg-surface-container-highest rounded-t">
+<h3 class="font-headline font-semibold text-sm text-on-surface">Route Performance</h3>
+<button class="text-on-surface-variant hover:text-on-surface text-sm font-medium flex items-center">View All <span class="material-symbols-outlined text-[16px] ml-1">arrow_forward</span></button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left text-sm whitespace-nowrap">
+<thead>
+<tr class="text-xs text-on-surface-variant font-label uppercase tracking-widest border-b border-outline-variant/15">
+<th class="px-5 py-3 font-medium">Route</th>
+<th class="px-5 py-3 font-medium">Flights</th>
+<th class="px-5 py-3 font-medium">Load Factor</th>
+<th class="px-5 py-3 font-medium">Revenue</th>
+<th class="px-5 py-3 font-medium">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/15 font-body">
+<tr class="hover:bg-surface-container-highest transition-colors">
+<td class="px-5 py-3 font-semibold text-on-surface">JFK → LHR</td>
+<td class="px-5 py-3 text-on-surface-variant">124</td>
+<td class="px-5 py-3 text-on-surface-variant">88%</td>
+<td class="px-5 py-3 text-on-surface-variant">$840k</td>
+<td class="px-5 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-tertiary-fixed text-on-tertiary-fixed-variant">Optimal</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-highest transition-colors">
+<td class="px-5 py-3 font-semibold text-on-surface">SFO → NRT</td>
+<td class="px-5 py-3 text-on-surface-variant">86</td>
+<td class="px-5 py-3 text-on-surface-variant">92%</td>
+<td class="px-5 py-3 text-on-surface-variant">$720k</td>
+<td class="px-5 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-tertiary-fixed text-on-tertiary-fixed-variant">Optimal</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-highest transition-colors">
+<td class="px-5 py-3 font-semibold text-on-surface">ORD → CDG</td>
+<td class="px-5 py-3 text-on-surface-variant">62</td>
+<td class="px-5 py-3 text-on-surface-variant">74%</td>
+<td class="px-5 py-3 text-on-surface-variant">$410k</td>
+<td class="px-5 py-3">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-error-container text-on-error-container">Underperforming</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Right Panel: Feedback & Sentiment -->
+<div class="space-y-6">
+<div class="bg-surface-container-low rounded h-full flex flex-col">
+<div class="px-5 py-4 bg-surface-container-highest rounded-t">
+<h3 class="font-headline font-semibold text-sm text-on-surface">Customer Sentiment</h3>
+<p class="text-xs text-on-surface-variant mt-1">Recent feedback from verified passengers.</p>
+</div>
+<div class="p-5 border-b border-outline-variant/15">
+<div class="flex items-center justify-between mb-2">
+<div class="text-2xl font-headline font-bold text-on-surface">4.8</div>
+<div class="flex text-tertiary-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="material-symbols-outlined">star_half</span>
+</div>
+</div>
+<p class="text-xs font-label text-on-surface-variant uppercase tracking-widest">Average Rating</p>
+</div>
+<!-- Feedback List -->
+<div class="flex-1 overflow-y-auto p-5 space-y-4">
+<!-- Comment 1 -->
+<div class="bg-surface-container-lowest p-4 rounded shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-primary-fixed flex items-center justify-center text-[10px] font-bold text-on-primary-fixed-variant">JD</div>
+<span class="text-xs font-medium text-on-surface">Flight AP402</span>
+</div>
+<span class="text-[10px] text-on-surface-variant">2h ago</span>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed">"Boarding process was incredibly smooth. The staff at Terminal 3 were efficient and polite. Food options at the gate were limited though."</p>
+<div class="mt-3 flex gap-2">
+<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-surface-variant text-on-surface-variant">Boarding</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-error-container text-on-error-container">Amenities</span>
+</div>
+</div>
+<!-- Comment 2 -->
+<div class="bg-surface-container-lowest p-4 rounded shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-secondary-fixed flex items-center justify-center text-[10px] font-bold text-on-secondary-fixed-variant">MK</div>
+<span class="text-xs font-medium text-on-surface">Flight AP118</span>
+</div>
+<span class="text-[10px] text-on-surface-variant">5h ago</span>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed">"Slight delay on the tarmac, but the captain kept us well informed. Cabin crew was excellent throughout the turbulent sections."</p>
+<div class="mt-3 flex gap-2">
+<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-tertiary-fixed text-on-tertiary-fixed-variant">Crew</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-surface-variant text-on-surface-variant">Communication</span>
+</div>
+</div>
+<!-- Comment 3 -->
+<div class="bg-surface-container-lowest p-4 rounded shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-primary-fixed flex items-center justify-center text-[10px] font-bold text-on-primary-fixed-variant">SL</div>
+<span class="text-xs font-medium text-on-surface">Flight AP092</span>
+</div>
+<span class="text-[10px] text-on-surface-variant">1d ago</span>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed">"Baggage claim took longer than expected. Needs better organization at carousel 4."</p>
+<div class="mt-3 flex gap-2">
+<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-error-container text-on-error-container">Baggage</span>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-outline-variant/15 bg-surface-container-highest rounded-b">
+<button class="w-full py-2 text-sm font-medium text-on-surface hover:bg-surface-variant transition-colors rounded">View All Feedback</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>
