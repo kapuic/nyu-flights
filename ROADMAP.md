@@ -7,35 +7,35 @@ Build the Part 3 full-stack web app on top of the existing airline reservation d
 ## Phase 1: Foundation
 
 - [x] Set up the app shell and routing.
-- [ ] Configure environment variables for PostgreSQL.
+- [x] Configure environment variables for PostgreSQL.
 - [ ] Add Drizzle with a PostgreSQL driver.
-- [ ] Add a small database layer for running `sql`` queries.
-- [ ] Verify the app can connect to the existing database.
+- [x] Add a small database layer for running `sql`` queries.
+- [x] Verify the app can connect to the existing database.
 
 ## Phase 2: Public + Customer Flows
 
 ### Public Home Page
 
-- [ ] Build a not-logged-in home page.
-- [ ] Implement public future-flight search by source city/airport, destination city/airport, and departure date.
-- [ ] Support both one-way and round-trip search.
-- [ ] Add customer registration.
-- [ ] Add airline staff registration.
-- [ ] Add customer login.
-- [ ] Add airline staff login.
-- [ ] Show clear login failure states.
+- [x] Build a not-logged-in home page.
+- [x] Implement public future-flight search by source city/airport, destination city/airport, and departure date.
+- [x] Support both one-way and round-trip search.
+- [x] Add customer registration.
+- [x] Add airline staff registration.
+- [x] Add customer login.
+- [x] Add airline staff login.
+- [x] Show clear login failure states.
 
 ### Customer Home Page + Use Cases
 
-- [ ] Build a customer-only home page with only customer-relevant actions.
-- [ ] Show future flights by default in `View My Flights`.
-- [ ] Support filtering purchased flights by date range and optional source/destination.
-- [ ] Implement customer flight search from the logged-in experience too.
-- [ ] Implement ticket purchase with card type, card number, name on card, expiration date, and purchase timestamp.
-- [ ] Enforce seat availability before purchase using ticket count versus airplane capacity.
-- [ ] Restrict ticket purchase to logged-in customers only.
-- [ ] Implement ratings and comments for completed past flights only.
-- [ ] Add customer logout.
+- [x] Build a customer-only home page with only customer-relevant actions.
+- [x] Show future flights by default in `View My Flights`.
+- [x] Support filtering purchased flights by date range and optional source/destination.
+- [x] Implement customer flight search from the logged-in experience too.
+- [x] Implement ticket purchase with card type, card number, name on card, expiration date, and purchase timestamp.
+- [x] Enforce seat availability before purchase using ticket count versus airplane capacity.
+- [x] Restrict ticket purchase to logged-in customers only.
+- [x] Implement ratings and comments for completed past flights only.
+- [x] Add customer logout.
 
 ## Phase 3: Airline Staff Flows
 
@@ -64,14 +64,14 @@ Build the Part 3 full-stack web app on top of the existing airline reservation d
 
 ## Phase 4: Auth, Security, and Validation
 
-- [ ] Hash passwords with `bcrypt`.
-- [ ] Create a shared session guard for customer routes.
-- [ ] Create a shared session guard for airline staff routes.
-- [ ] Validate all form inputs on the server.
-- [ ] Prevent SQL injection by using parameterized queries everywhere.
-- [ ] Avoid `dangerouslySetInnerHTML` for comments and other user-provided text.
-- [ ] Prevent users from accessing staff-only mutations without staff authorization checks.
-- [ ] Prevent customers from rating flights they have not completed.
+- [x] Hash passwords with `bcrypt`.
+- [x] Create a shared session guard for customer routes.
+- [x] Create a shared session guard for airline staff routes.
+- [x] Validate all form inputs on the server.
+- [x] Prevent SQL injection by using parameterized queries everywhere.
+- [x] Avoid `dangerouslySetInnerHTML` for comments and other user-provided text.
+- [x] Prevent users from accessing staff-only mutations without staff authorization checks.
+- [x] Prevent customers from rating flights they have not completed.
 
 ## Phase 5: Testing and Demo Readiness
 

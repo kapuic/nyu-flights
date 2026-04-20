@@ -44,7 +44,14 @@ export const Route = createFileRoute("/staff")({
     if (!currentUser) throw redirect({ to: "/login" })
     if (currentUser.role !== "staff") throw redirect({ to: "/customer" })
 
-    return getStaffDashboardFn()
+    return getStaffDashboardFn({
+      data: {
+        destination: "",
+        endDate: "",
+        source: "",
+        startDate: "",
+      },
+    })
   },
   component: StaffHomePage,
 })
@@ -52,6 +59,7 @@ export const Route = createFileRoute("/staff")({
 function StaffHomePage() {
   const router = useRouter()
   const dashboard = Route.useLoaderData()
+  const [dashboardData, setDashboardData] = useState(dashboard)
   const [flightForm, setFlightForm] = useState({
     airplaneId: dashboard.airplanes[0]?.airplaneId ?? "",
     arrivalAirportCode: dashboard.airports[0]?.code ?? "",
@@ -69,12 +77,18 @@ function StaffHomePage() {
   })
   const [selectedPassengers, setSelectedPassengers] = useState<PassengerRecord[] | null>(null)
   const [selectedPassengerKey, setSelectedPassengerKey] = useState<string | null>(null)
+  const [flightFilters, setFlightFilters] = useState({
+    destination: "",
+    endDate: "",
+    source: "",
+    startDate: "",
+  })
   const [reportRange, setReportRange] = useState({ endDate: "", startDate: "" })
   const [rangeResult, setRangeResult] = useState<{ endDate: string; startDate: string; ticketsSold: number } | null>(null)
   const [busyAction, setBusyAction] = useState<string | null>(null)
 
   async function refresh() {
-    await router.invalidate()
+    setDashboardData(await getStaffDashboardFn({ data: flightFilters }))
   }
 
   async function handleStatusToggle(airlineName: string, departureDatetime: string, flightNumber: string, status: "on_time" | "delayed") {
@@ -98,6 +112,16 @@ function StaffHomePage() {
     setSelectedPassengerKey(key)
     const passengers = await getFlightPassengersFn({ data: { airlineName, departureDatetime, flightNumber } })
     setSelectedPassengers(passengers)
+  }
+
+  async function handleFlightFilterSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setBusyAction("flight-filter")
+    try {
+      setDashboardData(await getStaffDashboardFn({ data: flightFilters }))
+    } finally {
+      setBusyAction(null)
+    }
   }
 
   async function handleCreateFlight(event: React.FormEvent<HTMLFormElement>) {
@@ -152,6 +176,11 @@ function StaffHomePage() {
     setBusyAction("report")
     try {
       const result = await getStaffReportFn({ data: reportRange })
+      if ("error" in result && result.error) {
+        toast.error(result.error)
+        setRangeResult(null)
+        return
+      }
       setRangeResult(result)
     } finally {
       setBusyAction(null)
@@ -168,15 +197,15 @@ function StaffHomePage() {
   return (
     <SiteShell
       active="staff"
-      currentUser={{ displayName: dashboard.airlineName, role: "staff" }}
+      currentUser={{ displayName: dashboardData.airlineName, role: "staff" }}
       summary={
         <>
-          <SummaryMetric label="Flights next 30 days" value={String(dashboard.flights.length)} />
-          <SummaryMetric label="Fleet size" value={String(dashboard.airplanes.length)} />
-          <SummaryMetric label="Tickets this year" value={String(dashboard.reportSummary.lastYearTickets)} />
+          <SummaryMetric label="Flights in view" value={String(dashboardData.flights.length)} />
+          <SummaryMetric label="Fleet size" value={String(dashboardData.airplanes.length)} />
+          <SummaryMetric label="Tickets this year" value={String(dashboardData.reportSummary.lastYearTickets)} />
         </>
       }
-      title={`Staff home · ${dashboard.airlineName}`}
+      title={`Staff home · ${dashboardData.airlineName}`}
     >
       <Tabs className="space-y-5" defaultValue="flights">
         <TabsList className="grid w-full grid-cols-2 gap-1 rounded-[18px] bg-slate-100 p-1 md:grid-cols-5">
@@ -188,6 +217,21 @@ function StaffHomePage() {
         </TabsList>
 
         <TabsContent className="space-y-5" value="flights">
+          <Card className="rounded-[24px] border border-slate-200 bg-white shadow-none">
+            <CardHeader>
+              <CardTitle>Filter operational schedule</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form className="grid gap-4 md:grid-cols-[1fr_1fr_180px_180px_auto] md:items-end" onSubmit={handleFlightFilterSubmit}>
+                <Field label="From"><Input onChange={(event) => setFlightFilters((current) => ({ ...current, source: event.target.value }))} placeholder="City or airport code" value={flightFilters.source} /></Field>
+                <Field label="To"><Input onChange={(event) => setFlightFilters((current) => ({ ...current, destination: event.target.value }))} placeholder="City or airport code" value={flightFilters.destination} /></Field>
+                <Field label="Start date"><Input onChange={(event) => setFlightFilters((current) => ({ ...current, startDate: event.target.value }))} type="date" value={flightFilters.startDate} /></Field>
+                <Field label="End date"><Input onChange={(event) => setFlightFilters((current) => ({ ...current, endDate: event.target.value }))} type="date" value={flightFilters.endDate} /></Field>
+                <Button className="rounded-[14px] bg-slate-950 text-white hover:bg-slate-800" disabled={busyAction === "flight-filter"} type="submit">{busyAction === "flight-filter" ? "Filtering…" : "Apply filters"}</Button>
+              </form>
+            </CardContent>
+          </Card>
+
           <Card className="rounded-[24px] border border-slate-200 bg-white shadow-none">
             <CardHeader>
               <CardTitle>Operational schedule for the next 30 days</CardTitle>
@@ -205,7 +249,7 @@ function StaffHomePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {dashboard.flights.map((flight) => {
+                  {dashboardData.flights.map((flight) => {
                     const key = `${flight.flightNumber}:${flight.departureDatetime}`
                     return (
                       <TableRow key={key}>
@@ -285,14 +329,14 @@ function StaffHomePage() {
                   <Select onValueChange={(value) => setFlightForm((current) => ({ ...current, airplaneId: value ?? current.airplaneId }))} value={flightForm.airplaneId}>
                     <SelectTrigger className="w-full"><SelectValue placeholder="Choose airplane" /></SelectTrigger>
                     <SelectContent>
-                      {dashboard.airplanes.map((airplane) => (
+                      {dashboardData.airplanes.map((airplane) => (
                         <SelectItem key={airplane.airplaneId} value={airplane.airplaneId}>{airplane.airplaneId} · {airplane.numberOfSeats} seats</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <AirportField airports={dashboard.airports} label="Departure airport" onChange={(value) => setFlightForm((current) => ({ ...current, departureAirportCode: value }))} value={flightForm.departureAirportCode} />
-                <AirportField airports={dashboard.airports} label="Arrival airport" onChange={(value) => setFlightForm((current) => ({ ...current, arrivalAirportCode: value }))} value={flightForm.arrivalAirportCode} />
+                <AirportField airports={dashboardData.airports} label="Departure airport" onChange={(value) => setFlightForm((current) => ({ ...current, departureAirportCode: value }))} value={flightForm.departureAirportCode} />
+                <AirportField airports={dashboardData.airports} label="Arrival airport" onChange={(value) => setFlightForm((current) => ({ ...current, arrivalAirportCode: value }))} value={flightForm.arrivalAirportCode} />
                 <Field label="Departure date & time"><Input onChange={(event) => setFlightForm((current) => ({ ...current, departureDatetime: event.target.value }))} type="datetime-local" value={flightForm.departureDatetime} /></Field>
                 <Field label="Arrival date & time"><Input onChange={(event) => setFlightForm((current) => ({ ...current, arrivalDatetime: event.target.value }))} type="datetime-local" value={flightForm.arrivalDatetime} /></Field>
                 <Field label="Base price"><Input onChange={(event) => setFlightForm((current) => ({ ...current, basePrice: event.target.value }))} type="number" value={flightForm.basePrice} /></Field>
@@ -334,7 +378,7 @@ function StaffHomePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {dashboard.airplanes.map((airplane) => (
+                  {dashboardData.airplanes.map((airplane) => (
                     <TableRow key={airplane.airplaneId}>
                       <TableCell className="font-medium text-slate-950">{airplane.airplaneId}</TableCell>
                       <TableCell>{airplane.numberOfSeats}</TableCell>
@@ -354,8 +398,8 @@ function StaffHomePage() {
               <CardTitle>Flight ratings and written feedback</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {dashboard.ratings.length ? (
-                dashboard.ratings.map((rating) => (
+              {dashboardData.ratings.length ? (
+                dashboardData.ratings.map((rating) => (
                   <div className="rounded-[20px] border border-slate-200 p-4" key={`${rating.flightNumber}-${rating.departureDatetime}`}>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
@@ -391,13 +435,13 @@ function StaffHomePage() {
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="grid gap-4 md:grid-cols-3">
-                <SummaryTile label="All tickets sold" value={String(dashboard.reportSummary.totalTickets)} />
-                <SummaryTile label="Last month" value={String(dashboard.reportSummary.lastMonthTickets)} />
-                <SummaryTile label="Last year" value={String(dashboard.reportSummary.lastYearTickets)} />
+                <SummaryTile label="All tickets sold" value={String(dashboardData.reportSummary.totalTickets)} />
+                <SummaryTile label="Last month" value={String(dashboardData.reportSummary.lastMonthTickets)} />
+                <SummaryTile label="Last year" value={String(dashboardData.reportSummary.lastYearTickets)} />
               </div>
               <div className="h-[260px] rounded-[20px] border border-slate-200 bg-slate-50 p-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dashboard.monthlySales}>
+                  <BarChart data={dashboardData.monthlySales}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" vertical={false} />
                     <XAxis dataKey="month" stroke="#475569" />
                     <YAxis allowDecimals={false} stroke="#475569" />

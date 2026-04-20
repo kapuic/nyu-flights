@@ -1,5 +1,25 @@
 import { z } from "zod"
 
+function withOptionalDateRangeValidation(
+  schema: z.ZodObject<{
+    destination: z.ZodDefault<z.ZodOptional<z.ZodString>>
+    endDate: z.ZodDefault<z.ZodOptional<z.ZodString>>
+    source: z.ZodDefault<z.ZodOptional<z.ZodString>>
+    startDate: z.ZodDefault<z.ZodOptional<z.ZodString>>
+  }>,
+) {
+  return schema.refine(
+    (value) => {
+      if (!value.startDate || !value.endDate) return true
+      return new Date(value.startDate) <= new Date(value.endDate)
+    },
+    {
+      message: "Start date must be on or before end date.",
+      path: ["endDate"],
+    },
+  )
+}
+
 export const loginSchema = z.object({
   password: z.string().min(1, "Password is required."),
   role: z.enum(["customer", "staff"]),
@@ -87,6 +107,24 @@ export const flightPassengersSchema = z.object({
   departureDatetime: z.string().min(1),
   flightNumber: z.string().min(1),
 })
+
+export const customerFlightFiltersSchema = withOptionalDateRangeValidation(
+  z.object({
+    destination: z.string().optional().default(""),
+    endDate: z.string().optional().default(""),
+    source: z.string().optional().default(""),
+    startDate: z.string().optional().default(""),
+  }),
+)
+
+export const staffFlightFiltersSchema = withOptionalDateRangeValidation(
+  z.object({
+    destination: z.string().optional().default(""),
+    endDate: z.string().optional().default(""),
+    source: z.string().optional().default(""),
+    startDate: z.string().optional().default(""),
+  }),
+)
 
 export const reportRangeSchema = z.object({
   endDate: z.string().min(1, "End date is required."),

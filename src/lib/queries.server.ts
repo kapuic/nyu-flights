@@ -9,6 +9,8 @@ import type {
   StaffDashboardData,
 } from "@/lib/queries"
 
+const DEFAULT_STAFF_FLIGHT_WINDOW_DAYS = 30
+
 function normalizeQueryValue(value: string | undefined) {
   const normalized = value?.trim().toLowerCase()
   if (!normalized) return null
@@ -203,8 +205,23 @@ export async function searchFlightsInternal(input: {
   } satisfies FlightSearchResponse
 }
 
-export async function getCustomerDashboardInternal() {
+function normalizeFilterDate(value: string | undefined) {
+  const trimmed = value?.trim()
+  return trimmed ? trimmed : null
+}
+
+export async function getCustomerDashboardInternal(filters: {
+  destination?: string
+  endDate?: string
+  source?: string
+  startDate?: string
+}) {
   const user = await requireUser("customer")
+  const sourceQuery = normalizeQueryValue(filters.source)
+  const destinationQuery = normalizeQueryValue(filters.destination)
+  const startDate = normalizeFilterDate(filters.startDate)
+  const endDate = normalizeFilterDate(filters.endDate)
+
   const flights = await db<{
     airline_name: string
     arrival_airport_code: string
@@ -244,6 +261,10 @@ export async function getCustomerDashboardInternal() {
     join airport arrival_airport on arrival_airport.code = f.arrival_airport_code
     left join review on review.customer_email = ticket.customer_email and review.airline_name = ticket.airline_name and review.flight_number = ticket.flight_number and review.departure_datetime = ticket.departure_datetime
     where ticket.customer_email = ${user.email}
+      and (${startDate}::text is null or f.departure_datetime::date >= ${startDate}::date)
+      and (${endDate}::text is null or f.departure_datetime::date <= ${endDate}::date)
+      and (${sourceQuery}::text is null or lower(departure_airport.city) like ${sourceQuery} or lower(departure_airport.code) like ${sourceQuery})
+      and (${destinationQuery}::text is null or lower(arrival_airport.city) like ${destinationQuery} or lower(arrival_airport.code) like ${destinationQuery})
     order by f.departure_datetime desc
   `
 
@@ -279,8 +300,17 @@ export async function getCustomerDashboardInternal() {
   } satisfies CustomerDashboardData
 }
 
-export async function getStaffDashboardInternal() {
+export async function getStaffDashboardInternal(filters: {
+  destination?: string
+  endDate?: string
+  source?: string
+  startDate?: string
+}) {
   const user = await requireUser("staff")
+  const sourceQuery = normalizeQueryValue(filters.source)
+  const destinationQuery = normalizeQueryValue(filters.destination)
+  const startDate = normalizeFilterDate(filters.startDate)
+  const endDate = normalizeFilterDate(filters.endDate)
 
   const flights = await db<{
     airline_name: string
@@ -324,7 +354,13 @@ export async function getStaffDashboardInternal() {
     left join ticket on ticket.airline_name = f.airline_name and ticket.flight_number = f.flight_number and ticket.departure_datetime = f.departure_datetime
     left join review on review.airline_name = f.airline_name and review.flight_number = f.flight_number and review.departure_datetime = f.departure_datetime
     where f.airline_name = ${user.airlineName}
-      and f.departure_datetime between now() and now() + interval '30 day'
+      and (
+        (${startDate}::text is null and ${endDate}::text is null and f.departure_datetime between now() and now() + make_interval(days => ${DEFAULT_STAFF_FLIGHT_WINDOW_DAYS}))
+        or (${startDate}::text is not null and f.departure_datetime::date >= ${startDate}::date)
+      )
+      and (${endDate}::text is null or f.departure_datetime::date <= ${endDate}::date)
+      and (${sourceQuery}::text is null or lower(departure_airport.city) like ${sourceQuery} or lower(departure_airport.code) like ${sourceQuery})
+      and (${destinationQuery}::text is null or lower(arrival_airport.city) like ${destinationQuery} or lower(arrival_airport.code) like ${destinationQuery})
     group by
       f.airline_name,
       f.flight_number,
@@ -755,6 +791,15 @@ export async function getFlightPassengersInternal(data: {
 
 export async function getStaffReportInternal(data: { endDate: string; startDate: string }) {
   const user = await requireUser("staff")
+
+  if (new Date(data.startDate) > new Date(data.endDate)) {
+    return {
+      endDate: data.endDate,
+      error: "Start date must be on or before end date.",
+      startDate: data.startDate,
+      ticketsSold: 0,
+    }
+  }
 
   const [rangeSummary] = await db<{ tickets_sold: number }[]>`
     select count(*)::int as tickets_sold

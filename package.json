@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite dev --port 3000",
+    "dev": "vite dev --host 127.0.0.1",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx}\"",
     "lint": "eslint",
     "preview": "vite preview",

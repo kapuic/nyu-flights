@@ -3,11 +3,13 @@ import { createServerFn } from "@tanstack/react-start"
 import {
   addAirplaneSchema,
   createFlightSchema,
+  customerFlightFiltersSchema,
   flightPassengersSchema,
   purchaseTicketSchema,
   reportRangeSchema,
   reviewSchema,
   searchFlightsSchema,
+  staffFlightFiltersSchema,
   updateStatusSchema,
 } from "@/lib/schemas"
 import {
@@ -107,9 +109,13 @@ export const searchFlightsFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => searchFlightsSchema.parse(data))
   .handler(async ({ data }) => searchFlightsInternal(data))
 
-export const getCustomerDashboardFn = createServerFn({ method: "GET" }).handler(async () => getCustomerDashboardInternal())
+export const getCustomerDashboardFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => customerFlightFiltersSchema.parse(data))
+  .handler(async ({ data }) => getCustomerDashboardInternal(data))
 
-export const getStaffDashboardFn = createServerFn({ method: "GET" }).handler(async () => getStaffDashboardInternal())
+export const getStaffDashboardFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => staffFlightFiltersSchema.parse(data))
+  .handler(async ({ data }) => getStaffDashboardInternal(data))
 
 export const purchaseTicketFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => purchaseTicketSchema.parse(data))
