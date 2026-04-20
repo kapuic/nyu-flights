@@ -22,6 +22,13 @@ import { formatCurrency, formatDate, formatDateTime, titleCaseStatus } from "@/l
 import { type FlightOption, getCustomerDashboardFn, purchaseTicketFn, searchFlightsFn, submitReviewFn } from "@/lib/queries"
 import { cn } from "@/lib/utils"
 
+function formatDateLabel(value: string) {
+  if (!value) return "Select date"
+  const parsed = new Date(`${value}T00:00:00`)
+  if (Number.isNaN(parsed.getTime())) return value
+  return parsed.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+}
+
 export const Route = createFileRoute("/customer")({
   loader: async () => {
     const currentUser = await getCurrentUserFn()
@@ -241,20 +248,34 @@ function FlightsSection({
         <div className="rounded-lg bg-white p-6 shadow-sm">
           <form className="grid gap-4 md:grid-cols-[1fr_1fr_180px_180px_auto] md:items-end" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); searchForm.handleSubmit() }}>
             <div className="space-y-1.5">
-              <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">From</Label>
-              <searchForm.Field name="source">{(field: any) => <Input className="rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} placeholder="City or airport" value={field.state.value} />}</searchForm.Field>
+              <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500" htmlFor="customer-search-from">From</Label>
+              <searchForm.Field name="source">{(field: any) => <Input className="rounded-lg bg-slate-50" id="customer-search-from" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} placeholder="City or airport" value={field.state.value} />}</searchForm.Field>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">To</Label>
-              <searchForm.Field name="destination">{(field: any) => <Input className="rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} placeholder="City or airport" value={field.state.value} />}</searchForm.Field>
+              <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500" htmlFor="customer-search-to">To</Label>
+              <searchForm.Field name="destination">{(field: any) => <Input className="rounded-lg bg-slate-50" id="customer-search-to" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} placeholder="City or airport" value={field.state.value} />}</searchForm.Field>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">Departure</Label>
-              <searchForm.Field name="departureDate">{(field: any) => <Input className="rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} type="date" value={field.state.value} />}</searchForm.Field>
+              <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500" htmlFor="customer-search-departure">Departure</Label>
+              <searchForm.Field name="departureDate">{(field: any) => (
+                <div className="relative">
+                  <span className={cn("pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium", field.state.value ? "text-slate-950" : "text-slate-400")}>
+                    {formatDateLabel(field.state.value)}
+                  </span>
+                  <Input className="rounded-lg bg-slate-50 text-transparent caret-transparent" id="customer-search-departure" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} type="date" value={field.state.value} />
+                </div>
+              )}</searchForm.Field>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">Return</Label>
-              <searchForm.Field name="returnDate">{(field: any) => <Input className="rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} type="date" value={field.state.value} />}</searchForm.Field>
+              <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500" htmlFor="customer-search-return">Return</Label>
+              <searchForm.Field name="returnDate">{(field: any) => (
+                <div className="relative">
+                  <span className={cn("pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium", field.state.value ? "text-slate-950" : "text-slate-400")}>
+                    {formatDateLabel(field.state.value)}
+                  </span>
+                  <Input className="rounded-lg bg-slate-50 text-transparent caret-transparent" id="customer-search-return" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} type="date" value={field.state.value} />
+                </div>
+              )}</searchForm.Field>
             </div>
             <Button className="rounded-lg bg-slate-950 text-white hover:bg-slate-800" disabled={searchBusy} type="submit">{searchBusy ? "Searching…" : "Search"}</Button>
           </form>

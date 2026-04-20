@@ -49,6 +49,13 @@ import {
   type PassengerRecord,
 } from "@/lib/queries"
 
+function formatDateLabel(value: string) {
+  if (!value) return "Select date"
+  const parsed = new Date(`${value}T00:00:00`)
+  if (Number.isNaN(parsed.getTime())) return value
+  return parsed.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+}
+
 export const Route = createFileRoute("/staff/app")({
   loader: async () => {
     const currentUser = await getCurrentUserFn()
@@ -207,16 +214,30 @@ function DashboardSection({
         <CardContent className="p-4">
           <form className="grid gap-3 md:grid-cols-[1fr_1fr_180px_180px_auto] md:items-end" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); filterForm.handleSubmit() }}>
             <FilterField label="From">
-              <filterForm.Field name="source">{(field) => <Input className="h-9 rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="City or airport" value={field.state.value} />}</filterForm.Field>
+              <filterForm.Field name="source">{(field) => <Input aria-label="From" className="h-9 rounded-lg bg-slate-50" id="staff-filter-from" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="City or airport" value={field.state.value} />}</filterForm.Field>
             </FilterField>
             <FilterField label="To">
-              <filterForm.Field name="destination">{(field) => <Input className="h-9 rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="City or airport" value={field.state.value} />}</filterForm.Field>
+              <filterForm.Field name="destination">{(field) => <Input aria-label="To" className="h-9 rounded-lg bg-slate-50" id="staff-filter-to" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="City or airport" value={field.state.value} />}</filterForm.Field>
             </FilterField>
             <FilterField label="Start date">
-              <filterForm.Field name="startDate">{(field) => <Input className="h-9 rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} type="date" value={field.state.value} />}</filterForm.Field>
+              <filterForm.Field name="startDate">{(field) => (
+                <div className="relative">
+                  <span className={field.state.value ? "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-950" : "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400"}>
+                    {formatDateLabel(field.state.value)}
+                  </span>
+                  <Input aria-label="Start Date" className="h-9 rounded-lg bg-slate-50 text-transparent caret-transparent" id="staff-filter-start-date" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} type="date" value={field.state.value} />
+                </div>
+              )}</filterForm.Field>
             </FilterField>
             <FilterField label="End date">
-              <filterForm.Field name="endDate">{(field) => <Input className="h-9 rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} type="date" value={field.state.value} />}</filterForm.Field>
+              <filterForm.Field name="endDate">{(field) => (
+                <div className="relative">
+                  <span className={field.state.value ? "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-950" : "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400"}>
+                    {formatDateLabel(field.state.value)}
+                  </span>
+                  <Input aria-label="End Date" className="h-9 rounded-lg bg-slate-50 text-transparent caret-transparent" id="staff-filter-end-date" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} type="date" value={field.state.value} />
+                </div>
+              )}</filterForm.Field>
             </FilterField>
             <Button className="h-9 rounded-lg bg-slate-950 text-white hover:bg-slate-800" disabled={busyAction === "flight-filter"} type="submit">
               <Filter className="mr-2 size-4" />{busyAction === "flight-filter" ? "Filtering…" : "Filter"}
@@ -638,8 +659,8 @@ function ReportsSection({
         <CardHeader><CardTitle className="text-lg">Custom Range Report</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <form className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); reportForm.handleSubmit() }}>
-            <reportForm.Field name="startDate">{(field) => <FilterField label="Start Date"><Input className="h-10 rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} type="date" value={field.state.value} /></FilterField>}</reportForm.Field>
-            <reportForm.Field name="endDate">{(field) => <FilterField label="End Date"><Input className="h-10 rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} type="date" value={field.state.value} /></FilterField>}</reportForm.Field>
+            <reportForm.Field name="startDate">{(field) => <FilterField label="Start Date"><div className="relative"><span className={field.state.value ? "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-950" : "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400"}>{formatDateLabel(field.state.value)}</span><Input aria-label="Report Start Date" className="h-10 rounded-lg bg-slate-50 text-transparent caret-transparent" id="staff-report-start-date" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} type="date" value={field.state.value} /></div></FilterField>}</reportForm.Field>
+            <reportForm.Field name="endDate">{(field) => <FilterField label="End Date"><div className="relative"><span className={field.state.value ? "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-950" : "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400"}>{formatDateLabel(field.state.value)}</span><Input aria-label="Report End Date" className="h-10 rounded-lg bg-slate-50 text-transparent caret-transparent" id="staff-report-end-date" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} type="date" value={field.state.value} /></div></FilterField>}</reportForm.Field>
             <Button className="h-10 rounded-lg bg-slate-950 text-white hover:bg-slate-800" disabled={busyAction === "report"} type="submit">
               {busyAction === "report" ? "Running…" : "Run Report"}
             </Button>
