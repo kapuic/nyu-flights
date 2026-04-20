@@ -8,7 +8,7 @@ function readEnv(name: string, fallback: string) {
 }
 
 export const env = {
-  appName: "SkyRoute Reserve",
+  appName: readEnv("VITE_APP_NAME", "Flights"),
   databaseUrl: readEnv("DATABASE_URL", defaultDatabaseUrl),
   sessionSecret: readEnv("SESSION_SECRET", defaultSessionSecret),
 }

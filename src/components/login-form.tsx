@@ -1,5 +1,6 @@
 
 import { Button } from "@/components/ui/button"
+import { APP_NAME } from "@/lib/app-config"
 import { TRAVELER_AUTH_IMAGE_URLS } from "@/lib/auth-images"
 import { cn } from "@/lib/utils"
 import { Card, CardContent } from "@/components/ui/card"
@@ -52,7 +53,7 @@ export function LoginForm({
                 </div>
                 <h1 className="text-2xl font-bold">Welcome back</h1>
                 <p className="text-balance text-muted-foreground">
-                  Sign in to complete your booking
+                  {`Sign in to continue with ${APP_NAME}`}
                 </p>
               </div>
               <Field>
@@ -115,15 +116,26 @@ export function LoginForm({
                 Or
               </FieldSeparator>
               <Field>
-                <FieldDescription className="text-center">
-                  Don&apos;t have an account?{" "}
-                  <a
-                    className="font-medium text-foreground underline underline-offset-4"
-                    href="/register"
-                  >
-                    Create one
-                  </a>
-                </FieldDescription>
+                <div className="space-y-2 text-center text-sm text-muted-foreground">
+                  <p>
+                    Don&apos;t have an account?{" "}
+                    <a
+                      className="font-medium text-foreground underline underline-offset-4"
+                      href="/register"
+                    >
+                      Create one
+                    </a>
+                  </p>
+                  <p>
+                    Staff member?{" "}
+                    <a
+                      className="font-medium text-foreground underline underline-offset-4"
+                      href="/staff/login"
+                    >
+                      Staff sign in
+                    </a>
+                  </p>
+                </div>
               </Field>
             </FieldGroup>
           </form>

@@ -8,14 +8,14 @@ import { getCurrentUserFn, loginFn } from "@/lib/auth"
 import { pickRandomAuthImage } from "@/lib/auth-images"
 
 export const Route = createFileRoute("/login")({
-  loader: async () => ({ currentUser: await getCurrentUserFn() }),
+  loader: async () => ({ currentUser: await getCurrentUserFn(), heroImageUrl: pickRandomAuthImage() }),
   component: LoginPage,
 })
 
 function LoginPage() {
   const router = useRouter()
+  const { heroImageUrl } = Route.useLoaderData()
   const [error, setError] = useState<string | null>(null)
-  const heroImageUrl = pickRandomAuthImage()
 
   const form = useForm({
     defaultValues: { password: "", username: "" },

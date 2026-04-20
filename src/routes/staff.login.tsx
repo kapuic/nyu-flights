@@ -40,15 +40,9 @@ function StaffLoginPage() {
   })
 
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
-      <div className="flex w-full max-w-sm flex-col gap-6">
-        <div className="flex items-center gap-2 self-center font-medium">
-          <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <Building2 className="size-4" />
-          </div>
-          Airline Staff
-        </div>
-        <Card>
+    <div className="flex min-h-svh items-center justify-center bg-muted p-6 md:p-10">
+      <div className="w-full max-w-sm">
+        <Card className="border-border/70 bg-card shadow-sm">
           <CardContent className="pt-6">
             <form.Subscribe selector={(state) => state.isSubmitting}>
               {(isSubmitting) => (
@@ -58,15 +52,21 @@ function StaffLoginPage() {
                       {(passwordField) => (
                         <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
                           <FieldGroup>
-                            <div className="flex flex-col items-center gap-2 text-center">
-                              <h1 className="text-2xl font-bold">Staff sign in</h1>
-                              <p className="text-balance text-sm text-muted-foreground">
-                                Access flight operations, fleet, and reporting.
-                              </p>
+                            <div className="flex flex-col gap-2 text-center">
+                              <div className="mx-auto flex size-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                                <Building2 className="size-4" />
+                              </div>
+                              <div className="space-y-1">
+                                <h1 className="text-xl font-semibold">Staff sign in</h1>
+                                <p className="text-sm text-muted-foreground">
+                                  Access operations, fleet, schedules, and reporting.
+                                </p>
+                              </div>
                             </div>
                             <Field>
                               <FieldLabel htmlFor="staff-username">Username</FieldLabel>
                               <Input
+                                autoComplete="username"
                                 id="staff-username"
                                 onChange={(e) => usernameField.handleChange(e.target.value)}
                                 placeholder="staff username"
@@ -77,6 +77,7 @@ function StaffLoginPage() {
                             <Field>
                               <FieldLabel htmlFor="staff-password">Password</FieldLabel>
                               <Input
+                                autoComplete="current-password"
                                 id="staff-password"
                                 onChange={(e) => passwordField.handleChange(e.target.value)}
                                 placeholder="••••••••"
@@ -86,7 +87,7 @@ function StaffLoginPage() {
                               />
                             </Field>
                             {error ? <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div> : null}
-                            <Button disabled={isSubmitting} type="submit">
+                            <Button className="w-full" disabled={isSubmitting} type="submit">
                               {isSubmitting ? 'Signing in…' : 'Sign In'}
                             </Button>
                             <FieldDescription className="text-center">

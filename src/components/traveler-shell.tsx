@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router"
 import { Luggage, PersonStanding, Plane, Search, Wallet } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { APP_NAME } from "@/lib/app-config"
 import { cn } from "@/lib/utils"
 
 type TravelerShellProps = {
@@ -32,7 +33,7 @@ export function TravelerShell({ children, currentUser, onLogout, section = "expl
           <div className="flex items-center gap-8">
             <Link className="flex items-center gap-2 text-xl font-bold tracking-tighter text-slate-900" to="/">
               <Plane className="size-5" />
-              AeroPrecision
+              {APP_NAME}
             </Link>
             <nav className="flex gap-8">
               {DESKTOP_NAV.map((item) => (
@@ -61,7 +62,6 @@ export function TravelerShell({ children, currentUser, onLogout, section = "expl
               </>
             ) : (
               <>
-                <Link className="text-sm text-slate-500 transition-opacity hover:text-slate-900" to="/staff/login">Staff</Link>
                 <Link className="font-medium text-slate-900 transition-opacity hover:opacity-80" to="/login">Sign In</Link>
                 <Link className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-medium text-white hover:bg-slate-800" to="/register">Join</Link>
               </>

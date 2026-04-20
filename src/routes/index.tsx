@@ -35,6 +35,12 @@ function PublicHomePage() {
   const [searchResults, setSearchResults] = useState<{ outbound: FlightOption[]; returnOptions: FlightOption[]; tripType: "one-way" | "round-trip" } | null>(null)
   const [passengers, setPassengers] = useState("1")
   const [cabinClass, setCabinClass] = useState("economy")
+  function formatDateLabel(value: string) {
+    if (!value) return "Select departure date"
+    const parsed = new Date(`${value}T00:00:00`)
+    if (Number.isNaN(parsed.getTime())) return value
+    return parsed.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+  }
   const passengerOptions = [
     { label: "1 Passenger", value: "1" },
     { label: "2 Passengers", value: "2" },
@@ -85,10 +91,10 @@ function PublicHomePage() {
 
             <form className="relative z-20 flex w-full flex-col items-center gap-2 rounded-lg bg-white p-2 shadow-[0_20px_40px_-10px_rgba(25,28,30,0.08)] md:flex-row md:gap-4 md:p-4" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); form.handleSubmit() }}>
               <div className="w-full flex-1 border-b-2 border-slate-100 px-2 pb-2 md:border-b-0 md:border-r-2 md:px-4 md:pb-0">
-                <Label className="mb-1 block text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">From</Label>
+                <Label className="mb-1 block text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500" htmlFor="search-from">From</Label>
                 <div className="flex items-center gap-2">
                   <Plane className="size-4 text-slate-400" />
-                  <form.Field name="source">{(field) => <Input className="h-auto border-0 bg-transparent px-0 py-1 shadow-none" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="JFK - New York" value={field.state.value} />}</form.Field>
+                  <form.Field name="source">{(field) => <Input className="h-auto border-0 bg-transparent px-0 py-1 shadow-none" id="search-from" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="JFK - New York" value={field.state.value} />}</form.Field>
                 </div>
               </div>
 
@@ -97,18 +103,34 @@ function PublicHomePage() {
               </Button>
 
               <div className="w-full flex-1 border-b-2 border-slate-100 px-2 pb-2 pt-4 md:border-b-0 md:border-r-2 md:px-4 md:pb-0 md:pt-0">
-                <Label className="mb-1 block text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">To</Label>
+                <Label className="mb-1 block text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500" htmlFor="search-to">To</Label>
                 <div className="flex items-center gap-2">
                   <Plane className="size-4 rotate-90 text-slate-400" />
-                  <form.Field name="destination">{(field) => <Input className="h-auto border-0 bg-transparent px-0 py-1 shadow-none" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="LHR - London" value={field.state.value} />}</form.Field>
+                  <form.Field name="destination">{(field) => <Input className="h-auto border-0 bg-transparent px-0 py-1 shadow-none" id="search-to" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="LHR - London" value={field.state.value} />}</form.Field>
                 </div>
               </div>
 
               <div className="w-full flex-1 px-2 pt-4 md:px-4 md:pt-0">
-                <Label className="mb-1 block text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">Dates</Label>
-                <div className="flex items-center gap-2">
+                <Label className="mb-1 block text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500" htmlFor="search-departure-date">Dates</Label>
+                <div className="relative flex items-center gap-2">
                   <CalendarDays className="size-4 text-slate-400" />
-                  <form.Field name="departureDate">{(field) => <Input className="h-auto cursor-pointer border-0 bg-transparent px-0 py-1 shadow-none" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} type="date" value={field.state.value} />}</form.Field>
+                  <form.Field name="departureDate">
+                    {(field) => (
+                      <>
+                        <span className={cn("pointer-events-none py-1 text-sm font-medium", field.state.value ? "text-slate-950" : "text-slate-400")}>
+                          {formatDateLabel(field.state.value)}
+                        </span>
+                        <Input
+                          className="absolute inset-0 h-full w-full cursor-pointer border-0 bg-transparent px-0 py-1 opacity-0 shadow-none"
+                          id="search-departure-date"
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          type="date"
+                          value={field.state.value}
+                        />
+                      </>
+                    )}
+                  </form.Field>
                 </div>
               </div>
 
@@ -127,17 +149,17 @@ function PublicHomePage() {
                     value={field.state.value}
                   >
                     <div className="flex items-center gap-2">
-                      <RadioGroupItem id="round-trip" value="round-trip" />
+                      <RadioGroupItem aria-label="Round Trip" id="round-trip" value="round-trip" />
                       <Label className={cn("cursor-pointer text-sm font-medium", field.state.value === "round-trip" ? "text-slate-950" : "text-slate-500")} htmlFor="round-trip">Round Trip</Label>
                     </div>
                     <div className="flex items-center gap-2">
-                      <RadioGroupItem id="one-way" value="one-way" />
+                      <RadioGroupItem aria-label="One Way" id="one-way" value="one-way" />
                       <Label className={cn("cursor-pointer text-sm font-medium", field.state.value === "one-way" ? "text-slate-950" : "text-slate-500")} htmlFor="one-way">One Way</Label>
                     </div>
                   </RadioGroup>
                   <div className="hidden h-4 w-px bg-slate-300 md:block" />
                   <Select onValueChange={(value) => setPassengers(value ?? passengers)} value={passengers}>
-                    <SelectTrigger className="h-8 w-[160px] border-0 bg-transparent px-2.5 shadow-none hover:bg-slate-100 focus-visible:ring-2">
+                    <SelectTrigger aria-label="Passengers" className="h-8 w-[160px] border-0 bg-transparent px-2.5 shadow-none hover:bg-slate-100 focus-visible:ring-2">
                       <SelectValue>
                         {passengerOptions.find((option) => option.value === passengers)?.label ?? "Passengers"}
                       </SelectValue>
@@ -149,7 +171,7 @@ function PublicHomePage() {
                     </SelectContent>
                   </Select>
                   <Select onValueChange={(value) => setCabinClass(value ?? cabinClass)} value={cabinClass}>
-                    <SelectTrigger className="h-8 w-[180px] border-0 bg-transparent px-2.5 shadow-none hover:bg-slate-100 focus-visible:ring-2">
+                    <SelectTrigger aria-label="Cabin class" className="h-8 w-[180px] border-0 bg-transparent px-2.5 shadow-none hover:bg-slate-100 focus-visible:ring-2">
                       <SelectValue>
                         {cabinClassOptions.find((option) => option.value === cabinClass)?.label ?? "Cabin class"}
                       </SelectValue>
@@ -185,7 +207,7 @@ function PublicHomePage() {
                 <div>
                   <h4 className="mb-3 text-sm font-medium text-slate-950">Airlines</h4>
                   <div className="space-y-2">
-                    <FilterLine label="AeroPrecision" defaultChecked />
+                    <FilterLine label="Jet Blue" defaultChecked />
                     <FilterLine label="Global Airways" defaultChecked />
                     <FilterLine label="SkyNet Connect" />
                   </div>
@@ -224,7 +246,7 @@ function PublicHomePage() {
               </div>
             ) : (
               <div className="space-y-6">
-                <DemoFlightCard airline="AeroPrecision AP-102" arrivalCode="LHR" arrivalTime="06:40" departureCode="JFK" departureTime="18:30" duration="7h 10m" hasPlusOne price={450} status="ON TIME" />
+                <DemoFlightCard airline="Jet Blue JB-102" arrivalCode="LHR" arrivalTime="06:40" departureCode="JFK" departureTime="18:30" duration="7h 10m" hasPlusOne price={450} status="ON TIME" />
                 <DemoFlightCard airline="Global Airways GA-44" arrivalCode="LHR" arrivalTime="08:55" departureCode="JFK" departureTime="21:00" duration="6h 55m" hasPlusOne price={520} seatsLeft={3} variant="secondary" />
               </div>
             )}

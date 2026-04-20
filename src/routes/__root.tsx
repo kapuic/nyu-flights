@@ -5,6 +5,7 @@ import { ThemeProvider } from "next-themes"
 
 import { Toaster } from "@/components/ui/sonner"
 import { getCurrentUserFn, type AuthUser } from "@/lib/auth"
+import { APP_NAME } from "@/lib/app-config"
 import appCss from "../styles.css?url"
 
 type RouterContext = {
@@ -25,7 +26,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "SkyRoute Reserve",
+        title: APP_NAME,
       },
     ],
     links: [

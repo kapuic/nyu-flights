@@ -13,6 +13,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import { APP_NAME } from "@/lib/app-config"
 
 type NavItem = {
   icon: React.ComponentType<{ className?: string }>
@@ -23,7 +24,7 @@ type NavItem = {
 type AppSidebarProps = {
   airlineName: string
   currentSection: string
-  items: NavItem[]
+  items: readonly NavItem[]
   onCreateFlight: () => void
   onLogout: () => void
   onSectionChange: (key: string) => void
@@ -46,7 +47,7 @@ export function AppSidebar({
             <Plane className="size-4" />
           </div>
           <div className="grid flex-1 text-start text-sm leading-tight">
-            <span className="truncate font-semibold">AeroPrecision</span>
+            <span className="truncate font-semibold">{APP_NAME}</span>
             <span className="truncate text-xs text-sidebar-foreground/60">{airlineName} Operations</span>
           </div>
         </div>

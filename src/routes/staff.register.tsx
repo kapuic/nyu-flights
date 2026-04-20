@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { getCurrentUserFn, registerStaffFn } from "@/lib/auth"
+import { APP_NAME } from "@/lib/app-config"
 
 export const Route = createFileRoute('/staff/register')({
   loader: async () => ({ currentUser: await getCurrentUserFn() }),
@@ -49,15 +50,9 @@ function StaffRegisterPage() {
   })
 
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
-      <div className="flex w-full max-w-sm flex-col gap-6">
-        <div className="flex items-center gap-2 self-center font-medium">
-          <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <Building2 className="size-4" />
-          </div>
-          Airline Staff
-        </div>
-        <Card>
+    <div className="flex min-h-svh items-center justify-center bg-muted p-6 md:p-10">
+      <div className="w-full max-w-sm">
+        <Card className="border-border/70 bg-card shadow-sm">
           <CardContent className="pt-6">
             <form.Subscribe selector={(state) => state.isSubmitting}>
               {(isSubmitting) => (
@@ -79,19 +74,24 @@ function StaffRegisterPage() {
                                               {(phoneNumbersField) => (
                                                 <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
                                                   <FieldGroup>
-                                                    <div className="flex flex-col items-center gap-2 text-center">
-                                                      <h1 className="text-2xl font-bold">Staff account</h1>
-                                                      <p className="text-balance text-sm text-muted-foreground">
-                                                        Create an internal airline operations account.
-                                                      </p>
+                                                    <div className="flex flex-col gap-2 text-center">
+                                                      <div className="mx-auto flex size-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                                                        <Building2 className="size-4" />
+                                                      </div>
+                                                      <div className="space-y-1">
+                                                        <h1 className="text-xl font-semibold">Staff account</h1>
+                                                        <p className="text-sm text-muted-foreground">
+                                                          Create an internal airline operations account.
+                                                        </p>
+                                                      </div>
                                                     </div>
                                                     <Field>
                                                       <FieldLabel htmlFor="staff-airline">Airline</FieldLabel>
-                                                      <Input id="staff-airline" onChange={(e) => airlineNameField.handleChange(e.target.value)} placeholder="AeroPrecision" required value={airlineNameField.state.value} />
+                                                      <Input id="staff-airline" onChange={(e) => airlineNameField.handleChange(e.target.value)} placeholder={APP_NAME} required value={airlineNameField.state.value} />
                                                     </Field>
                                                     <Field>
                                                       <FieldLabel htmlFor="staff-username-create">Username</FieldLabel>
-                                                      <Input id="staff-username-create" onChange={(e) => usernameField.handleChange(e.target.value)} placeholder="ops-user" required value={usernameField.state.value} />
+                                                      <Input autoComplete="username" id="staff-username-create" onChange={(e) => usernameField.handleChange(e.target.value)} placeholder="ops-user" required value={usernameField.state.value} />
                                                     </Field>
                                                     <div className="grid grid-cols-2 gap-4">
                                                       <Field>
@@ -109,11 +109,12 @@ function StaffRegisterPage() {
                                                     </Field>
                                                     <Field>
                                                       <FieldLabel htmlFor="staff-password-create">Password</FieldLabel>
-                                                      <Input id="staff-password-create" onChange={(e) => passwordField.handleChange(e.target.value)} required type="password" value={passwordField.state.value} />
+                                                      <Input autoComplete="new-password" id="staff-password-create" onChange={(e) => passwordField.handleChange(e.target.value)} required type="password" value={passwordField.state.value} />
                                                     </Field>
                                                     <Field>
                                                       <FieldLabel htmlFor="staff-dob">Date of Birth</FieldLabel>
-                                                      <Input id="staff-dob" onChange={(e) => dateOfBirthField.handleChange(e.target.value)} required type="date" value={dateOfBirthField.state.value} />
+                                                      <Input id="staff-dob" inputMode="numeric" onChange={(e) => dateOfBirthField.handleChange(e.target.value)} placeholder="YYYY-MM-DD" required value={dateOfBirthField.state.value} />
+                                                      <FieldDescription>Use the format YYYY-MM-DD.</FieldDescription>
                                                     </Field>
                                                     <Field>
                                                       <FieldLabel htmlFor="staff-phones">Phone Numbers</FieldLabel>
@@ -121,7 +122,7 @@ function StaffRegisterPage() {
                                                       <FieldDescription>Separate multiple numbers with commas.</FieldDescription>
                                                     </Field>
                                                     {error ? <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div> : null}
-                                                    <Button disabled={isSubmitting} type="submit">
+                                                    <Button className="w-full" disabled={isSubmitting} type="submit">
                                                       {isSubmitting ? 'Creating…' : 'Create Staff Account'}
                                                     </Button>
                                                     <FieldDescription className="text-center">
