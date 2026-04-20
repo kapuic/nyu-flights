@@ -39,21 +39,21 @@ Build the Part 3 full-stack web app on top of the existing airline reservation d
 
 ## Phase 3: Airline Staff Flows
 
-- [ ] Build an airline-staff-only home page with only staff-relevant actions.
-- [ ] Show future flights for the next 30 days by default.
-- [ ] Support staff flight filtering by date range, source, and destination.
-- [ ] Show all customers for a selected flight.
-- [ ] Implement create-flight flow.
-- [ ] Restrict create-flight to authorized staff only.
-- [ ] Implement flight status updates between `on_time` and `delayed`.
-- [ ] Implement add-airplane flow.
-- [ ] Restrict add-airplane to authorized staff only.
-- [ ] Show all airplanes owned by the staff member's airline after airplane creation.
-- [ ] Implement flight ratings view with average rating plus all comments.
-- [ ] Implement reports for ticket sales by date range.
-- [ ] Implement summary reports for last month and last year.
-- [ ] Implement month-wise ticket sales in a bar chart or table.
-- [ ] Add staff logout.
+- [x] Build an airline-staff-only home page with only staff-relevant actions.
+- [x] Show future flights for the next 30 days by default.
+- [x] Support staff flight filtering by date range, source, and destination.
+- [x] Show all customers for a selected flight.
+- [x] Implement create-flight flow.
+- [x] Restrict create-flight to authorized staff only.
+- [x] Implement flight status updates between `on_time` and `delayed`.
+- [x] Implement add-airplane flow.
+- [x] Restrict add-airplane to authorized staff only.
+- [x] Show all airplanes owned by the staff member's airline after airplane creation.
+- [x] Implement flight ratings view with average rating plus all comments.
+- [x] Implement reports for ticket sales by date range.
+- [x] Implement summary reports for last month and last year.
+- [x] Implement month-wise ticket sales in a bar chart or table.
+- [x] Add staff logout.
 
 ## Phase 4: UI Polish
 
