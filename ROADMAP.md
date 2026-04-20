@@ -8,7 +8,7 @@ Build the Part 3 full-stack web app on top of the existing airline reservation d
 
 - [x] Set up the app shell and routing.
 - [x] Configure environment variables for PostgreSQL.
-- [ ] Add Drizzle with a PostgreSQL driver.
+- [x] Add Drizzle with a PostgreSQL driver.
 - [x] Add a small database layer for running `sql`` queries.
 - [x] Verify the app can connect to the existing database.
 
@@ -57,10 +57,10 @@ Build the Part 3 full-stack web app on top of the existing airline reservation d
 
 ## Phase 4: UI Polish
 
-- [ ] Landing page / dashboard.
-- [ ] Form validation and error states.
-- [ ] Loading states and empty states.
-- [ ] Responsive layout for desktop and mobile.
+- [x] Landing page / dashboard.
+- [x] Form validation and error states.
+- [x] Loading states and empty states.
+- [x] Responsive layout for desktop and mobile.
 
 ## Phase 4: Auth, Security, and Validation
 
