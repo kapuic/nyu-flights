@@ -1,0 +1,771 @@
+import { db } from "@/lib/db"
+import { requireUser } from "@/lib/auth.server"
+import type {
+  CustomerDashboardData,
+  CustomerFlight,
+  FlightOption,
+  FlightSearchResponse,
+  PassengerRecord,
+  StaffDashboardData,
+} from "@/lib/queries"
+
+function normalizeQueryValue(value: string | undefined) {
+  const normalized = value?.trim().toLowerCase()
+  if (!normalized) return null
+  return `%${normalized}%`
+}
+
+export async function listReferenceData() {
+  const airlines = await db<{ name: string }[]>`select name from airline order by name asc`
+  const airports = await db<{ city: string; code: string }[]>`select city, code from airport order by city asc`
+
+  return {
+    airlines: airlines.map((airline) => airline.name),
+    airports,
+  }
+}
+
+export async function searchFlightsInternal(input: {
+  departureDate?: string
+  destination?: string
+  returnDate?: string
+  source?: string
+  tripType: "one-way" | "round-trip"
+}) {
+  const departureDate = input.departureDate?.trim() || null
+  const returnDate = input.returnDate?.trim() || null
+  const sourceQuery = normalizeQueryValue(input.source)
+  const destinationQuery = normalizeQueryValue(input.destination)
+
+  const outbound = await db<{
+    airline_name: string
+    arrival_airport_code: string
+    arrival_airport_name: string
+    arrival_city: string
+    arrival_datetime: string
+    average_rating: number | null
+    available_seats: number
+    base_price: string
+    departure_airport_code: string
+    departure_airport_name: string
+    departure_city: string
+    departure_datetime: string
+    flight_number: string
+    review_count: number
+    status: "on_time" | "delayed"
+  }[]>`
+    select
+      f.airline_name,
+      f.flight_number,
+      f.departure_datetime,
+      f.arrival_datetime,
+      f.departure_airport_code,
+      departure_airport.city as departure_city,
+      concat(departure_airport.city, ' · ', departure_airport.code) as departure_airport_name,
+      f.arrival_airport_code,
+      arrival_airport.city as arrival_city,
+      concat(arrival_airport.city, ' · ', arrival_airport.code) as arrival_airport_name,
+      f.base_price,
+      f.status,
+      greatest(airplane.number_of_seats - count(ticket.ticket_id), 0)::int as available_seats,
+      round(avg(review.rating)::numeric, 1)::float8 as average_rating,
+      count(distinct review.customer_email)::int as review_count
+    from flight f
+    join airport departure_airport on departure_airport.code = f.departure_airport_code
+    join airport arrival_airport on arrival_airport.code = f.arrival_airport_code
+    join airplane on airplane.airline_name = f.airline_name and airplane.airplane_id = f.airplane_id
+    left join ticket on ticket.airline_name = f.airline_name and ticket.flight_number = f.flight_number and ticket.departure_datetime = f.departure_datetime
+    left join review on review.airline_name = f.airline_name and review.flight_number = f.flight_number and review.departure_datetime = f.departure_datetime
+    where f.departure_datetime >= now()
+      and (${departureDate}::text is null or f.departure_datetime::date = ${departureDate}::date)
+      and (${sourceQuery}::text is null or lower(departure_airport.city) like ${sourceQuery} or lower(departure_airport.code) like ${sourceQuery})
+      and (${destinationQuery}::text is null or lower(arrival_airport.city) like ${destinationQuery} or lower(arrival_airport.code) like ${destinationQuery})
+    group by
+      f.airline_name,
+      f.flight_number,
+      f.departure_datetime,
+      f.arrival_datetime,
+      f.departure_airport_code,
+      departure_airport.city,
+      departure_airport.code,
+      f.arrival_airport_code,
+      arrival_airport.city,
+      arrival_airport.code,
+      f.base_price,
+      f.status,
+      airplane.number_of_seats
+    order by f.departure_datetime asc
+  `
+
+  let returnOptions = outbound.slice(0, 0)
+  if (input.tripType === "round-trip" && returnDate && sourceQuery && destinationQuery) {
+    returnOptions = await db<{
+      airline_name: string
+      arrival_airport_code: string
+      arrival_airport_name: string
+      arrival_city: string
+      arrival_datetime: string
+      average_rating: number | null
+      available_seats: number
+      base_price: string
+      departure_airport_code: string
+      departure_airport_name: string
+      departure_city: string
+      departure_datetime: string
+      flight_number: string
+      review_count: number
+      status: "on_time" | "delayed"
+    }[]>`
+      select
+        f.airline_name,
+        f.flight_number,
+        f.departure_datetime,
+        f.arrival_datetime,
+        f.departure_airport_code,
+        departure_airport.city as departure_city,
+        concat(departure_airport.city, ' · ', departure_airport.code) as departure_airport_name,
+        f.arrival_airport_code,
+        arrival_airport.city as arrival_city,
+        concat(arrival_airport.city, ' · ', arrival_airport.code) as arrival_airport_name,
+        f.base_price,
+        f.status,
+        greatest(airplane.number_of_seats - count(ticket.ticket_id), 0)::int as available_seats,
+        round(avg(review.rating)::numeric, 1)::float8 as average_rating,
+        count(distinct review.customer_email)::int as review_count
+      from flight f
+      join airport departure_airport on departure_airport.code = f.departure_airport_code
+      join airport arrival_airport on arrival_airport.code = f.arrival_airport_code
+      join airplane on airplane.airline_name = f.airline_name and airplane.airplane_id = f.airplane_id
+      left join ticket on ticket.airline_name = f.airline_name and ticket.flight_number = f.flight_number and ticket.departure_datetime = f.departure_datetime
+      left join review on review.airline_name = f.airline_name and review.flight_number = f.flight_number and review.departure_datetime = f.departure_datetime
+      where f.departure_datetime >= now()
+        and f.departure_datetime::date = ${returnDate}::date
+        and (lower(departure_airport.city) like ${destinationQuery} or lower(departure_airport.code) like ${destinationQuery})
+        and (lower(arrival_airport.city) like ${sourceQuery} or lower(arrival_airport.code) like ${sourceQuery})
+      group by
+        f.airline_name,
+        f.flight_number,
+        f.departure_datetime,
+        f.arrival_datetime,
+        f.departure_airport_code,
+        departure_airport.city,
+        departure_airport.code,
+        f.arrival_airport_code,
+        arrival_airport.city,
+        arrival_airport.code,
+        f.base_price,
+        f.status,
+        airplane.number_of_seats
+      order by f.departure_datetime asc
+    `
+  }
+
+  function mapFlights(rows: Array<{
+    airline_name: string
+    arrival_airport_code: string
+    arrival_airport_name: string
+    arrival_city: string
+    arrival_datetime: string
+    average_rating: number | null
+    available_seats: number
+    base_price: string
+    departure_airport_code: string
+    departure_airport_name: string
+    departure_city: string
+    departure_datetime: string
+    flight_number: string
+    review_count: number
+    status: "on_time" | "delayed"
+  }>): FlightOption[] {
+    return rows.map((row) => ({
+      airlineName: row.airline_name,
+      arrivalAirportCode: row.arrival_airport_code,
+      arrivalAirportName: row.arrival_airport_name,
+      arrivalCity: row.arrival_city,
+      arrivalDatetime: row.arrival_datetime,
+      averageRating: row.average_rating,
+      availableSeats: row.available_seats,
+      basePrice: Number(row.base_price),
+      departureAirportCode: row.departure_airport_code,
+      departureAirportName: row.departure_airport_name,
+      departureCity: row.departure_city,
+      departureDatetime: row.departure_datetime,
+      flightNumber: row.flight_number,
+      reviewCount: row.review_count,
+      status: row.status,
+    }))
+  }
+
+  return {
+    outbound: mapFlights(outbound),
+    returnOptions: mapFlights(returnOptions),
+    tripType: input.tripType,
+  } satisfies FlightSearchResponse
+}
+
+export async function getCustomerDashboardInternal() {
+  const user = await requireUser("customer")
+  const flights = await db<{
+    airline_name: string
+    arrival_airport_code: string
+    arrival_airport_name: string
+    arrival_city: string
+    arrival_datetime: string
+    base_price: string
+    comment: string | null
+    departure_airport_code: string
+    departure_airport_name: string
+    departure_city: string
+    departure_datetime: string
+    flight_number: string
+    purchase_datetime: string
+    rating: number | null
+    status: "on_time" | "delayed"
+  }[]>`
+    select
+      f.airline_name,
+      f.flight_number,
+      f.departure_datetime,
+      f.arrival_datetime,
+      f.departure_airport_code,
+      concat(departure_airport.city, ' · ', departure_airport.code) as departure_airport_name,
+      departure_airport.city as departure_city,
+      f.arrival_airport_code,
+      concat(arrival_airport.city, ' · ', arrival_airport.code) as arrival_airport_name,
+      arrival_airport.city as arrival_city,
+      f.base_price,
+      f.status,
+      ticket.purchase_datetime,
+      review.rating,
+      review.comment
+    from ticket
+    join flight f on f.airline_name = ticket.airline_name and f.flight_number = ticket.flight_number and f.departure_datetime = ticket.departure_datetime
+    join airport departure_airport on departure_airport.code = f.departure_airport_code
+    join airport arrival_airport on arrival_airport.code = f.arrival_airport_code
+    left join review on review.customer_email = ticket.customer_email and review.airline_name = ticket.airline_name and review.flight_number = ticket.flight_number and review.departure_datetime = ticket.departure_datetime
+    where ticket.customer_email = ${user.email}
+    order by f.departure_datetime desc
+  `
+
+  const mappedFlights = flights.map((row) => ({
+    airlineName: row.airline_name,
+    arrivalAirportCode: row.arrival_airport_code,
+    arrivalAirportName: row.arrival_airport_name,
+    arrivalCity: row.arrival_city,
+    arrivalDatetime: row.arrival_datetime,
+    averageRating: row.rating,
+    availableSeats: 0,
+    basePrice: Number(row.base_price),
+    canReview: new Date(row.arrival_datetime) < new Date() && row.rating === null,
+    comment: row.comment,
+    departureAirportCode: row.departure_airport_code,
+    departureAirportName: row.departure_airport_name,
+    departureCity: row.departure_city,
+    departureDatetime: row.departure_datetime,
+    flightNumber: row.flight_number,
+    purchaseDatetime: row.purchase_datetime,
+    rating: row.rating,
+    reviewCount: row.rating ? 1 : 0,
+    status: row.status,
+  })) satisfies CustomerFlight[]
+
+  return {
+    currentUser: {
+      displayName: user.displayName,
+      email: user.email,
+    },
+    pastFlights: mappedFlights.filter((flight) => new Date(flight.arrivalDatetime) < new Date()),
+    upcomingFlights: mappedFlights.filter((flight) => new Date(flight.arrivalDatetime) >= new Date()),
+  } satisfies CustomerDashboardData
+}
+
+export async function getStaffDashboardInternal() {
+  const user = await requireUser("staff")
+
+  const flights = await db<{
+    airline_name: string
+    arrival_airport_code: string
+    arrival_airport_name: string
+    arrival_city: string
+    arrival_datetime: string
+    average_rating: number | null
+    available_seats: number
+    base_price: string
+    departure_airport_code: string
+    departure_airport_name: string
+    departure_city: string
+    departure_datetime: string
+    flight_number: string
+    review_count: number
+    status: "on_time" | "delayed"
+    ticket_count: number
+  }[]>`
+    select
+      f.airline_name,
+      f.flight_number,
+      f.departure_datetime,
+      f.arrival_datetime,
+      f.departure_airport_code,
+      concat(departure_airport.city, ' · ', departure_airport.code) as departure_airport_name,
+      departure_airport.city as departure_city,
+      f.arrival_airport_code,
+      concat(arrival_airport.city, ' · ', arrival_airport.code) as arrival_airport_name,
+      arrival_airport.city as arrival_city,
+      f.base_price,
+      f.status,
+      count(distinct ticket.ticket_id)::int as ticket_count,
+      greatest(airplane.number_of_seats - count(distinct ticket.ticket_id), 0)::int as available_seats,
+      round(avg(review.rating)::numeric, 1)::float8 as average_rating,
+      count(distinct review.customer_email)::int as review_count
+    from flight f
+    join airport departure_airport on departure_airport.code = f.departure_airport_code
+    join airport arrival_airport on arrival_airport.code = f.arrival_airport_code
+    join airplane on airplane.airline_name = f.airline_name and airplane.airplane_id = f.airplane_id
+    left join ticket on ticket.airline_name = f.airline_name and ticket.flight_number = f.flight_number and ticket.departure_datetime = f.departure_datetime
+    left join review on review.airline_name = f.airline_name and review.flight_number = f.flight_number and review.departure_datetime = f.departure_datetime
+    where f.airline_name = ${user.airlineName}
+      and f.departure_datetime between now() and now() + interval '30 day'
+    group by
+      f.airline_name,
+      f.flight_number,
+      f.departure_datetime,
+      f.arrival_datetime,
+      f.departure_airport_code,
+      departure_airport.city,
+      departure_airport.code,
+      f.arrival_airport_code,
+      arrival_airport.city,
+      arrival_airport.code,
+      f.base_price,
+      f.status,
+      airplane.number_of_seats
+    order by f.departure_datetime asc
+  `
+
+  const airplanes = await db<{
+    airplane_id: string
+    manufacturing_company: string
+    manufacturing_date: string
+    number_of_seats: number
+  }[]>`
+    select airplane_id, manufacturing_company, manufacturing_date, number_of_seats
+    from airplane
+    where airline_name = ${user.airlineName}
+    order by airplane_id asc
+  `
+
+  const airports = await db<{
+    city: string
+    code: string
+    country: string
+  }[]>`
+    select code, city, country
+    from airport
+    order by code asc
+  `
+
+  const ratings = await db<{
+    average_rating: number | null
+    departure_datetime: string
+    flight_number: string
+    review_count: number
+    comment: string | null
+  }[]>`
+    select
+      f.flight_number,
+      f.departure_datetime,
+      round(avg(review.rating)::numeric, 1)::float8 as average_rating,
+      count(review.customer_email)::int as review_count,
+      review.comment
+    from flight f
+    left join review on review.airline_name = f.airline_name and review.flight_number = f.flight_number and review.departure_datetime = f.departure_datetime
+    where f.airline_name = ${user.airlineName}
+    group by f.flight_number, f.departure_datetime, review.comment
+    order by f.departure_datetime desc
+  `
+
+  const ratingsMap = new Map<string, { averageRating: number | null; comments: string[]; departureDatetime: string; flightNumber: string; reviewCount: number }>()
+  for (const row of ratings) {
+    const key = `${row.flight_number}:${row.departure_datetime}`
+    const existing = ratingsMap.get(key)
+    if (existing) {
+      if (row.comment) existing.comments.push(row.comment)
+      continue
+    }
+
+    ratingsMap.set(key, {
+      averageRating: row.average_rating,
+      comments: row.comment ? [row.comment] : [],
+      departureDatetime: row.departure_datetime,
+      flightNumber: row.flight_number,
+      reviewCount: row.review_count,
+    })
+  }
+
+  const [summary] = await db<{
+    last_month_tickets: number
+    last_year_tickets: number
+    total_tickets: number
+  }[]>`
+    select
+      count(*)::int as total_tickets,
+      count(*) filter (where purchase_datetime >= now() - interval '1 month')::int as last_month_tickets,
+      count(*) filter (where purchase_datetime >= now() - interval '1 year')::int as last_year_tickets
+    from ticket
+    where airline_name = ${user.airlineName}
+  `
+
+  const monthlySales = await db<{
+    month: string
+    tickets_sold: number
+  }[]>`
+    select
+      to_char(date_trunc('month', purchase_datetime), 'YYYY-MM') as month,
+      count(*)::int as tickets_sold
+    from ticket
+    where airline_name = ${user.airlineName}
+      and purchase_datetime >= now() - interval '12 month'
+    group by date_trunc('month', purchase_datetime)
+    order by date_trunc('month', purchase_datetime) asc
+  `
+
+  return {
+    airlineName: user.airlineName ?? "",
+    airplanes: airplanes.map((row) => ({
+      airplaneId: row.airplane_id,
+      manufacturingCompany: row.manufacturing_company,
+      manufacturingDate: row.manufacturing_date,
+      numberOfSeats: row.number_of_seats,
+    })),
+    airports,
+    flights: flights.map((row) => ({
+      airlineName: row.airline_name,
+      arrivalAirportCode: row.arrival_airport_code,
+      arrivalAirportName: row.arrival_airport_name,
+      arrivalCity: row.arrival_city,
+      arrivalDatetime: row.arrival_datetime,
+      averageRating: row.average_rating,
+      availableSeats: row.available_seats,
+      basePrice: Number(row.base_price),
+      departureAirportCode: row.departure_airport_code,
+      departureAirportName: row.departure_airport_name,
+      departureCity: row.departure_city,
+      departureDatetime: row.departure_datetime,
+      flightNumber: row.flight_number,
+      reviewCount: row.review_count,
+      status: row.status,
+      ticketCount: row.ticket_count,
+    })),
+    monthlySales: monthlySales.map((row) => ({
+      month: row.month,
+      ticketsSold: row.tickets_sold,
+    })),
+    ratings: Array.from(ratingsMap.values()),
+    reportSummary: {
+      lastMonthTickets: summary?.last_month_tickets ?? 0,
+      lastYearTickets: summary?.last_year_tickets ?? 0,
+      totalTickets: summary?.total_tickets ?? 0,
+    },
+  } satisfies StaffDashboardData
+}
+
+export async function purchaseTicketInternal(data: {
+  airlineName: string
+  cardExpiration: string
+  cardNumber: string
+  cardType: "credit" | "debit"
+  departureDatetime: string
+  flightNumber: string
+  nameOnCard: string
+}) {
+  const user = await requireUser("customer")
+
+  const result = await db.begin(async (transaction) => {
+    const [flight] = await transaction<{
+      available_seats: number
+      base_price: string
+    }[]>`
+      select
+        greatest(airplane.number_of_seats - count(ticket.ticket_id), 0)::int as available_seats,
+        f.base_price
+      from flight f
+      join airplane on airplane.airline_name = f.airline_name and airplane.airplane_id = f.airplane_id
+      left join ticket on ticket.airline_name = f.airline_name and ticket.flight_number = f.flight_number and ticket.departure_datetime = f.departure_datetime
+      where f.airline_name = ${data.airlineName}
+        and f.flight_number = ${data.flightNumber}
+        and f.departure_datetime = ${data.departureDatetime}
+      group by f.base_price, airplane.number_of_seats
+      limit 1
+    `
+
+    if (!flight) throw new Error("That flight could not be found anymore.")
+    if (flight.available_seats <= 0) throw new Error("That flight is already full.")
+
+    const [nextTicket] = await transaction<{ next_id: number }[]>`
+      select coalesce(max(ticket_id), 1000) + 1 as next_id
+      from ticket
+    `
+
+    await transaction`
+      insert into ticket (
+        ticket_id,
+        customer_email,
+        airline_name,
+        flight_number,
+        departure_datetime,
+        purchase_datetime,
+        card_type,
+        card_number,
+        name_on_card,
+        card_expiration
+      )
+      values (
+        ${nextTicket.next_id},
+        ${user.email},
+        ${data.airlineName},
+        ${data.flightNumber},
+        ${data.departureDatetime},
+        now(),
+        ${data.cardType},
+        ${data.cardNumber},
+        ${data.nameOnCard},
+        ${data.cardExpiration}
+      )
+    `
+
+    return {
+      nextTicketId: nextTicket.next_id,
+      price: Number(flight.base_price),
+    }
+  })
+
+  return {
+    message: `Ticket #${result.nextTicketId} confirmed for ${data.flightNumber}.`,
+    price: result.price,
+  }
+}
+
+export async function submitReviewInternal(data: {
+  airlineName: string
+  comment: string
+  departureDatetime: string
+  flightNumber: string
+  rating: number
+}) {
+  const user = await requireUser("customer")
+
+  const [eligibleFlight] = await db<{ eligible: boolean }[]>`
+    select exists (
+      select 1
+      from ticket
+      join flight on flight.airline_name = ticket.airline_name and flight.flight_number = ticket.flight_number and flight.departure_datetime = ticket.departure_datetime
+      where ticket.customer_email = ${user.email}
+        and ticket.airline_name = ${data.airlineName}
+        and ticket.flight_number = ${data.flightNumber}
+        and ticket.departure_datetime = ${data.departureDatetime}
+        and flight.arrival_datetime < now()
+    ) as eligible
+  `
+
+  if (!eligibleFlight?.eligible) {
+    return { error: "Only completed flights that you purchased can be reviewed." }
+  }
+
+  const [existingReview] = await db<{ exists: boolean }[]>`
+    select exists (
+      select 1
+      from review
+      where customer_email = ${user.email}
+        and airline_name = ${data.airlineName}
+        and flight_number = ${data.flightNumber}
+        and departure_datetime = ${data.departureDatetime}
+    ) as exists
+  `
+
+  if (existingReview?.exists) {
+    return { error: "You already reviewed this flight." }
+  }
+
+  await db`
+    insert into review (
+      customer_email,
+      airline_name,
+      flight_number,
+      departure_datetime,
+      rating,
+      comment,
+      review_datetime
+    )
+    values (
+      ${user.email},
+      ${data.airlineName},
+      ${data.flightNumber},
+      ${data.departureDatetime},
+      ${data.rating},
+      ${data.comment || null},
+      now()
+    )
+  `
+
+  return { message: "Thanks — your rating is now part of the airline record." }
+}
+
+export async function createFlightInternal(data: {
+  airplaneId: string
+  arrivalAirportCode: string
+  arrivalDatetime: string
+  basePrice: number
+  departureAirportCode: string
+  departureDatetime: string
+  flightNumber: string
+}) {
+  const user = await requireUser("staff")
+
+  if (data.departureAirportCode === data.arrivalAirportCode) {
+    return { error: "Departure and arrival airports must be different." }
+  }
+
+  if (new Date(data.arrivalDatetime) <= new Date(data.departureDatetime)) {
+    return { error: "Arrival time must be after departure time." }
+  }
+
+  const [airplane] = await db<{ airplane_id: string }[]>`
+    select airplane_id
+    from airplane
+    where airline_name = ${user.airlineName}
+      and airplane_id = ${data.airplaneId}
+    limit 1
+  `
+
+  if (!airplane) return { error: "Choose one of your airline's airplanes." }
+
+  await db`
+    insert into flight (
+      airline_name,
+      flight_number,
+      departure_datetime,
+      departure_airport_code,
+      arrival_airport_code,
+      arrival_datetime,
+      base_price,
+      status,
+      airplane_id
+    )
+    values (
+      ${user.airlineName},
+      ${data.flightNumber},
+      ${data.departureDatetime},
+      ${data.departureAirportCode},
+      ${data.arrivalAirportCode},
+      ${data.arrivalDatetime},
+      ${data.basePrice},
+      'on_time',
+      ${data.airplaneId}
+    )
+  `
+
+  return { message: `Flight ${data.flightNumber} is now on the schedule.` }
+}
+
+export async function updateFlightStatusInternal(data: {
+  airlineName: string
+  departureDatetime: string
+  flightNumber: string
+  status: "on_time" | "delayed"
+}) {
+  const user = await requireUser("staff")
+  if (user.airlineName !== data.airlineName) return { error: "You can only edit your airline's flights." }
+
+  await db`
+    update flight
+    set status = ${data.status}
+    where airline_name = ${data.airlineName}
+      and flight_number = ${data.flightNumber}
+      and departure_datetime = ${data.departureDatetime}
+  `
+
+  return { message: `Flight ${data.flightNumber} is now marked ${data.status.replaceAll("_", " ")}.` }
+}
+
+export async function addAirplaneInternal(data: {
+  airplaneId: string
+  manufacturingCompany: string
+  manufacturingDate: string
+  numberOfSeats: number
+}) {
+  const user = await requireUser("staff")
+
+  await db`
+    insert into airplane (
+      airline_name,
+      airplane_id,
+      number_of_seats,
+      manufacturing_company,
+      manufacturing_date
+    )
+    values (
+      ${user.airlineName},
+      ${data.airplaneId},
+      ${data.numberOfSeats},
+      ${data.manufacturingCompany},
+      ${data.manufacturingDate}
+    )
+  `
+
+  return { message: `Airplane ${data.airplaneId} is now available for ${user.airlineName}.` }
+}
+
+export async function getFlightPassengersInternal(data: {
+  airlineName: string
+  departureDatetime: string
+  flightNumber: string
+}) {
+  const user = await requireUser("staff")
+  if (user.airlineName !== data.airlineName) return []
+
+  const passengers = await db<{
+    customer_email: string
+    customer_name: string
+    passport_number: string
+    purchase_datetime: string
+    ticket_id: number
+  }[]>`
+    select
+      ticket.ticket_id,
+      ticket.customer_email,
+      customer.name as customer_name,
+      customer.passport_number,
+      ticket.purchase_datetime
+    from ticket
+    join customer on customer.email = ticket.customer_email
+    where ticket.airline_name = ${data.airlineName}
+      and ticket.flight_number = ${data.flightNumber}
+      and ticket.departure_datetime = ${data.departureDatetime}
+    order by ticket.purchase_datetime asc
+  `
+
+  return passengers.map((row) => ({
+    customerEmail: row.customer_email,
+    customerName: row.customer_name,
+    passportNumber: row.passport_number,
+    purchaseDatetime: row.purchase_datetime,
+    ticketId: row.ticket_id,
+  })) satisfies PassengerRecord[]
+}
+
+export async function getStaffReportInternal(data: { endDate: string; startDate: string }) {
+  const user = await requireUser("staff")
+
+  const [rangeSummary] = await db<{ tickets_sold: number }[]>`
+    select count(*)::int as tickets_sold
+    from ticket
+    where airline_name = ${user.airlineName}
+      and purchase_datetime::date between ${data.startDate}::date and ${data.endDate}::date
+  `
+
+  return {
+    endDate: data.endDate,
+    startDate: data.startDate,
+    ticketsSold: rangeSummary?.tickets_sold ?? 0,
+  }
+}
