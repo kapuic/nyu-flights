@@ -11,6 +11,20 @@ import type {
 
 const DEFAULT_STAFF_FLIGHT_WINDOW_DAYS = 30
 
+function serializeTimestamp(value: Date | string) {
+  if (value instanceof Date) {
+    const year = value.getFullYear()
+    const month = String(value.getMonth() + 1).padStart(2, "0")
+    const day = String(value.getDate()).padStart(2, "0")
+    const hours = String(value.getHours()).padStart(2, "0")
+    const minutes = String(value.getMinutes()).padStart(2, "0")
+    const seconds = String(value.getSeconds()).padStart(2, "0")
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`
+  }
+
+  return value.replace(" ", "T").replace(/\.\d+Z?$/, "")
+}
+
 function normalizeQueryValue(value: string | undefined) {
   const normalized = value?.trim().toLowerCase()
   if (!normalized) return null
@@ -184,14 +198,14 @@ export async function searchFlightsInternal(input: {
       arrivalAirportCode: row.arrival_airport_code,
       arrivalAirportName: row.arrival_airport_name,
       arrivalCity: row.arrival_city,
-      arrivalDatetime: row.arrival_datetime,
+      arrivalDatetime: serializeTimestamp(row.arrival_datetime),
       averageRating: row.average_rating,
       availableSeats: row.available_seats,
       basePrice: Number(row.base_price),
       departureAirportCode: row.departure_airport_code,
       departureAirportName: row.departure_airport_name,
       departureCity: row.departure_city,
-      departureDatetime: row.departure_datetime,
+      departureDatetime: serializeTimestamp(row.departure_datetime),
       flightNumber: row.flight_number,
       reviewCount: row.review_count,
       status: row.status,
@@ -273,18 +287,18 @@ export async function getCustomerDashboardInternal(filters: {
     arrivalAirportCode: row.arrival_airport_code,
     arrivalAirportName: row.arrival_airport_name,
     arrivalCity: row.arrival_city,
-    arrivalDatetime: row.arrival_datetime,
+    arrivalDatetime: serializeTimestamp(row.arrival_datetime),
     averageRating: row.rating,
     availableSeats: 0,
     basePrice: Number(row.base_price),
-    canReview: new Date(row.arrival_datetime) < new Date() && row.rating === null,
+    canReview: new Date(serializeTimestamp(row.arrival_datetime)) < new Date() && row.rating === null,
     comment: row.comment,
     departureAirportCode: row.departure_airport_code,
     departureAirportName: row.departure_airport_name,
     departureCity: row.departure_city,
-    departureDatetime: row.departure_datetime,
+    departureDatetime: serializeTimestamp(row.departure_datetime),
     flightNumber: row.flight_number,
-    purchaseDatetime: row.purchase_datetime,
+    purchaseDatetime: serializeTimestamp(row.purchase_datetime),
     rating: row.rating,
     reviewCount: row.rating ? 1 : 0,
     status: row.status,
@@ -432,7 +446,7 @@ export async function getStaffDashboardInternal(filters: {
     ratingsMap.set(key, {
       averageRating: row.average_rating,
       comments: row.comment ? [row.comment] : [],
-      departureDatetime: row.departure_datetime,
+      departureDatetime: serializeTimestamp(row.departure_datetime),
       flightNumber: row.flight_number,
       reviewCount: row.review_count,
     })
@@ -470,7 +484,7 @@ export async function getStaffDashboardInternal(filters: {
     airplanes: airplanes.map((row) => ({
       airplaneId: row.airplane_id,
       manufacturingCompany: row.manufacturing_company,
-      manufacturingDate: row.manufacturing_date,
+      manufacturingDate: serializeTimestamp(row.manufacturing_date),
       numberOfSeats: row.number_of_seats,
     })),
     airports,
@@ -479,14 +493,14 @@ export async function getStaffDashboardInternal(filters: {
       arrivalAirportCode: row.arrival_airport_code,
       arrivalAirportName: row.arrival_airport_name,
       arrivalCity: row.arrival_city,
-      arrivalDatetime: row.arrival_datetime,
+      arrivalDatetime: serializeTimestamp(row.arrival_datetime),
       averageRating: row.average_rating,
       availableSeats: row.available_seats,
       basePrice: Number(row.base_price),
       departureAirportCode: row.departure_airport_code,
       departureAirportName: row.departure_airport_name,
       departureCity: row.departure_city,
-      departureDatetime: row.departure_datetime,
+      departureDatetime: serializeTimestamp(row.departure_datetime),
       flightNumber: row.flight_number,
       reviewCount: row.review_count,
       status: row.status,
@@ -529,7 +543,7 @@ export async function purchaseTicketInternal(data: {
       left join ticket on ticket.airline_name = f.airline_name and ticket.flight_number = f.flight_number and ticket.departure_datetime = f.departure_datetime
       where f.airline_name = ${data.airlineName}
         and f.flight_number = ${data.flightNumber}
-        and f.departure_datetime = ${data.departureDatetime}
+        and f.departure_datetime::text = replace(${data.departureDatetime}, 'T', ' ')
       group by f.base_price, airplane.number_of_seats
       limit 1
     `
@@ -560,7 +574,7 @@ export async function purchaseTicketInternal(data: {
         ${user.email},
         ${data.airlineName},
         ${data.flightNumber},
-        ${data.departureDatetime},
+        replace(${data.departureDatetime}, 'T', ' ')::timestamp,
         now(),
         ${data.cardType},
         ${data.cardNumber},
@@ -598,7 +612,7 @@ export async function submitReviewInternal(data: {
       where ticket.customer_email = ${user.email}
         and ticket.airline_name = ${data.airlineName}
         and ticket.flight_number = ${data.flightNumber}
-        and ticket.departure_datetime = ${data.departureDatetime}
+        and ticket.departure_datetime::text = replace(${data.departureDatetime}, 'T', ' ')
         and flight.arrival_datetime < now()
     ) as eligible
   `
@@ -614,7 +628,7 @@ export async function submitReviewInternal(data: {
       where customer_email = ${user.email}
         and airline_name = ${data.airlineName}
         and flight_number = ${data.flightNumber}
-        and departure_datetime = ${data.departureDatetime}
+        and departure_datetime::text = replace(${data.departureDatetime}, 'T', ' ')
     ) as exists
   `
 
@@ -717,7 +731,7 @@ export async function updateFlightStatusInternal(data: {
     set status = ${data.status}
     where airline_name = ${data.airlineName}
       and flight_number = ${data.flightNumber}
-      and departure_datetime = ${data.departureDatetime}
+      and departure_datetime::text = replace(${data.departureDatetime}, 'T', ' ')
   `
 
   return { message: `Flight ${data.flightNumber} is now marked ${data.status.replaceAll("_", " ")}.` }
@@ -776,7 +790,7 @@ export async function getFlightPassengersInternal(data: {
     join customer on customer.email = ticket.customer_email
     where ticket.airline_name = ${data.airlineName}
       and ticket.flight_number = ${data.flightNumber}
-      and ticket.departure_datetime = ${data.departureDatetime}
+      and ticket.departure_datetime::text = replace(${data.departureDatetime}, 'T', ' ')
     order by ticket.purchase_datetime asc
   `
 
@@ -784,7 +798,7 @@ export async function getFlightPassengersInternal(data: {
     customerEmail: row.customer_email,
     customerName: row.customer_name,
     passportNumber: row.passport_number,
-    purchaseDatetime: row.purchase_datetime,
+    purchaseDatetime: serializeTimestamp(row.purchase_datetime),
     ticketId: row.ticket_id,
   })) satisfies PassengerRecord[]
 }

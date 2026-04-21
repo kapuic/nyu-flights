@@ -59,6 +59,7 @@ export function LoginForm({
               <Field>
                 <FieldLabel htmlFor="login-email">Email</FieldLabel>
                 <Input
+                  autoComplete="email"
                   id="login-email"
                   onChange={(e) => onEmailChange(e.target.value)}
                   placeholder="name@example.com"
@@ -79,6 +80,7 @@ export function LoginForm({
                 </div>
                 <div className="relative">
                   <Input
+                    autoComplete="current-password"
                     className="pr-10"
                     id="login-password"
                     onChange={(e) => onPasswordChange(e.target.value)}

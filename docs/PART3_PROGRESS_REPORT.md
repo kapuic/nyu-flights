@@ -69,74 +69,74 @@ This design phase is already giving me a strong reference for:
 
 #### Traveler: Flight Search & Results
 
-![Traveler Flight Search Results](stitch_skyward_airline_platform/traveler_flight_search_results/screen.png)
+![Traveler Flight Search Results](design/traveler_flight_search_results/screen.png)
 
 #### Traveler: Round-Trip Selection
 
-![Traveler Round Trip Selection](stitch_skyward_airline_platform/traveler_round_trip_selection/screen.png)
+![Traveler Round Trip Selection](design/traveler_round_trip_selection/screen.png)
 
 #### Traveler: Booking & Checkout 1
 
-![Traveler Booking Checkout 1](stitch_skyward_airline_platform/traveler_booking_checkout_1/screen.png)
+![Traveler Booking Checkout 1](design/traveler_booking_checkout_1/screen.png)
 
 #### Traveler: Booking & Checkout 2
 
-![Traveler Booking Checkout 2](stitch_skyward_airline_platform/traveler_booking_checkout_2/screen.png)
+![Traveler Booking Checkout 2](design/traveler_booking_checkout_2/screen.png)
 
 #### Traveler: My Trips Hub
 
-![Traveler My Trips Hub](stitch_skyward_airline_platform/traveler_my_trips_hub/screen.png)
+![Traveler My Trips Hub](design/traveler_my_trips_hub/screen.png)
 
 #### Traveler: My Trips History
 
-![Traveler My Trips History](stitch_skyward_airline_platform/traveler_my_trips_history/screen.png)
+![Traveler My Trips History](design/traveler_my_trips_history/screen.png)
 
 #### Traveler: My Trips Review States
 
-![Traveler My Trips Review States](stitch_skyward_airline_platform/traveler_my_trips_review_states/screen.png)
+![Traveler My Trips Review States](design/traveler_my_trips_review_states/screen.png)
 
 #### Traveler: No Search Results
 
-![Traveler No Search Results](stitch_skyward_airline_platform/traveler_no_search_results/screen.png)
+![Traveler No Search Results](design/traveler_no_search_results/screen.png)
 
 #### Traveler: Payment Methods
 
-![Traveler Payment Methods](stitch_skyward_airline_platform/traveler_payment_methods/screen.png)
+![Traveler Payment Methods](design/traveler_payment_methods/screen.png)
 
 #### Traveler: Account Profile
 
-![Traveler Account Profile](stitch_skyward_airline_platform/traveler_account_profile/screen.png)
+![Traveler Account Profile](design/traveler_account_profile/screen.png)
 
 #### Traveler: Account Settings
 
-![Traveler Account Settings](stitch_skyward_airline_platform/traveler_account_settings/screen.png)
+![Traveler Account Settings](design/traveler_account_settings/screen.png)
 
 #### Auth: Booking Interruption
 
-![Auth Booking Interruption](stitch_skyward_airline_platform/auth_booking_interruption/screen.png)
+![Auth Booking Interruption](design/auth_booking_interruption/screen.png)
 
 ### Staff-facing designs
 
 #### Staff: Operations Dashboard
 
-![Staff Operations Dashboard](stitch_skyward_airline_platform/staff_operations_dashboard/screen.png)
+![Staff Operations Dashboard](design/staff_operations_dashboard/screen.png)
 
 #### Staff: Reporting & Feedback
 
-![Staff Reporting Feedback](stitch_skyward_airline_platform/staff_reporting_feedback/screen.png)
+![Staff Reporting Feedback](design/staff_reporting_feedback/screen.png)
 
 #### Staff: Passenger Manifest
 
-![Staff Passenger Manifest](stitch_skyward_airline_platform/staff_passenger_manifest/screen.png)
+![Staff Passenger Manifest](design/staff_passenger_manifest/screen.png)
 
 #### Staff: Fleet Management
 
-![Staff Fleet Management](stitch_skyward_airline_platform/staff_fleet_management/screen.png)
+![Staff Fleet Management](design/staff_fleet_management/screen.png)
 
 #### Staff: Flight Creation
 
-![Staff Flight Creation](stitch_skyward_airline_platform/staff_flight_creation/screen.png)
+![Staff Flight Creation](design/staff_flight_creation/screen.png)
 
 #### Staff: Status Update Workflow
 
-![Staff Status Update Workflow](stitch_skyward_airline_platform/staff_status_update_workflow/screen.png)
+![Staff Status Update Workflow](design/staff_status_update_workflow/screen.png)
