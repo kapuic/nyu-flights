@@ -33,6 +33,7 @@ function PublicHomePage() {
   const { currentUser } = Route.useLoaderData()
   const [searchBusy, setSearchBusy] = useState(false)
   const [searchResults, setSearchResults] = useState<{ outbound: FlightOption[]; returnOptions: FlightOption[]; tripType: "one-way" | "round-trip" } | null>(null)
+  const [selectedOutboundFlight, setSelectedOutboundFlight] = useState<FlightOption | null>(null)
   const [passengers, setPassengers] = useState("1")
   const [cabinClass, setCabinClass] = useState("economy")
   function formatDateLabel(value: string) {
@@ -67,6 +68,7 @@ function PublicHomePage() {
       try {
         const result = await searchFlightsFn({ data: value })
         setSearchResults(result)
+        setSelectedOutboundFlight(result.tripType === "round-trip" ? null : result.outbound[0] ?? null)
         if (!result.outbound.length) toast.message("No future flights matched those filters.")
       } finally {
         setSearchBusy(false)
@@ -142,24 +144,24 @@ function PublicHomePage() {
 
             <form.Field name="tripType">
               {(field) => (
-                <div className="mt-6 flex flex-wrap items-center gap-4 text-center md:justify-start">
+                <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-3 text-left md:flex-nowrap md:gap-3 md:overflow-x-auto md:pb-1">
                   <RadioGroup
-                    className="flex flex-row gap-4"
+                    className="flex shrink-0 flex-row gap-4"
                     onValueChange={(v) => field.handleChange(v as "one-way" | "round-trip")}
                     value={field.state.value}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
                       <RadioGroupItem aria-label="Round Trip" id="round-trip" value="round-trip" />
-                      <Label className={cn("cursor-pointer text-sm font-medium", field.state.value === "round-trip" ? "text-slate-950" : "text-slate-500")} htmlFor="round-trip">Round Trip</Label>
+                      <Label className={cn("cursor-pointer text-sm font-medium whitespace-nowrap", field.state.value === "round-trip" ? "text-slate-950" : "text-slate-500")} htmlFor="round-trip">Round Trip</Label>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
                       <RadioGroupItem aria-label="One Way" id="one-way" value="one-way" />
-                      <Label className={cn("cursor-pointer text-sm font-medium", field.state.value === "one-way" ? "text-slate-950" : "text-slate-500")} htmlFor="one-way">One Way</Label>
+                      <Label className={cn("cursor-pointer text-sm font-medium whitespace-nowrap", field.state.value === "one-way" ? "text-slate-950" : "text-slate-500")} htmlFor="one-way">One Way</Label>
                     </div>
                   </RadioGroup>
-                  <div className="hidden h-4 w-px bg-slate-300 md:block" />
+                  <div className="hidden h-4 w-px shrink-0 bg-slate-300 md:block" />
                   <Select onValueChange={(value) => setPassengers(value ?? passengers)} value={passengers}>
-                    <SelectTrigger aria-label="Passengers" className="h-8 w-[160px] border-0 bg-transparent px-2.5 shadow-none hover:bg-slate-100 focus-visible:ring-2">
+                    <SelectTrigger aria-label="Passengers" className="h-8 w-auto min-w-[142px] shrink-0 border-0 bg-transparent px-2 shadow-none hover:bg-slate-100 focus-visible:ring-2">
                       <SelectValue>
                         {passengerOptions.find((option) => option.value === passengers)?.label ?? "Passengers"}
                       </SelectValue>
@@ -171,7 +173,7 @@ function PublicHomePage() {
                     </SelectContent>
                   </Select>
                   <Select onValueChange={(value) => setCabinClass(value ?? cabinClass)} value={cabinClass}>
-                    <SelectTrigger aria-label="Cabin class" className="h-8 w-[180px] border-0 bg-transparent px-2.5 shadow-none hover:bg-slate-100 focus-visible:ring-2">
+                    <SelectTrigger aria-label="Cabin class" className="h-8 w-auto min-w-[132px] shrink-0 border-0 bg-transparent px-2 shadow-none hover:bg-slate-100 focus-visible:ring-2">
                       <SelectValue>
                         {cabinClassOptions.find((option) => option.value === cabinClass)?.label ?? "Cabin class"}
                       </SelectValue>
@@ -230,21 +232,23 @@ function PublicHomePage() {
               </div>
             </div>
 
-            {searchResults ? (
-              <div className="space-y-6">
-                {searchResults.outbound.length ? searchResults.outbound.map((flight) => (
-                  <FlightCard currentUser={currentUser} flight={flight} key={`${flight.airlineName}-${flight.flightNumber}-${flight.departureDatetime}`} />
-                )) : <NoResultsCard />}
-                {searchResults.tripType === "round-trip" && searchResults.returnOptions.length ? (
-                  <div className="space-y-6 pt-2">
-                    <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">Return Flights</div>
-                    {searchResults.returnOptions.map((flight) => (
-                      <FlightCard currentUser={currentUser} flight={flight} key={`${flight.airlineName}-${flight.flightNumber}-${flight.departureDatetime}-return`} />
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ) : (
+             {searchResults ? (
+               <div className="space-y-6">
+                 {!searchResults.outbound.length ? <NoResultsCard onClear={() => { form.reset(); setSearchResults(null); setSelectedOutboundFlight(null) }} onReturnHome={() => { form.reset(); setSearchResults(null); setSelectedOutboundFlight(null); window.scrollTo({ top: 0, behavior: "smooth" }) }} /> : null}
+                 {searchResults.outbound.length && searchResults.tripType === "round-trip" ? (
+                   <RoundTripSelectionStage
+                     currentUser={currentUser}
+                     outboundFlights={searchResults.outbound}
+                     returnFlights={searchResults.returnOptions}
+                     selectedOutboundFlight={selectedOutboundFlight}
+                     setSelectedOutboundFlight={setSelectedOutboundFlight}
+                   />
+                 ) : null}
+                 {searchResults.outbound.length && searchResults.tripType === "one-way" ? searchResults.outbound.map((flight) => (
+                   <FlightCard currentUser={currentUser} flight={flight} key={`${flight.airlineName}-${flight.flightNumber}-${flight.departureDatetime}`} />
+                 )) : null}
+               </div>
+             ) : (
               <div className="space-y-6">
                 <DemoFlightCard airline="Jet Blue JB-102" arrivalCode="LHR" arrivalTime="06:40" departureCode="JFK" departureTime="18:30" duration="7h 10m" hasPlusOne price={450} status="ON TIME" />
                 <DemoFlightCard airline="Global Airways GA-44" arrivalCode="LHR" arrivalTime="08:55" departureCode="JFK" departureTime="21:00" duration="6h 55m" hasPlusOne price={520} seatsLeft={3} variant="secondary" />
@@ -257,13 +261,110 @@ function PublicHomePage() {
   )
 }
 
-function FlightCard({ currentUser, flight }: { currentUser: Awaited<ReturnType<typeof getCurrentUserFn>>; flight: FlightOption }) {
+function RoundTripSelectionStage({
+  currentUser,
+  outboundFlights,
+  returnFlights,
+  selectedOutboundFlight,
+  setSelectedOutboundFlight,
+}: {
+  currentUser: Awaited<ReturnType<typeof getCurrentUserFn>>
+  outboundFlights: FlightOption[]
+  returnFlights: FlightOption[]
+  selectedOutboundFlight: FlightOption | null
+  setSelectedOutboundFlight: (flight: FlightOption) => void
+}) {
+  const activeOutbound = selectedOutboundFlight ?? outboundFlights[0]
+
+  return (
+    <div className="grid gap-8 xl:grid-cols-[0.85fr_1.15fr]">
+      <div className="space-y-6 xl:sticky xl:top-24 xl:self-start">
+        <div className="flex items-center gap-3 text-sm font-medium text-slate-500">
+          <div className="flex items-center gap-2 text-slate-950">
+            <div className="flex size-6 items-center justify-center rounded-full bg-slate-950 text-xs font-bold text-white">1</div>
+            <span>Outbound</span>
+          </div>
+          <div className="h-px flex-1 bg-slate-300" />
+          <div className="flex items-center gap-2 text-slate-950">
+            <div className="flex size-6 items-center justify-center rounded-full border border-slate-300 text-xs font-bold text-slate-700">2</div>
+            <span>Return</span>
+          </div>
+          <div className="h-px flex-1 bg-slate-200" />
+          <div className="flex items-center gap-2 text-slate-400">
+            <div className="flex size-6 items-center justify-center rounded-full border border-slate-200 text-xs font-bold">3</div>
+            <span>Review</span>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+            <h3 className="text-lg font-semibold text-slate-950">Selected Outbound</h3>
+            <Button className="px-0 text-sm text-slate-500 hover:text-slate-950" onClick={() => setSelectedOutboundFlight(outboundFlights[0])} type="button" variant="ghost">Reset</Button>
+          </div>
+          <div className="mt-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Flight</div>
+                <div className="mt-1 text-sm font-semibold text-slate-950">{activeOutbound.airlineName} {activeOutbound.flightNumber}</div>
+              </div>
+              <Badge className={cn("rounded-sm px-2 py-1 text-[0.6875rem] font-bold uppercase tracking-[0.05em]", activeOutbound.status === "on_time" ? "bg-[#cde5ff] text-[#004b74]" : "bg-red-100 text-red-700")} variant="secondary">
+                {titleCaseStatus(activeOutbound.status)}
+              </Badge>
+            </div>
+            <CheckoutStageRow label="Route" value={`${activeOutbound.departureAirportCode} → ${activeOutbound.arrivalAirportCode}`} />
+            <CheckoutStageRow label="Departure" value={new Date(activeOutbound.departureDatetime).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} />
+            <CheckoutStageRow label="Current Total" value={formatCurrency(activeOutbound.basePrice)} />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-8">
+        <div>
+          <h3 className="text-2xl font-bold tracking-tight text-slate-950">Choose Your Outbound Flight</h3>
+          <p className="mt-2 text-sm text-slate-500">Select an outbound first, then choose a matching return from the live results below.</p>
+        </div>
+        <div className="space-y-4">
+          {outboundFlights.map((flight) => (
+            <FlightCard
+              currentUser={currentUser}
+              flight={flight}
+              key={`${flight.airlineName}-${flight.flightNumber}-${flight.departureDatetime}`}
+              onSelect={() => setSelectedOutboundFlight(flight)}
+              selectionLabel={selectedOutboundFlight?.flightNumber === flight.flightNumber && selectedOutboundFlight?.departureDatetime === flight.departureDatetime ? "Selected" : "Choose outbound"}
+            />
+          ))}
+        </div>
+        <div className="pt-2">
+          <div className="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">Return Flights</div>
+          <div className="mt-4 space-y-4">
+            {returnFlights.length ? returnFlights.map((flight) => (
+              <FlightCard currentUser={currentUser} flight={flight} key={`${flight.airlineName}-${flight.flightNumber}-${flight.departureDatetime}-return`} selectionLabel="Choose return" />
+            )) : (
+              <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm">No return flights matched the selected dates yet.</div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function CheckoutStageRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-t border-slate-200 pt-4 first:border-t-0 first:pt-0">
+      <div className="text-sm text-slate-500">{label}</div>
+      <div className="text-right text-sm font-semibold text-slate-950">{value}</div>
+    </div>
+  )
+}
+
+function FlightCard({ currentUser, flight, onSelect, selectionLabel = "Select" }: { currentUser: Awaited<ReturnType<typeof getCurrentUserFn>>; flight: FlightOption; onSelect?: () => void; selectionLabel?: string }) {
   const dep = new Date(flight.departureDatetime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
   const arr = new Date(flight.arrivalDatetime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
   const plusOne = new Date(flight.arrivalDatetime) > new Date(flight.departureDatetime)
 
   return (
-    <div className="flex flex-col items-center gap-6 rounded-lg bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.02)] transition-transform duration-300 hover:-translate-y-1 md:flex-row">
+    <div className="flex flex-col items-center gap-6 rounded-lg bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.02)] md:flex-row">
       <div className="w-full flex-1 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -302,7 +403,11 @@ function FlightCard({ currentUser, flight }: { currentUser: Awaited<ReturnType<t
           <div className="text-3xl font-bold text-slate-950">{formatCurrency(flight.basePrice)}</div>
           <div className="text-xs text-slate-500">Round trip</div>
         </div>
-        <Link className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-medium text-white hover:bg-slate-800" to={currentUser?.role === "customer" ? "/customer" : "/login"}>Select</Link>
+         {onSelect ? (
+           <Button className="rounded-lg bg-slate-950 text-white hover:bg-slate-800" onClick={onSelect} type="button">{selectionLabel}</Button>
+         ) : (
+           <Link className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-medium text-white hover:bg-slate-800" to={currentUser?.role === "customer" ? "/customer" : "/login"}>{selectionLabel}</Link>
+         )}
       </div>
     </div>
   )
@@ -313,7 +418,7 @@ function DemoFlightCard({ airline, departureCode, departureTime, arrivalCode, ar
   duration: string; hasPlusOne?: boolean; price: number; status?: string; seatsLeft?: number; variant?: "primary" | "secondary"
 }) {
   return (
-    <div className="flex flex-col items-center gap-6 rounded-lg bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.02)] transition-transform duration-300 hover:-translate-y-1 md:flex-row">
+    <div className="flex flex-col items-center gap-6 rounded-lg bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.02)] md:flex-row">
       <div className="w-full flex-1 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -374,18 +479,36 @@ function FilterLine({ label, price, defaultChecked }: { label: string; price?: s
   )
 }
 
-function NoResultsCard() {
+function NoResultsCard({ onClear, onReturnHome }: { onClear: () => void; onReturnHome: () => void }) {
   return (
-    <div className="rounded-lg bg-slate-50 p-10 text-center">
-      <div className="mx-auto flex size-20 items-center justify-center rounded-full bg-slate-200 text-slate-400">
-        <Plane className="size-10" />
+    <div className="grid gap-6 rounded-lg bg-slate-50 p-8 shadow-[0_20px_40px_-10px_rgba(25,28,30,0.08)] md:grid-cols-[180px_minmax(0,1fr)] md:items-center md:p-10">
+      <div className="flex justify-center md:justify-end">
+        <div className="flex size-28 items-center justify-center rounded-sm bg-slate-200 text-slate-400">
+          <Plane className="size-14" />
+        </div>
       </div>
-      <h3 className="mt-6 text-xl font-bold text-slate-950">No flights found</h3>
-      <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">We are unable to locate active flight schedules for the selected route and parameters.</p>
-      <div className="mt-6 flex flex-wrap justify-center gap-4">
-        <Button variant="secondary">Clear Filters</Button>
-        <Button variant="outline">Return Home</Button>
+      <div className="text-center md:text-left">
+        <h3 className="text-2xl font-bold text-slate-950">No flights found</h3>
+        <p className="mt-2 max-w-2xl text-sm text-slate-500">We are unable to locate active flight schedules for the selected route and parameters.</p>
+        <div className="mt-6 rounded-sm border-l-4 border-slate-300 bg-slate-200/60 p-5 text-left">
+          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Recommended actions</div>
+          <div className="mt-4 space-y-4">
+            <div>
+              <div className="text-sm font-semibold text-slate-950">Adjust your travel dates</div>
+              <p className="mt-1 text-xs text-slate-500">Try searching a few days earlier or later than your current selection.</p>
+            </div>
+            <div className="border-t border-slate-300/70 pt-4">
+              <div className="text-sm font-semibold text-slate-950">Try a nearby airport</div>
+              <p className="mt-1 text-xs text-slate-500">Broaden the route by using a nearby origin or destination airport.</p>
+            </div>
+          </div>
+        </div>
+        <div className="mt-6 flex flex-wrap justify-center gap-3 md:justify-start">
+          <Button onClick={onClear} type="button" variant="secondary">Clear Filters</Button>
+          <Button onClick={onReturnHome} type="button" variant="outline">Return Home</Button>
+        </div>
       </div>
     </div>
   )
 }
+

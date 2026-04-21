@@ -1,6 +1,6 @@
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router"
 import { useForm } from "@tanstack/react-form"
-import { ArrowRight, CreditCard, History, Lock, Plane, Plus, Settings, Star } from "lucide-react"
+import { ArrowRight, CreditCard, History, Lock, Plane, Plus, Settings, Star, User } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 
@@ -29,6 +29,20 @@ function formatDateLabel(value: string) {
   return parsed.toLocaleDateString("en-US", { month: "short", day: "numeric" })
 }
 
+function normalizeDateTimeInput(value: Date | string) {
+  if (value instanceof Date) {
+    const year = value.getFullYear()
+    const month = String(value.getMonth() + 1).padStart(2, "0")
+    const day = String(value.getDate()).padStart(2, "0")
+    const hours = String(value.getHours()).padStart(2, "0")
+    const minutes = String(value.getMinutes()).padStart(2, "0")
+    const seconds = String(value.getSeconds()).padStart(2, "0")
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+  }
+
+  return value.replace("T", " ").replace(/\.\d+Z?$/, "")
+}
+
 export const Route = createFileRoute("/customer")({
   loader: async () => {
     const currentUser = await getCurrentUserFn()
@@ -46,7 +60,7 @@ function CustomerPage() {
   const router = useRouter()
   const loaderData = Route.useLoaderData()
   const [dashboardData, setDashboardData] = useState(loaderData)
-  const [activeSection, setActiveSection] = useState<"flights" | "payments" | "security" | "preferences">("flights")
+  const [activeSection, setActiveSection] = useState<"profile" | "flights" | "payments" | "security" | "preferences">("flights")
   const [searchBusy, setSearchBusy] = useState(false)
   const [searchResults, setSearchResults] = useState<{ outbound: FlightOption[]; returnOptions: FlightOption[]; tripType: "one-way" | "round-trip" } | null>(null)
   const [selectedFlight, setSelectedFlight] = useState<FlightOption | null>(null)
@@ -74,21 +88,25 @@ function CustomerPage() {
     defaultValues: { cardExpiration: "", cardNumber: "", cardType: "credit", nameOnCard: "" },
     onSubmit: async ({ value }) => {
       if (!selectedFlight) return
-      const response = await purchaseTicketFn({
-        data: {
-          airlineName: selectedFlight.airlineName,
-          cardExpiration: value.cardExpiration,
-          cardNumber: value.cardNumber,
-          cardType: value.cardType as "credit" | "debit",
-          departureDatetime: selectedFlight.departureDatetime,
-          flightNumber: selectedFlight.flightNumber,
-          nameOnCard: value.nameOnCard,
-        },
-      })
-      toast.success(response.message)
-      setSelectedFlight(null)
-      purchaseForm.reset()
-      setDashboardData(await getCustomerDashboardFn({ data: { destination: "", endDate: "", source: "", startDate: "" } }))
+      try {
+        const response = await purchaseTicketFn({
+          data: {
+            airlineName: selectedFlight.airlineName,
+            cardExpiration: value.cardExpiration,
+            cardNumber: value.cardNumber,
+            cardType: value.cardType as "credit" | "debit",
+            departureDatetime: normalizeDateTimeInput(selectedFlight.departureDatetime as Date | string),
+            flightNumber: selectedFlight.flightNumber,
+            nameOnCard: value.nameOnCard,
+          },
+        })
+        toast.success(response.message)
+        setSelectedFlight(null)
+        purchaseForm.reset()
+        setDashboardData(await getCustomerDashboardFn({ data: { destination: "", endDate: "", source: "", startDate: "" } }))
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "We couldn't complete that booking.")
+      }
     },
   })
 
@@ -114,6 +132,7 @@ function CustomerPage() {
   }
 
   const sidebarItems = [
+    { icon: User, key: "profile" as const, label: "Profile" },
     { icon: Plane, key: "flights" as const, label: "My Trips" },
     { icon: CreditCard, key: "payments" as const, label: "Payment Methods" },
     { icon: Lock, key: "security" as const, label: "Security" },
@@ -125,6 +144,7 @@ function CustomerPage() {
       <div className="mx-auto flex w-full max-w-screen-2xl flex-1">
         {/* Sidebar — matches Stitch traveler_my_trips_hub */}
         <aside className="hidden w-64 shrink-0 border-r-0 bg-slate-50 p-4 md:flex md:flex-col md:sticky md:top-16 md:h-[calc(100vh-4rem)]">
+
           <div className="mb-8 px-2 pt-4">
             <div className="mb-1 flex items-center gap-3">
               <div className="flex size-10 items-center justify-center rounded-full bg-slate-200 text-slate-600">
@@ -157,9 +177,32 @@ function CustomerPage() {
           </nav>
         </aside>
 
+        <div className="border-b border-slate-200 bg-white px-4 py-3 md:hidden">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {sidebarItems.map((item) => (
+              <Button
+                className={cn(
+                  "shrink-0 rounded-full px-4 text-sm",
+                  activeSection === item.key
+                    ? "bg-slate-950 text-white hover:bg-slate-800"
+                    : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100",
+                )}
+                key={item.key}
+                onClick={() => setActiveSection(item.key)}
+                size="sm"
+                type="button"
+                variant={activeSection === item.key ? "default" : "outline"}
+              >
+                {item.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
         {/* Main Content — matches Stitch content area */}
         <main className="flex-1 p-6 md:p-12">
           <div className="mx-auto max-w-4xl">
+            {activeSection === "profile" ? <ProfileSection dashboardData={dashboardData} /> : null}
             {activeSection === "flights" ? (
               <FlightsSection
                 dashboardData={dashboardData}
@@ -180,6 +223,77 @@ function CustomerPage() {
         </main>
       </div>
     </TravelerShell>
+  )
+}
+
+function ProfileSection({
+  dashboardData,
+}: {
+  dashboardData: Awaited<ReturnType<typeof getCustomerDashboardFn>>
+}) {
+  const initials = dashboardData.currentUser.displayName
+    .split(" ")
+    .map((name: string) => name[0])
+    .join("")
+
+  return (
+    <>
+      <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h1 className="mb-2 text-3xl font-bold text-slate-950">Profile</h1>
+          <p className="text-sm text-slate-500">Review your traveler identity, account summary, and booking activity from one place.</p>
+        </div>
+      </div>
+      <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+            <div className="flex size-16 items-center justify-center rounded-full bg-slate-100 text-lg font-bold text-slate-700">{initials}</div>
+            <div>
+              <h2 className="text-2xl font-bold text-slate-950">{dashboardData.currentUser.displayName}</h2>
+              <p className="mt-1 text-sm text-slate-500">{dashboardData.currentUser.email}</p>
+              <div className="mt-3 inline-flex items-center rounded-sm bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-slate-600">Traveler account</div>
+            </div>
+          </div>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            <ProfileMetric description="Flights already booked and still ahead of you." label="Upcoming trips" value={String(dashboardData.upcomingFlights.length)} />
+            <ProfileMetric description="Journeys that have already landed and can inform future planning." label="Past trips" value={String(dashboardData.pastFlights.length)} />
+            <ProfileMetric description="Primary account identity used across booking and review flows." label="Sign-in email" value={dashboardData.currentUser.email} />
+            <ProfileMetric description="Current traveler tier shown throughout the customer shell." label="Status tier" value="Silver" />
+          </div>
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
+          <h2 className="text-xl font-bold text-slate-950">Traveler Summary</h2>
+          <div className="mt-6 space-y-4">
+            <ProfileSummaryRow label="Most recent upcoming route" value={dashboardData.upcomingFlights[0] ? `${dashboardData.upcomingFlights[0].departureAirportCode} → ${dashboardData.upcomingFlights[0].arrivalAirportCode}` : "No upcoming trips"} />
+            <ProfileSummaryRow label="Latest purchase" value={dashboardData.upcomingFlights[0] ? formatDate(dashboardData.upcomingFlights[0].purchaseDatetime) : "No recent purchase"} />
+            <ProfileSummaryRow label="Reviewable journeys" value={String(dashboardData.pastFlights.filter((flight) => flight.canReview).length)} />
+            <ProfileSummaryRow label="Saved payment surface" value="Available in Payment Methods" />
+          </div>
+          <div className="mt-8 rounded-lg border border-dashed border-slate-200 px-4 py-3 text-sm text-slate-500">
+            Profile editing remains intentionally read-only until the product has a supported customer-profile update flow and matching backend model.
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function ProfileMetric({ description, label, value }: { description: string; label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+      <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</div>
+      <div className="mt-2 break-words text-lg font-semibold text-slate-950">{value}</div>
+      <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
+    </div>
+  )
+}
+
+function ProfileSummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4 last:border-b-0 last:pb-0">
+      <div className="text-sm text-slate-500">{label}</div>
+      <div className="max-w-[60%] text-right text-sm font-semibold text-slate-950">{value}</div>
+    </div>
   )
 }
 
@@ -292,47 +406,134 @@ function FlightsSection({
 
         {/* Purchase Form */}
         {selectedFlight ? (
-          <div className="mt-6 rounded-lg bg-slate-950 p-6 text-white">
-            <h3 className="mb-4 text-2xl font-bold">Complete your booking</h3>
-            <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-              <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); purchaseForm.handleSubmit() }}>
+          <div className="mt-6 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+            <div className="space-y-8">
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-950">Complete your booking</h3>
+                    <p className="mt-1 text-sm text-slate-500">Review passenger details and payment before confirming this reservation.</p>
+                  </div>
+                  <Button disabled type="button" variant="outline">Sign in shortcut</Button>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3">
+                  <div className="flex size-8 items-center justify-center rounded-full bg-slate-950 text-sm font-bold text-white">1</div>
+                  <h3 className="text-xl font-bold text-slate-950">Passenger Details</h3>
+                </div>
+                <div className="space-y-6">
+                  <div className="border-b border-slate-200 pb-3 text-sm font-semibold text-slate-950">Primary Traveler</div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FieldPreview description="Use the same legal name shown on the traveler identity document." label="First Name" value={dashboardData.currentUser.displayName.split(" ")[0] ?? dashboardData.currentUser.displayName} />
+                    <FieldPreview description="Last-name capture remains UI-only until customer profile editing is supported." label="Last Name" value={dashboardData.currentUser.displayName.split(" ").slice(1).join(" ") || "Add in future profile flow"} />
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FieldPreview description="Traveler birthdate is collected during registration and should eventually prefill here from supported account data." label="Date of Birth" value="Profile-backed later" />
+                    <FieldPreview description="Nationality selection is shown here for checkout composition only and is not submitted in the current purchase mutation." label="Nationality" value="Select in future profile flow" />
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FieldPreview description="Passport data should come from a future editable traveler profile, not a fake checkout-only store." label="Passport Number" value="Profile-backed later" />
+                    <FieldPreview description="Known traveler programs remain intentionally informational until the backend model supports them." label="Known Traveler #" value="Optional in future" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3">
+                  <div className="flex size-8 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">2</div>
+                  <h3 className="text-xl font-bold text-slate-950">Contact Information</h3>
+                </div>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-white/60">Name on Card</Label>
-                    <purchaseForm.Field name="nameOnCard">{(field: any) => <Input className="rounded-lg bg-white/10 text-white placeholder:text-white/40" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} value={field.state.value} />}</purchaseForm.Field>
+                  <FieldPreview description="Booking confirmation and flight updates will be sent here." label="Email Address" value={dashboardData.currentUser.email} />
+                  <FieldPreview description="Phone verification and traveler-profile editing are not implemented yet, so this stays informational for now." label="Phone Number" value="Add in future profile flow" />
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="mb-6 flex items-center gap-3">
+                  <div className="flex size-8 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">3</div>
+                  <h3 className="text-xl font-bold text-slate-950">Payment</h3>
+                </div>
+                <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); void purchaseForm.handleSubmit() }}>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <button className="flex items-center gap-3 rounded-lg border border-slate-950 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-950" type="button">
+                      <CreditCard className="size-4" /> Credit Card
+                    </button>
+                    <button className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-500" disabled type="button">
+                      <CreditCard className="size-4" /> Bank Transfer
+                    </button>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-white/60">Card Number</Label>
-                    <purchaseForm.Field name="cardNumber">{(field: any) => <Input className="rounded-lg bg-white/10 text-white placeholder:text-white/40" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} value={field.state.value} />}</purchaseForm.Field>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-1.5 md:col-span-2">
+                      <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500" htmlFor="purchase-card-number">Card Number</Label>
+                      <purchaseForm.Field name="cardNumber">{(field: any) => <Input autoComplete="cc-number" className="rounded-lg bg-slate-50 font-mono tracking-widest text-slate-950" id="purchase-card-number" inputMode="numeric" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} placeholder="0000 0000 0000 0000" value={field.state.value} />}</purchaseForm.Field>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500" htmlFor="purchase-card-expiration">Expiration</Label>
+                      <purchaseForm.Field name="cardExpiration">{(field: any) => <Input autoComplete="cc-exp" className="rounded-lg bg-slate-50 text-slate-950" id="purchase-card-expiration" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} onInput={(e: any) => field.handleChange(e.currentTarget.value)} type="date" value={field.state.value} />}</purchaseForm.Field>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500" htmlFor="purchase-card-type">Card Type</Label>
+                      <purchaseForm.Field name="cardType">{(field: any) => (
+                        <Select onValueChange={(v) => field.handleChange(v ?? field.state.value)} value={field.state.value}>
+                          <SelectTrigger className="w-full rounded-lg bg-slate-50 text-slate-950" id="purchase-card-type"><SelectValue placeholder="Select type" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="credit">Credit</SelectItem>
+                            <SelectItem value="debit">Debit</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}</purchaseForm.Field>
+                    </div>
+                    <div className="space-y-1.5 md:col-span-2">
+                      <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500" htmlFor="purchase-name-on-card">Name on Card</Label>
+                      <purchaseForm.Field name="nameOnCard">{(field: any) => <Input autoComplete="cc-name" className="rounded-lg bg-slate-50 text-slate-950" id="purchase-name-on-card" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} placeholder="Full name" value={field.state.value} />}</purchaseForm.Field>
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-white/60">Expiration</Label>
-                    <purchaseForm.Field name="cardExpiration">{(field: any) => <Input className="rounded-lg bg-white/10 text-white" onBlur={field.handleBlur} onChange={(e: any) => field.handleChange(e.target.value)} type="date" value={field.state.value} />}</purchaseForm.Field>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                    This checkout keeps passenger and contact sections presentation-only for now. The real purchase mutation still submits only the supported payment and flight fields.
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-white/60">Card Type</Label>
-                    <purchaseForm.Field name="cardType">{(field: any) => (
-                      <Select onValueChange={(v) => field.handleChange(v ?? field.state.value)} value={field.state.value}>
-                        <SelectTrigger className="w-full rounded-lg bg-white/10 text-white"><SelectValue placeholder="Select type" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="credit">Credit</SelectItem>
-                          <SelectItem value="debit">Debit</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}</purchaseForm.Field>
+                  <div className="flex flex-wrap gap-3">
+                    <Button className="rounded-lg bg-slate-950 text-white hover:bg-slate-800" type="submit">Confirm & Pay</Button>
+                    <Button className="rounded-lg" onClick={() => setSelectedFlight(null)} type="button" variant="outline">Cancel</Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+                <div className="border-b border-slate-200 bg-slate-950 px-6 py-5 text-white">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-white/70">Selected Itinerary</div>
+                  <div className="mt-2 text-2xl font-bold">{selectedFlight.departureAirportCode} → {selectedFlight.arrivalAirportCode}</div>
+                  <div className="mt-1 text-sm text-white/70">{selectedFlight.departureCity} to {selectedFlight.arrivalCity}</div>
+                </div>
+                <div className="space-y-6 p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Departure</div>
+                      <div className="mt-1 text-xl font-bold text-slate-950">{formatDateTime(selectedFlight.departureDatetime)}</div>
+                    </div>
+                    <Badge className={cn("rounded-sm px-2 py-1 text-[0.6875rem] font-bold uppercase tracking-[0.05em]", selectedFlight.status === "on_time" ? "bg-[#cde5ff] text-[#004b74]" : "bg-red-100 text-red-700")} variant="secondary">
+                      {titleCaseStatus(selectedFlight.status)}
+                    </Badge>
+                  </div>
+                  <div className="grid gap-4 border-y border-slate-200 py-4 text-sm text-slate-500">
+                    <CheckoutSummaryRow label="Flight" value={`${selectedFlight.airlineName} ${selectedFlight.flightNumber}`} />
+                    <CheckoutSummaryRow label="Cabin" value="Economy" />
+                    <CheckoutSummaryRow label="Traveler" value={dashboardData.currentUser.displayName} />
+                    <CheckoutSummaryRow label="Available seats" value={String(selectedFlight.availableSeats)} />
+                  </div>
+                  <div className="space-y-3">
+                    <CheckoutSummaryRow label="Base fare" value={formatCurrency(selectedFlight.basePrice)} />
+                    <CheckoutSummaryRow label="Taxes & fees" value="Included" />
+                    <div className="flex items-center justify-between border-t border-slate-200 pt-3">
+                      <div className="text-sm font-semibold text-slate-950">Total per traveler</div>
+                      <div className="text-2xl font-bold text-slate-950">{formatCurrency(selectedFlight.basePrice)}</div>
+                    </div>
                   </div>
                 </div>
-                <div className="flex gap-3">
-                  <Button className="rounded-lg bg-white text-slate-950 hover:bg-slate-100" type="submit">Confirm & Pay</Button>
-                  <Button className="rounded-lg border-white/20 text-white hover:bg-white/10" onClick={() => setSelectedFlight(null)} type="button" variant="outline">Cancel</Button>
-                </div>
-              </form>
-              <div className="rounded-lg bg-white/10 p-5">
-                <div className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-white/45">Selected Route</div>
-                <div className="mt-3 text-2xl font-bold">{selectedFlight.departureAirportCode} → {selectedFlight.arrivalAirportCode}</div>
-                <div className="mt-2 text-sm text-white/70">{formatDateTime(selectedFlight.departureDatetime)}</div>
-                <div className="mt-6 text-3xl font-bold">{formatCurrency(selectedFlight.basePrice)}</div>
-                <div className="mt-1 text-sm text-white/70">Total per traveler</div>
               </div>
             </div>
           </div>
@@ -397,11 +598,30 @@ function FlightsSection({
   )
 }
 
+function FieldPreview({ description, label, value }: { description: string; label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+      <div className="text-[0.6875rem] font-bold uppercase tracking-[0.05em] text-slate-500">{label}</div>
+      <div className="mt-2 text-sm font-semibold text-slate-950">{value}</div>
+      <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
+    </div>
+  )
+}
+
+function CheckoutSummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div className="text-sm text-slate-500">{label}</div>
+      <div className="text-right text-sm font-semibold text-slate-950">{value}</div>
+    </div>
+  )
+}
+
 /* ─── Upcoming Trip Card ─── */
 
 function UpcomingTripCard({ flight }: { flight: any }) {
   return (
-    <div className="flex flex-col gap-6 rounded bg-white p-6 shadow-sm transition-transform duration-300 hover:-translate-y-1 md:flex-row">
+    <div className="flex flex-col gap-6 rounded bg-white p-6 shadow-sm md:flex-row">
       <div className="relative w-full shrink-0 overflow-hidden rounded md:w-48">
         <div className="flex aspect-video items-center justify-center bg-slate-200">
           <Plane className="size-8 text-slate-400" />
@@ -419,7 +639,7 @@ function UpcomingTripCard({ flight }: { flight: any }) {
         <h3 className="mb-1 text-xl font-bold text-slate-950">{flight.arrivalCity ?? flight.arrivalAirportCode}</h3>
         <p className="mb-4 text-sm text-slate-500">Direct flight · Economy</p>
         <div className="flex flex-wrap gap-2">
-          <Button className="rounded bg-gradient-to-r from-slate-950 to-slate-800 text-white hover:opacity-90" size="sm">View Itinerary</Button>
+          <Button className="rounded bg-slate-950 text-white hover:bg-slate-800" size="sm">View Itinerary</Button>
           <Button className="rounded" size="sm" variant="outline">Modify Options</Button>
         </div>
       </div>
@@ -577,25 +797,48 @@ function SecuritySection() {
           <h2 className="mb-6 flex items-center gap-2 text-xl font-bold text-slate-950">
             <Lock className="size-5 text-slate-400" /> Change Password
           </h2>
-          <div className="space-y-5">
+          <form className="space-y-5">
             <div>
-              <Label className="mb-1 block text-sm font-medium text-slate-950">Current Password</Label>
-              <Input className="border-b-2 border-slate-200 bg-white px-0 shadow-none focus-visible:ring-0" placeholder="••••••••" type="password" />
+              <Label className="mb-1 block text-sm font-medium text-slate-950" htmlFor="customer-current-password">Current Password</Label>
+              <Input autoComplete="current-password" className="border-b-2 border-slate-200 bg-white px-0 shadow-none focus-visible:ring-0" id="customer-current-password" placeholder="••••••••" type="password" />
             </div>
             <div className="grid gap-6 md:grid-cols-2">
               <div>
-                <Label className="mb-1 block text-sm font-medium text-slate-950">New Password</Label>
-                <Input className="border-b-2 border-slate-200 bg-white px-0 shadow-none focus-visible:ring-0" placeholder="Enter new password" type="password" />
+                <Label className="mb-1 block text-sm font-medium text-slate-950" htmlFor="customer-new-password">New Password</Label>
+                <Input autoComplete="new-password" className="border-b-2 border-slate-200 bg-white px-0 shadow-none focus-visible:ring-0" id="customer-new-password" placeholder="Enter new password" type="password" />
               </div>
               <div>
-                <Label className="mb-1 block text-sm font-medium text-slate-950">Confirm New Password</Label>
-                <Input className="border-b-2 border-slate-200 bg-white px-0 shadow-none focus-visible:ring-0" placeholder="Confirm new password" type="password" />
+                <Label className="mb-1 block text-sm font-medium text-slate-950" htmlFor="customer-confirm-password">Confirm New Password</Label>
+                <Input autoComplete="new-password" className="border-b-2 border-slate-200 bg-white px-0 shadow-none focus-visible:ring-0" id="customer-confirm-password" placeholder="Confirm new password" type="password" />
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-4">
-              <Button className="rounded-lg" variant="secondary">Cancel</Button>
-              <Button className="rounded-lg bg-gradient-to-r from-slate-950 to-slate-800 text-white hover:opacity-90">Update Password</Button>
+              <Button className="rounded-lg" type="reset" variant="secondary">Cancel</Button>
+              <Button className="rounded-lg bg-slate-950 text-white hover:bg-slate-800" type="submit">Update Password</Button>
             </div>
+          </form>
+        </div>
+        <div className="rounded-lg bg-white p-8 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="flex items-center gap-2 text-xl font-bold text-slate-950">
+                <Lock className="size-5 text-slate-400" /> Two-Factor Authentication
+              </h2>
+              <p className="mt-2 text-sm text-slate-500">This setup surface is intentionally informational for now. The current PostgreSQL-backed product model does not yet support storing second-factor enrollment state.</p>
+            </div>
+            <span className="inline-flex items-center rounded-sm bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider text-slate-600">Unavailable</span>
+          </div>
+          <div className="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-sm font-semibold text-slate-950">Authenticator app</div>
+                <p className="mt-1 text-sm leading-6 text-slate-500">Prepare app-based verification once enrollment, challenge, and recovery flows exist on the backend.</p>
+              </div>
+              <Button disabled type="button" variant="outline">Setup</Button>
+            </div>
+          </div>
+          <div className="mt-4 rounded-lg border border-dashed border-slate-200 px-4 py-3 text-sm text-slate-500">
+            Recovery codes, device trust, and SMS fallback remain intentionally disabled until the server model and auth flows support them.
           </div>
         </div>
       </div>
@@ -610,9 +853,51 @@ function PreferencesSection() {
     <>
       <h1 className="mb-2 text-3xl font-bold text-slate-950">Preferences</h1>
       <p className="mb-8 text-sm text-slate-500">Customize your travel experience.</p>
-      <div className="rounded-lg bg-white p-8 text-sm text-slate-500 shadow-sm">
-        Preferences will be available in a future update.
+      <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
+          <h2 className="text-xl font-bold text-slate-950">Traveler Preferences</h2>
+          <p className="mt-2 text-sm text-slate-500">These controls are prepared in the UI now. They are not wired to persistent storage because the current PostgreSQL schema does not model traveler preference records.</p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            <PreferenceTile description="Prefer nonstop and shorter itineraries when available." title="Route priority" value="Fastest routes" />
+            <PreferenceTile description="Keep seat requests ready once trip-level seat selection is implemented." title="Seat preference" value="Aisle seat" />
+            <PreferenceTile description="Prepare meal intent without inventing unsupported backend tables." title="Meal preference" value="Standard meal" />
+            <PreferenceTile description="Default cabin used to prefill future search and booking flows." title="Cabin preference" value="Economy" />
+          </div>
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
+          <h2 className="text-xl font-bold text-slate-950">Notification Defaults</h2>
+          <p className="mt-2 text-sm text-slate-500">These controls intentionally remain informational and disabled until notification channels exist in the real product model.</p>
+          <div className="mt-8 space-y-4">
+            <PreferenceToggleRow description="Email trip reminders and schedule-change summaries." label="Email alerts" />
+            <PreferenceToggleRow description="SMS disruption alerts after phone verification exists." label="SMS alerts" />
+            <PreferenceToggleRow description="Price-watch alerts once watchlists are implemented." label="Fare watches" />
+          </div>
+        </div>
       </div>
     </>
+  )
+}
+
+function PreferenceTile({ description, title, value }: { description: string; title: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+      <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">{title}</div>
+      <div className="mt-2 text-lg font-semibold text-slate-950">{value}</div>
+      <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
+    </div>
+  )
+}
+
+function PreferenceToggleRow({ description, label }: { description: string; label: string }) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
+      <div>
+        <div className="text-sm font-semibold text-slate-950">{label}</div>
+        <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
+      </div>
+      <button aria-disabled="true" className="mt-0.5 inline-flex h-6 w-11 shrink-0 cursor-not-allowed items-center rounded-full bg-slate-200 p-1 opacity-70" disabled type="button">
+        <span className="block size-4 rounded-full bg-white shadow-sm" />
+      </button>
+    </div>
   )
 }

@@ -62,6 +62,23 @@ Build the Part 3 full-stack web app on top of the existing airline reservation d
 - [x] Loading states and empty states.
 - [x] Responsive layout for desktop and mobile.
 
+### Post-audit action queue
+
+- [x] Make the public home search control row stay on one line in its desktop presentation and keep the passenger/class controls visually compact.
+- [x] Keep the public trip-type row in shadcn/ui semantics while aligning its spacing, density, and layout more closely to the Stitch composition.
+- [x] Remove motion/hover affordances from non-clickable cards so only interactive elements signal interactivity.
+- [x] Add a dedicated round-trip selection experience with outbound summary, return-step framing, and review progression instead of appending return results inline on `/`.
+- [x] Upgrade the no-results state on `/` with actionable recovery controls such as adjusting dates and clearing filters.
+- [x] Add a real traveler profile/details surface rather than overloading `My Trips` as the only account landing section.
+- [x] Expand the traveler preferences UI into designed, non-persistent controls when the current PostgreSQL schema does not support storage, while keeping them out of live submission paths until backend support exists.
+- [x] Add an account-security expansion plan for non-schema-backed features such as 2FA: implement the components and states, but keep them disconnected from live rendering and persistence until the product model supports them.
+- [x] Replace the traveler checkout inline panel with a dedicated transactional checkout flow that supports passenger/contact details and a stronger booking summary.
+- [ ] Decide intentionally which Stitch differences are product decisions versus parity gaps, especially branding and staff information architecture.
+- [x] Add a dedicated staff passenger-manifest workspace with search/filter tools and bulk actions instead of rendering the manifest only inline under the dashboard table.
+- [x] Add a deliberate staff status-update workflow screen if the product should favor operational review over the current one-click toggle.
+- [x] Expand the staff fleet workspace with search, state filters, and richer aircraft status presentation without inventing unsupported database fields.
+- [x] Expand the staff flight-creation UI with draft-oriented components and helper affordances, while keeping draft behavior local-only until the product has a supported persistence model.
+
 ## Phase 4: Auth, Security, and Validation
 
 - [x] Hash passwords with `bcrypt`.
