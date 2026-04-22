@@ -78,6 +78,24 @@ Build the Part 3 full-stack web app on top of the existing airline reservation d
 - [x] Add a deliberate staff status-update workflow screen if the product should favor operational review over the current one-click toggle.
 - [x] Expand the staff fleet workspace with search, state filters, and richer aircraft status presentation without inventing unsupported database fields.
 - [x] Expand the staff flight-creation UI with draft-oriented components and helper affordances, while keeping draft behavior local-only until the product has a supported persistence model.
+- [ ] Replace all visible plain date inputs with the shadcn/ui base date-picker pattern and remove obsolete manual format hints.
+- [ ] Add a real swap affordance to the public search row so the middle control both looks and behaves like a `From`/`To` switcher.
+- [ ] Add debounced server-backed airport autocomplete for all visible `From`/`To` inputs, including airport code and city suggestions.
+- [ ] Upgrade traveler signup step 2 so prior identity fields are hidden, add a back action, and add a randomized valid-detail filler for the remaining required fields.
+- [ ] Replace editable phone inputs with masked inputs that preserve valid form values.
+- [ ] Replace traveler `state` entry with a full US states combobox.
+- [ ] Replace country inputs with comboboxes and show country flags in the option list.
+- [ ] Strengthen TanStack Form-powered client validation and visible field errors across the touched auth and search flows.
+- [ ] Refresh auth-page imagery with stronger airport, airplane, sky, beach, and vacation visuals.
+- [ ] Add full visible TanStack Form validation coverage to the remaining public, customer, and staff search/report/create-flight flows.
+- [ ] Add reusable date-time picker support for staff schedule creation and remove remaining native `datetime-local` controls.
+- [ ] Add productized light, dark, and system theme support with a persistent theme picker and no-flash boot behavior.
+- [ ] Replace critical hardcoded surface/text colors with semantic theme tokens across public, customer, auth, and staff shells before broad dark-mode rollout.
+- [ ] Audit popovers, dropdowns, toasts, dialogs, and other overlay surfaces for theme consistency after the token migration.
+- [ ] Compare Part 3 against `Coding/sapphyx` and document which optimization patterns are applicable versus intentionally out of scope.
+- [ ] Evaluate a centralized query-key/query-options layer before any TanStack Query or local-first refactor.
+- [ ] Add PWA/installability support only after theme and form work stabilize, including manifest, offline fallback, and service-worker update handling.
+- [ ] Evaluate whether local-first cache/query refactors are justified for Part 3 flows and only apply them where the backend mutation model supports correct invalidation.
 
 ## Phase 4: Auth, Security, and Validation
 

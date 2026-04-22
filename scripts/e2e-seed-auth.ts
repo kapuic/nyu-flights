@@ -66,7 +66,9 @@ async function main() {
     values ('auditstaffscript', '2125558000')
   `
 
-  console.log('seeded audit.customer.script@example.com and auditstaffscript with password123')
+  console.log(
+    "seeded audit.customer.script@example.com and auditstaffscript with password123"
+  )
 }
 
 main().catch((error) => {

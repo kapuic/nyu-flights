@@ -1,16 +1,48 @@
-import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from "@tanstack/react-router"
+import {
+  HeadContent,
+  Outlet,
+  Scripts,
+  createRootRouteWithContext,
+} from "@tanstack/react-router"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
 import { ThemeProvider } from "next-themes"
+import { useEffect } from "react"
 
-import { Toaster } from "@/components/ui/sonner"
-import { getCurrentUserFn, type AuthUser } from "@/lib/auth"
-import { APP_NAME } from "@/lib/app-config"
 import appCss from "../styles.css?url"
+import type { AuthUser } from "@/lib/auth"
+import { Toaster } from "@/components/ui/sonner"
+import { getCurrentUserFn } from "@/lib/auth"
+import { APP_NAME } from "@/lib/app-config"
 
 type RouterContext = {
   currentUser: AuthUser | null
 }
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      gcTime: 1000 * 60 * 10,
+      staleTime: 1000 * 30,
+      refetchOnReconnect: false,
+      refetchOnWindowFocus: false,
+    },
+  },
+})
+
+const themeBootScript = `(() => {
+  const storageKey = "part3-theme"
+  const fallback = "system"
+  const root = document.documentElement
+  const storedTheme = localStorage.getItem(storageKey) || fallback
+  const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+  const resolvedTheme = storedTheme === "system" ? systemTheme : storedTheme
+  root.classList.remove("light", "dark")
+  root.classList.add(resolvedTheme)
+  root.dataset.theme = storedTheme
+  root.style.colorScheme = resolvedTheme
+})()`
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: async () => ({
@@ -23,7 +55,23 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       },
       {
         name: "viewport",
-        content: "width=device-width, initial-scale=1",
+        content: "width=device-width, initial-scale=1, viewport-fit=cover",
+      },
+      {
+        name: "theme-color",
+        content: "#0f172a",
+      },
+      {
+        name: "apple-mobile-web-app-capable",
+        content: "yes",
+      },
+      {
+        name: "apple-mobile-web-app-status-bar-style",
+        content: "black-translucent",
+      },
+      {
+        name: "apple-mobile-web-app-title",
+        content: APP_NAME,
       },
       {
         title: APP_NAME,
@@ -34,6 +82,14 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         rel: "stylesheet",
         href: appCss,
       },
+      {
+        rel: "manifest",
+        href: "/manifest.json",
+      },
+      {
+        rel: "apple-touch-icon",
+        href: "/logo192.png",
+      },
     ],
   }),
   shellComponent: RootDocument,
@@ -41,6 +97,19 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 })
 
 function RootComponent() {
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return
+
+    let isRefreshing = false
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (isRefreshing) return
+      isRefreshing = true
+      window.location.reload()
+    })
+
+    void navigator.serviceWorker.register("/sw.js")
+  }, [])
+
   return <Outlet />
 }
 
@@ -49,26 +118,34 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       </head>
       <body>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-          {children}
-          <Toaster />
-          <TanStackDevtools
-            config={{
-              position: "bottom-right",
-            }}
-            plugins={[
-              {
-                name: "Tanstack Router",
-                render: <TanStackRouterDevtoolsPanel />,
-              },
-            ]}
-          />
-          <Scripts />
-        </ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+            storageKey="part3-theme"
+          >
+            {children}
+            <Toaster />
+            <TanStackDevtools
+              config={{
+                position: "bottom-right",
+              }}
+              plugins={[
+                {
+                  name: "Tanstack Router",
+                  render: <TanStackRouterDevtoolsPanel />,
+                },
+              ]}
+            />
+            <Scripts />
+          </ThemeProvider>
+        </QueryClientProvider>
       </body>
     </html>
   )
 }
-

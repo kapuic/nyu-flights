@@ -1,4 +1,5 @@
-
+import { Eye, Lock } from "lucide-react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { APP_NAME } from "@/lib/app-config"
 import { TRAVELER_AUTH_IMAGE_URLS } from "@/lib/auth-images"
@@ -12,34 +13,36 @@ import {
   FieldSeparator,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Eye, Lock } from "lucide-react"
-import { useState } from "react"
+
 type LoginFormProps = {
   className?: string
+  emailError?: string | null
   error: string | null
+  heroImageUrl?: string
   isSubmitting: boolean
   onEmailChange: (value: string) => void
   onPasswordChange: (value: string) => void
   onSubmit: (e: React.FormEvent) => void
   emailValue: string
+  passwordError?: string | null
   passwordValue: string
-  heroImageUrl?: string
 }
 
 export function LoginForm({
   className,
+  emailError,
   error,
   isSubmitting,
   onEmailChange,
   onPasswordChange,
   onSubmit,
   emailValue,
+  passwordError,
   passwordValue,
   heroImageUrl = TRAVELER_AUTH_IMAGE_URLS[0],
   ...props
 }: LoginFormProps & Omit<React.ComponentProps<"div">, keyof LoginFormProps>) {
   const [showPassword, setShowPassword] = useState(false)
-
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -56,9 +59,10 @@ export function LoginForm({
                   {`Sign in to continue with ${APP_NAME}`}
                 </p>
               </div>
-              <Field>
+              <Field data-invalid={Boolean(emailError)}>
                 <FieldLabel htmlFor="login-email">Email</FieldLabel>
                 <Input
+                  aria-invalid={Boolean(emailError)}
                   autoComplete="email"
                   id="login-email"
                   onChange={(e) => onEmailChange(e.target.value)}
@@ -67,8 +71,13 @@ export function LoginForm({
                   type="email"
                   value={emailValue}
                 />
+                {emailError ? (
+                  <FieldDescription className="text-destructive">
+                    {emailError}
+                  </FieldDescription>
+                ) : null}
               </Field>
-              <Field>
+              <Field data-invalid={Boolean(passwordError)}>
                 <div className="flex items-center">
                   <FieldLabel htmlFor="login-password">Password</FieldLabel>
                   <a
@@ -80,6 +89,7 @@ export function LoginForm({
                 </div>
                 <div className="relative">
                   <Input
+                    aria-invalid={Boolean(passwordError)}
                     autoComplete="current-password"
                     className="pr-10"
                     id="login-password"
@@ -90,7 +100,7 @@ export function LoginForm({
                     value={passwordValue}
                   />
                   <Button
-                    className="absolute right-1 top-1/2 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    className="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     onClick={() => setShowPassword(!showPassword)}
                     size="icon-sm"
                     type="button"
@@ -99,6 +109,11 @@ export function LoginForm({
                     <Eye className="size-4" />
                   </Button>
                 </div>
+                {passwordError ? (
+                  <FieldDescription className="text-destructive">
+                    {passwordError}
+                  </FieldDescription>
+                ) : null}
               </Field>
               {error ? (
                 <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -152,8 +167,7 @@ export function LoginForm({
         </CardContent>
       </Card>
       <FieldDescription className="px-6 text-center">
-        By continuing, you agree to our{" "}
-        <a href="#">Terms of Service</a> and{" "}
+        By continuing, you agree to our <a href="#">Terms of Service</a> and{" "}
         <a href="#">Privacy Policy</a>.
       </FieldDescription>
     </div>

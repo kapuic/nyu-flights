@@ -1,17 +1,27 @@
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { Building2 } from "lucide-react"
+import { IMaskInput } from "react-imask"
 import { useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { DatePickerButtonField } from "@/components/flight-search-panel"
 import { Card, CardContent } from "@/components/ui/card"
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { getCurrentUserFn, registerStaffFn } from "@/lib/auth"
 import { APP_NAME } from "@/lib/app-config"
 
-export const Route = createFileRoute('/staff/register')({
+const maskedInputClassName =
+  "h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-2.5 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
+
+export const Route = createFileRoute("/staff/register")({
   loader: async () => ({ currentUser: await getCurrentUserFn() }),
   component: StaffRegisterPage,
 })
@@ -25,27 +35,27 @@ function StaffRegisterPage() {
     try {
       await form.handleSubmit()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed.')
+      setError(err instanceof Error ? err.message : "Registration failed.")
     }
   }
 
   const form = useForm({
     defaultValues: {
-      airlineName: '',
-      dateOfBirth: '',
-      email: '',
-      firstName: '',
-      lastName: '',
-      password: '',
-      phoneNumbers: '',
-      username: '',
+      airlineName: "",
+      dateOfBirth: "",
+      email: "",
+      firstName: "",
+      lastName: "",
+      password: "",
+      phoneNumbers: "",
+      username: "",
     },
     onSubmit: async ({ value }) => {
       const result = await registerStaffFn({ data: value })
-      if (result?.error) throw new Error(result.error)
-      toast.success('Staff account created.')
+      if (result.error) throw new Error(result.error)
+      toast.success("Staff account created.")
       await router.invalidate()
-      await router.navigate({ to: result?.redirectTo ?? '/staff/app' })
+      await router.navigate({ to: result.redirectTo ?? "/staff/app" })
     },
   })
 
@@ -72,61 +82,205 @@ function StaffRegisterPage() {
                                           {(dateOfBirthField) => (
                                             <form.Field name="phoneNumbers">
                                               {(phoneNumbersField) => (
-                                                <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
+                                                <form
+                                                  className="flex flex-col gap-6"
+                                                  onSubmit={handleSubmit}
+                                                >
                                                   <FieldGroup>
                                                     <div className="flex flex-col gap-2 text-center">
                                                       <div className="mx-auto flex size-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
                                                         <Building2 className="size-4" />
                                                       </div>
                                                       <div className="space-y-1">
-                                                        <h1 className="text-xl font-semibold">Staff account</h1>
+                                                        <h1 className="text-xl font-semibold">
+                                                          Staff account
+                                                        </h1>
                                                         <p className="text-sm text-muted-foreground">
-                                                          Create an internal airline operations account.
+                                                          Create an internal
+                                                          airline operations
+                                                          account.
                                                         </p>
                                                       </div>
                                                     </div>
                                                     <Field>
-                                                      <FieldLabel htmlFor="staff-airline">Airline</FieldLabel>
-                                                      <Input id="staff-airline" onChange={(e) => airlineNameField.handleChange(e.target.value)} placeholder={APP_NAME} required value={airlineNameField.state.value} />
+                                                      <FieldLabel htmlFor="staff-airline">
+                                                        Airline
+                                                      </FieldLabel>
+                                                      <Input
+                                                        id="staff-airline"
+                                                        onChange={(e) =>
+                                                          airlineNameField.handleChange(
+                                                            e.target.value
+                                                          )
+                                                        }
+                                                        placeholder={APP_NAME}
+                                                        required
+                                                        value={
+                                                          airlineNameField.state
+                                                            .value
+                                                        }
+                                                      />
                                                     </Field>
                                                     <Field>
-                                                      <FieldLabel htmlFor="staff-username-create">Username</FieldLabel>
-                                                      <Input autoComplete="username" id="staff-username-create" onChange={(e) => usernameField.handleChange(e.target.value)} placeholder="ops-user" required value={usernameField.state.value} />
+                                                      <FieldLabel htmlFor="staff-username-create">
+                                                        Username
+                                                      </FieldLabel>
+                                                      <Input
+                                                        autoComplete="username"
+                                                        id="staff-username-create"
+                                                        onChange={(e) =>
+                                                          usernameField.handleChange(
+                                                            e.target.value
+                                                          )
+                                                        }
+                                                        placeholder="ops-user"
+                                                        required
+                                                        value={
+                                                          usernameField.state
+                                                            .value
+                                                        }
+                                                      />
                                                     </Field>
                                                     <div className="grid grid-cols-2 gap-4">
                                                       <Field>
-                                                        <FieldLabel htmlFor="staff-first-name">First Name</FieldLabel>
-                                                        <Input id="staff-first-name" onChange={(e) => firstNameField.handleChange(e.target.value)} required value={firstNameField.state.value} />
+                                                        <FieldLabel htmlFor="staff-first-name">
+                                                          First Name
+                                                        </FieldLabel>
+                                                        <Input
+                                                          id="staff-first-name"
+                                                          onChange={(e) =>
+                                                            firstNameField.handleChange(
+                                                              e.target.value
+                                                            )
+                                                          }
+                                                          required
+                                                          value={
+                                                            firstNameField.state
+                                                              .value
+                                                          }
+                                                        />
                                                       </Field>
                                                       <Field>
-                                                        <FieldLabel htmlFor="staff-last-name">Last Name</FieldLabel>
-                                                        <Input id="staff-last-name" onChange={(e) => lastNameField.handleChange(e.target.value)} required value={lastNameField.state.value} />
+                                                        <FieldLabel htmlFor="staff-last-name">
+                                                          Last Name
+                                                        </FieldLabel>
+                                                        <Input
+                                                          id="staff-last-name"
+                                                          onChange={(e) =>
+                                                            lastNameField.handleChange(
+                                                              e.target.value
+                                                            )
+                                                          }
+                                                          required
+                                                          value={
+                                                            lastNameField.state
+                                                              .value
+                                                          }
+                                                        />
                                                       </Field>
                                                     </div>
                                                     <Field>
-                                                      <FieldLabel htmlFor="staff-email">Email</FieldLabel>
-                                                      <Input id="staff-email" onChange={(e) => emailField.handleChange(e.target.value)} required type="email" value={emailField.state.value} />
+                                                      <FieldLabel htmlFor="staff-email">
+                                                        Email
+                                                      </FieldLabel>
+                                                      <Input
+                                                        id="staff-email"
+                                                        onChange={(e) =>
+                                                          emailField.handleChange(
+                                                            e.target.value
+                                                          )
+                                                        }
+                                                        required
+                                                        type="email"
+                                                        value={
+                                                          emailField.state.value
+                                                        }
+                                                      />
                                                     </Field>
                                                     <Field>
-                                                      <FieldLabel htmlFor="staff-password-create">Password</FieldLabel>
-                                                      <Input autoComplete="new-password" id="staff-password-create" onChange={(e) => passwordField.handleChange(e.target.value)} required type="password" value={passwordField.state.value} />
+                                                      <FieldLabel htmlFor="staff-password-create">
+                                                        Password
+                                                      </FieldLabel>
+                                                      <Input
+                                                        autoComplete="new-password"
+                                                        id="staff-password-create"
+                                                        onChange={(e) =>
+                                                          passwordField.handleChange(
+                                                            e.target.value
+                                                          )
+                                                        }
+                                                        required
+                                                        type="password"
+                                                        value={
+                                                          passwordField.state
+                                                            .value
+                                                        }
+                                                      />
                                                     </Field>
                                                     <Field>
-                                                      <FieldLabel htmlFor="staff-dob">Date of Birth</FieldLabel>
-                                                      <Input id="staff-dob" inputMode="numeric" onChange={(e) => dateOfBirthField.handleChange(e.target.value)} placeholder="YYYY-MM-DD" required value={dateOfBirthField.state.value} />
-                                                      <FieldDescription>Use the format YYYY-MM-DD.</FieldDescription>
+                                                      <FieldLabel htmlFor="staff-dob">
+                                                        Date of Birth
+                                                      </FieldLabel>
+                                                      <DatePickerButtonField
+                                                        id="staff-dob"
+                                                        onChange={
+                                                          dateOfBirthField.handleChange
+                                                        }
+                                                        placeholder="Select date"
+                                                        value={
+                                                          dateOfBirthField.state
+                                                            .value
+                                                        }
+                                                      />
                                                     </Field>
                                                     <Field>
-                                                      <FieldLabel htmlFor="staff-phones">Phone Numbers</FieldLabel>
-                                                      <Input id="staff-phones" onChange={(e) => phoneNumbersField.handleChange(e.target.value)} placeholder="123, 456" value={phoneNumbersField.state.value} />
-                                                      <FieldDescription>Separate multiple numbers with commas.</FieldDescription>
+                                                      <FieldLabel htmlFor="staff-phones">
+                                                        Phone Number
+                                                      </FieldLabel>
+                                                      <IMaskInput
+                                                        id="staff-phones"
+                                                        className={
+                                                          maskedInputClassName
+                                                        }
+                                                        mask="+{1} (000) 000-0000"
+                                                        onAccept={(value) =>
+                                                          phoneNumbersField.handleChange(
+                                                            String(value)
+                                                          )
+                                                        }
+                                                        placeholder="+1 (555) 000-0000"
+                                                        value={
+                                                          phoneNumbersField
+                                                            .state.value
+                                                        }
+                                                      />
+                                                      <FieldDescription>
+                                                        Additional staff numbers
+                                                        can be added later.
+                                                      </FieldDescription>
                                                     </Field>
-                                                    {error ? <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div> : null}
-                                                    <Button className="w-full" disabled={isSubmitting} type="submit">
-                                                      {isSubmitting ? 'Creating…' : 'Create Staff Account'}
+                                                    {error ? (
+                                                      <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                                                        {error}
+                                                      </div>
+                                                    ) : null}
+                                                    <Button
+                                                      className="w-full"
+                                                      disabled={isSubmitting}
+                                                      type="submit"
+                                                    >
+                                                      {isSubmitting
+                                                        ? "Creating…"
+                                                        : "Create Staff Account"}
                                                     </Button>
                                                     <FieldDescription className="text-center">
-                                                      Already have one? <a className="font-medium text-foreground underline underline-offset-4" href="/staff/login">Sign in</a>
+                                                      Already have one?{" "}
+                                                      <a
+                                                        className="font-medium text-foreground underline underline-offset-4"
+                                                        href="/staff/login"
+                                                      >
+                                                        Sign in
+                                                      </a>
                                                     </FieldDescription>
                                                   </FieldGroup>
                                                 </form>

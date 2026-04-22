@@ -8,7 +8,10 @@ import { getCurrentUserFn, registerCustomerFn } from "@/lib/auth"
 import { pickRandomAuthImage } from "@/lib/auth-images"
 
 export const Route = createFileRoute("/register")({
-  loader: async () => ({ currentUser: await getCurrentUserFn(), heroImageUrl: pickRandomAuthImage() }),
+  loader: async () => ({
+    currentUser: await getCurrentUserFn(),
+    heroImageUrl: pickRandomAuthImage(),
+  }),
   component: RegisterPage,
 })
 
@@ -34,12 +37,34 @@ function RegisterPage() {
     },
     onSubmit: async ({ value }) => {
       const result = await registerCustomerFn({ data: value })
-      if (result?.error) throw new Error(result.error)
+      if (result.error) throw new Error(result.error)
       toast.success("Welcome aboard.")
       await router.invalidate()
-      await router.navigate({ to: result?.redirectTo ?? "/customer" })
+      await router.navigate({ to: result.redirectTo ?? "/customer" })
     },
   })
+
+  function createFieldBinding(field: {
+    handleChange: (value: string) => void
+    state: { value: string }
+  }) {
+    return {
+      onChange: field.handleChange,
+      value: field.state.value,
+    }
+  }
+
+  async function handleRegisterSubmit(event: React.FormEvent) {
+    event.preventDefault()
+    event.stopPropagation()
+    setError(null)
+
+    try {
+      await form.handleSubmit()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Registration failed.")
+    }
+  }
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center bg-[#f7f9fb] p-6 md:p-10">
@@ -67,37 +92,98 @@ function RegisterPage() {
                                                 <form.Field name="passportNumber">
                                                   {(passportNumField) => (
                                                     <form.Field name="passportCountry">
-                                                      {(passportCountryField) => (
+                                                      {(
+                                                        passportCountryField
+                                                      ) => (
                                                         <form.Field name="passportExpiration">
-                                                          {(passportExpField) => (
+                                                          {(
+                                                            passportExpField
+                                                          ) => (
                                                             <SignupForm
                                                               error={error}
-                                                              heroImageUrl={heroImageUrl}
+                                                              fieldErrors={{
+                                                                email:
+                                                                  emailField
+                                                                    .state.meta
+                                                                    .isTouched &&
+                                                                  !emailField
+                                                                    .state.value
+                                                                    ? "Email is required."
+                                                                    : null,
+                                                                name:
+                                                                  nameField
+                                                                    .state.meta
+                                                                    .isTouched &&
+                                                                  !nameField
+                                                                    .state.value
+                                                                    ? "Full name is required."
+                                                                    : null,
+                                                                password:
+                                                                  passwordField
+                                                                    .state.meta
+                                                                    .isTouched &&
+                                                                  !passwordField
+                                                                    .state.value
+                                                                    ? "Password is required."
+                                                                    : null,
+                                                              }}
+                                                              heroImageUrl={
+                                                                heroImageUrl
+                                                              }
                                                               fields={{
-                                                                buildingNumber: { onChange: (v) => buildingField.handleChange(v), value: buildingField.state.value },
-                                                                city: { onChange: (v) => cityField.handleChange(v), value: cityField.state.value },
-                                                                dateOfBirth: { onChange: (v) => dobField.handleChange(v), value: dobField.state.value },
-                                                                email: { onChange: (v) => emailField.handleChange(v), value: emailField.state.value },
-                                                                name: { onChange: (v) => nameField.handleChange(v), value: nameField.state.value },
-                                                                passportCountry: { onChange: (v) => passportCountryField.handleChange(v), value: passportCountryField.state.value },
-                                                                passportExpiration: { onChange: (v) => passportExpField.handleChange(v), value: passportExpField.state.value },
-                                                                passportNumber: { onChange: (v) => passportNumField.handleChange(v), value: passportNumField.state.value },
-                                                                password: { onChange: (v) => passwordField.handleChange(v), value: passwordField.state.value },
-                                                                phoneNumber: { onChange: (v) => phoneField.handleChange(v), value: phoneField.state.value },
-                                                                state: { onChange: (v) => stateField.handleChange(v), value: stateField.state.value },
-                                                                street: { onChange: (v) => streetField.handleChange(v), value: streetField.state.value },
+                                                                buildingNumber:
+                                                                  createFieldBinding(
+                                                                    buildingField
+                                                                  ),
+                                                                city: createFieldBinding(
+                                                                  cityField
+                                                                ),
+                                                                dateOfBirth:
+                                                                  createFieldBinding(
+                                                                    dobField
+                                                                  ),
+                                                                email:
+                                                                  createFieldBinding(
+                                                                    emailField
+                                                                  ),
+                                                                name: createFieldBinding(
+                                                                  nameField
+                                                                ),
+                                                                passportCountry:
+                                                                  createFieldBinding(
+                                                                    passportCountryField
+                                                                  ),
+                                                                passportExpiration:
+                                                                  createFieldBinding(
+                                                                    passportExpField
+                                                                  ),
+                                                                passportNumber:
+                                                                  createFieldBinding(
+                                                                    passportNumField
+                                                                  ),
+                                                                password:
+                                                                  createFieldBinding(
+                                                                    passwordField
+                                                                  ),
+                                                                phoneNumber:
+                                                                  createFieldBinding(
+                                                                    phoneField
+                                                                  ),
+                                                                state:
+                                                                  createFieldBinding(
+                                                                    stateField
+                                                                  ),
+                                                                street:
+                                                                  createFieldBinding(
+                                                                    streetField
+                                                                  ),
                                                               }}
-                                                              isSubmitting={isSubmitting}
-                                                              onSubmit={async (e) => {
-                                                                e.preventDefault()
-                                                                e.stopPropagation()
-                                                                setError(null)
-                                                                try {
-                                                                  await form.handleSubmit()
-                                                                } catch (err) {
-                                                                  setError(err instanceof Error ? err.message : "Registration failed.")
-                                                                }
-                                                              }}
+                                                              isSubmitting={
+                                                                isSubmitting
+                                                              }
+                                                              onSubmit={
+                                                                handleRegisterSubmit
+                                                              }
                                                             />
                                                           )}
                                                         </form.Field>

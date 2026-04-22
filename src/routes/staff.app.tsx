@@ -16,10 +16,25 @@ import {
   Users,
 } from "lucide-react"
 import { useState } from "react"
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts"
 import { toast } from "sonner"
 
+import type { PassengerRecord } from "@/lib/queries"
 import { StaffShell } from "@/components/staff-shell"
+import {
+  AirportAutocompleteInput,
+  DatePickerButtonField,
+  DateTimePickerButtonField,
+  getFormFieldError,
+} from "@/components/flight-search-panel"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -49,14 +64,43 @@ import {
   getStaffDashboardFn,
   getStaffReportFn,
   updateFlightStatusFn,
-  type PassengerRecord,
 } from "@/lib/queries"
 
-function formatDateLabel(value: string) {
-  if (!value) return "Select date"
-  const parsed = new Date(`${value}T00:00:00`)
-  if (Number.isNaN(parsed.getTime())) return value
-  return parsed.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+function validateDifferentAirport(value: string, otherValue: string) {
+  if (!value.trim() || !otherValue.trim()) return undefined
+  return value === otherValue
+    ? "Departure and arrival airports must be different."
+    : undefined
+}
+
+function validateDateValue(label: string, value: string) {
+  return value ? undefined : `Choose ${label.toLowerCase()}.`
+}
+
+function validateFilterEndDate(value: string, startDate: string) {
+  if (!value || !startDate) return undefined
+  return new Date(value) < new Date(startDate)
+    ? "End date must be on or after start date."
+    : undefined
+}
+
+function validateArrivalDateTime(value: string, departureDateTime: string) {
+  if (!value) return "Choose an arrival date and time."
+  if (!departureDateTime) return undefined
+  return new Date(value) <= new Date(departureDateTime)
+    ? "Arrival time must be after departure time."
+    : undefined
+}
+
+function validateFlightNumber(value: string) {
+  return value.trim() ? undefined : "Enter a flight number."
+}
+
+function validateBasePrice(value: string) {
+  if (!value) return "Enter a base ticket price."
+  return Number(value) > 0
+    ? undefined
+    : "Base ticket price must be greater than zero."
 }
 
 export const Route = createFileRoute("/staff/app")({
@@ -96,11 +140,19 @@ function StaffHomePage() {
     ticketCount: number
     totalSeats: number
   } | null>(null)
-  const [selectedPassengers, setSelectedPassengers] = useState<PassengerRecord[] | null>(null)
-  const [selectedPassengerKey, setSelectedPassengerKey] = useState<string | null>(null)
+  const [selectedPassengers, setSelectedPassengers] =
+    useState<Array<PassengerRecord> | null>(null)
+  const [selectedPassengerKey, setSelectedPassengerKey] = useState<
+    string | null
+  >(null)
   const [busyAction, setBusyAction] = useState<string | null>(null)
 
-  async function refresh(_filters?: { destination: string; endDate: string; source: string; startDate: string }) {
+  async function refresh(_filters?: {
+    destination: string
+    endDate: string
+    source: string
+    startDate: string
+  }) {
     await router.invalidate()
   }
 
@@ -126,7 +178,15 @@ function StaffHomePage() {
       ticketCount: flight.ticketCount,
       totalSeats: flight.ticketCount + flight.availableSeats,
     })
-    setSelectedPassengers(await getFlightPassengersFn({ data: { airlineName: flight.airlineName, departureDatetime: flight.departureDatetime, flightNumber: flight.flightNumber } }))
+    setSelectedPassengers(
+      await getFlightPassengersFn({
+        data: {
+          airlineName: flight.airlineName,
+          departureDatetime: flight.departureDatetime,
+          flightNumber: flight.flightNumber,
+        },
+      })
+    )
     setActiveSection("manifest")
   }
 
@@ -161,7 +221,12 @@ function StaffHomePage() {
   }
 
   return (
-    <StaffShell airlineName={dashboardData.airlineName} currentSection={activeSection} onLogout={handleLogout} onSectionChange={setActiveSection}>
+    <StaffShell
+      airlineName={dashboardData.airlineName}
+      currentSection={activeSection}
+      onLogout={handleLogout}
+      onSectionChange={setActiveSection}
+    >
       <div className="p-6 lg:p-8">
         {activeSection === "dashboard" ? (
           <DashboardSection
@@ -196,7 +261,10 @@ function StaffHomePage() {
             airplanes={dashboardData.airplanes}
             airports={dashboardData.airports}
             busyAction={busyAction}
-            onCreated={() => { void refresh(); setActiveSection("dashboard") }}
+            onCreated={() => {
+              void refresh()
+              setActiveSection("dashboard")
+            }}
             setBusyAction={setBusyAction}
           />
         ) : null}
@@ -239,9 +307,14 @@ function DashboardSection({
   airplanes: Array<{ airplaneId: string; numberOfSeats: number }>
   busyAction: string | null
   flights: Array<{
-    airlineName: string; arrivalAirportCode: string; availableSeats: number
-    departureAirportCode: string; departureDatetime: string; flightNumber: string
-    status: "on_time" | "delayed"; ticketCount: number
+    airlineName: string
+    arrivalAirportCode: string
+    availableSeats: number
+    departureAirportCode: string
+    departureDatetime: string
+    flightNumber: string
+    status: "on_time" | "delayed"
+    ticketCount: number
   }>
   handlePassengers: (flight: {
     airlineName: string
@@ -263,67 +336,180 @@ function DashboardSection({
     status: "on_time" | "delayed"
     ticketCount: number
   }) => void
-  onRefresh: (filters?: { destination: string; endDate: string; source: string; startDate: string }) => Promise<void>
+  onRefresh: (filters?: {
+    destination: string
+    endDate: string
+    source: string
+    startDate: string
+  }) => Promise<void>
   selectedPassengerKey: string | null
-  reportSummary: { lastMonthTickets: number; lastYearTickets: number; totalTickets: number }
+  reportSummary: {
+    lastMonthTickets: number
+    lastYearTickets: number
+    totalTickets: number
+  }
 }) {
   const filterForm = useForm({
     defaultValues: { destination: "", endDate: "", source: "", startDate: "" },
     onSubmit: async ({ value }) => onRefresh(value),
   })
 
-  const onTimePct = flights.length ? Math.round((flights.filter((f) => f.status === "on_time").length / flights.length) * 100) : 0
+  const onTimePct = flights.length
+    ? Math.round(
+        (flights.filter((f) => f.status === "on_time").length /
+          flights.length) *
+          100
+      )
+    : 0
 
   return (
     <div className="space-y-8">
       <div className="grid gap-4 sm:grid-cols-3">
-        <KpiCard icon={TrendingUp} label="On-Time Rate" value={`${onTimePct}%`} />
-        <KpiCard icon={Plane} label="Fleet Size" value={String(airplanes.length)} />
-        <KpiCard icon={Users} label="Tickets (YTD)" value={String(reportSummary.lastYearTickets)} />
+        <KpiCard
+          icon={TrendingUp}
+          label="On-Time Rate"
+          value={`${onTimePct}%`}
+        />
+        <KpiCard
+          icon={Plane}
+          label="Fleet Size"
+          value={String(airplanes.length)}
+        />
+        <KpiCard
+          icon={Users}
+          label="Tickets (YTD)"
+          value={String(reportSummary.lastYearTickets)}
+        />
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-950">Scheduled Flights</h2>
-          <p className="text-sm text-slate-500">Next 30 days operations overview</p>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-950">
+            Scheduled Flights
+          </h2>
+          <p className="text-sm text-slate-500">
+            Next 30 days operations overview
+          </p>
         </div>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
-          <Input aria-label="Search flights" className="h-9 w-64 rounded-lg bg-slate-100 pl-9 text-sm" placeholder="Flight number, dest..." />
+          <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
+          <Input
+            aria-label="Search flights"
+            className="h-9 w-64 rounded-lg bg-slate-100 pl-9 text-sm"
+            placeholder="Flight number, dest..."
+          />
         </div>
       </div>
 
       <Card className="rounded-xl border border-slate-200 bg-white shadow-none">
         <CardContent className="p-4">
-          <form className="grid gap-3 md:grid-cols-[1fr_1fr_180px_180px_auto] md:items-end" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); filterForm.handleSubmit() }}>
+          <form
+            className="grid gap-3 md:grid-cols-[1fr_1fr_180px_180px_auto] md:items-end"
+            onSubmit={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              filterForm.handleSubmit()
+            }}
+          >
             <FilterField htmlFor="staff-filter-from" label="From">
-              <filterForm.Field name="source">{(field) => <Input aria-label="From" className="h-9 rounded-lg bg-slate-50" id="staff-filter-from" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="City or airport" value={field.state.value} />}</filterForm.Field>
+              <filterForm.Field name="source">
+                {(field) => (
+                  <AirportAutocompleteInput
+                    aria-label="From"
+                    className="h-9 rounded-lg bg-slate-50"
+                    error={getFormFieldError(field)}
+                    id="staff-filter-from"
+                    onBlur={field.handleBlur}
+                    onChange={field.handleChange}
+                    placeholder="City or airport"
+                    value={field.state.value}
+                  />
+                )}
+              </filterForm.Field>
             </FilterField>
             <FilterField htmlFor="staff-filter-to" label="To">
-              <filterForm.Field name="destination">{(field) => <Input aria-label="To" className="h-9 rounded-lg bg-slate-50" id="staff-filter-to" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="City or airport" value={field.state.value} />}</filterForm.Field>
+              <filterForm.Field
+                name="destination"
+                validators={{
+                  onChange: ({ value, fieldApi }) =>
+                    validateDifferentAirport(
+                      value,
+                      fieldApi.form.getFieldValue("source")
+                    ),
+                  onChangeListenTo: ["source"],
+                  onSubmit: ({ value, fieldApi }) =>
+                    validateDifferentAirport(
+                      value,
+                      fieldApi.form.getFieldValue("source")
+                    ),
+                }}
+              >
+                {(field) => (
+                  <AirportAutocompleteInput
+                    aria-label="To"
+                    className="h-9 rounded-lg bg-slate-50"
+                    error={getFormFieldError(field)}
+                    id="staff-filter-to"
+                    onBlur={field.handleBlur}
+                    onChange={field.handleChange}
+                    placeholder="City or airport"
+                    value={field.state.value}
+                  />
+                )}
+              </filterForm.Field>
             </FilterField>
             <FilterField htmlFor="staff-filter-start-date" label="Start date">
-              <filterForm.Field name="startDate">{(field) => (
-                <div className="relative">
-                  <span className={field.state.value ? "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-950" : "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400"}>
-                    {formatDateLabel(field.state.value)}
-                  </span>
-                  <Input aria-label="Start Date" className="h-9 rounded-lg bg-slate-50 text-transparent caret-transparent" id="staff-filter-start-date" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} type="date" value={field.state.value} />
-                </div>
-              )}</filterForm.Field>
+              <filterForm.Field name="startDate">
+                {(field) => (
+                  <DatePickerButtonField
+                    className="h-9 rounded-lg bg-slate-50"
+                    error={getFormFieldError(field)}
+                    id="staff-filter-start-date"
+                    onBlur={field.handleBlur}
+                    onChange={field.handleChange}
+                    placeholder="Select date"
+                    value={field.state.value}
+                  />
+                )}
+              </filterForm.Field>
             </FilterField>
             <FilterField htmlFor="staff-filter-end-date" label="End date">
-              <filterForm.Field name="endDate">{(field) => (
-                <div className="relative">
-                  <span className={field.state.value ? "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-950" : "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400"}>
-                    {formatDateLabel(field.state.value)}
-                  </span>
-                  <Input aria-label="End Date" className="h-9 rounded-lg bg-slate-50 text-transparent caret-transparent" id="staff-filter-end-date" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} type="date" value={field.state.value} />
-                </div>
-              )}</filterForm.Field>
+              <filterForm.Field
+                name="endDate"
+                validators={{
+                  onChange: ({ value, fieldApi }) =>
+                    validateFilterEndDate(
+                      value,
+                      fieldApi.form.getFieldValue("startDate")
+                    ),
+                  onChangeListenTo: ["startDate"],
+                  onSubmit: ({ value, fieldApi }) =>
+                    validateFilterEndDate(
+                      value,
+                      fieldApi.form.getFieldValue("startDate")
+                    ),
+                }}
+              >
+                {(field) => (
+                  <DatePickerButtonField
+                    className="h-9 rounded-lg bg-slate-50"
+                    error={getFormFieldError(field)}
+                    id="staff-filter-end-date"
+                    onBlur={field.handleBlur}
+                    onChange={field.handleChange}
+                    placeholder="Select date"
+                    value={field.state.value}
+                  />
+                )}
+              </filterForm.Field>
             </FilterField>
-            <Button className="h-9 rounded-lg bg-slate-950 text-white hover:bg-slate-800" disabled={busyAction === "flight-filter"} type="submit">
-              <Filter className="mr-2 size-4" />{busyAction === "flight-filter" ? "Filtering…" : "Filter"}
+            <Button
+              className="h-9 rounded-lg bg-slate-950 text-white hover:bg-slate-800"
+              disabled={busyAction === "flight-filter"}
+              type="submit"
+            >
+              <Filter className="mr-2 size-4" />
+              {busyAction === "flight-filter" ? "Filtering…" : "Filter"}
             </Button>
           </form>
         </CardContent>
@@ -334,12 +520,22 @@ function DashboardSection({
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-50">
-                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">Flight</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">Route</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">Departs</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">Status</TableHead>
-                <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Pax</TableHead>
-                <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-slate-500" />
+                <TableHead className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                  Flight
+                </TableHead>
+                <TableHead className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                  Route
+                </TableHead>
+                <TableHead className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                  Departs
+                </TableHead>
+                <TableHead className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                  Status
+                </TableHead>
+                <TableHead className="text-right text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                  Pax
+                </TableHead>
+                <TableHead className="text-right text-xs font-semibold tracking-wider text-slate-500 uppercase" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -347,35 +543,58 @@ function DashboardSection({
                 const key = `${flight.flightNumber}:${flight.departureDatetime}`
                 return (
                   <TableRow className="hover:bg-slate-50" key={key}>
-                    <TableCell className="font-semibold text-slate-950">{flight.flightNumber}</TableCell>
+                    <TableCell className="font-semibold text-slate-950">
+                      {flight.flightNumber}
+                    </TableCell>
                     <TableCell>
                       <span className="flex items-center gap-1.5 text-sm">
-                        <span className="font-semibold">{flight.departureAirportCode}</span>
+                        <span className="font-semibold">
+                          {flight.departureAirportCode}
+                        </span>
                         <ArrowRight className="size-3 text-slate-400" />
-                        <span className="font-semibold">{flight.arrivalAirportCode}</span>
+                        <span className="font-semibold">
+                          {flight.arrivalAirportCode}
+                        </span>
                       </span>
                     </TableCell>
-                    <TableCell className="text-sm text-slate-500">{formatDateTime(flight.departureDatetime)}</TableCell>
+                    <TableCell className="text-sm text-slate-500">
+                      {formatDateTime(flight.departureDatetime)}
+                    </TableCell>
                     <TableCell>
-                      <Badge className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${flight.status === "on_time" ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-50" : "bg-red-50 text-red-700 hover:bg-red-50"}`} variant="secondary">
+                      <Badge
+                        className={`rounded px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase ${flight.status === "on_time" ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-50" : "bg-red-50 text-red-700 hover:bg-red-50"}`}
+                        variant="secondary"
+                      >
                         {titleCaseStatus(flight.status)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right text-sm font-medium text-slate-700">
-                      {flight.ticketCount}/{flight.ticketCount + flight.availableSeats}
+                      {flight.ticketCount}/
+                      {flight.ticketCount + flight.availableSeats}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button className="h-8 rounded-lg text-xs" onClick={() => handlePassengers(flight)} size="sm" type="button" variant="outline">
+                        <Button
+                          className="h-8 rounded-lg text-xs"
+                          onClick={() => handlePassengers(flight)}
+                          size="sm"
+                          type="button"
+                          variant="outline"
+                        >
                           {selectedPassengerKey === key ? "Loaded" : "Pax"}
                         </Button>
                         <Button
                           className="h-8 rounded-lg bg-slate-950 text-xs text-white hover:bg-slate-800"
-                          disabled={busyAction === `status:${flight.flightNumber}:${flight.departureDatetime}`}
+                          disabled={
+                            busyAction ===
+                            `status:${flight.flightNumber}:${flight.departureDatetime}`
+                          }
                           onClick={() => handleStatusWorkflow(flight)}
                           size="sm"
                           type="button"
-                        >Status</Button>
+                        >
+                          Status
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -405,24 +624,27 @@ function ManifestSection({
     totalSeats: number
   } | null
   onBack: () => void
-  passengers: PassengerRecord[] | null
+  passengers: Array<PassengerRecord> | null
 }) {
   const [query, setQuery] = useState("")
   const normalizedQuery = query.trim().toLowerCase()
-  const filteredPassengers = passengers?.filter((passenger) => {
-    if (!normalizedQuery) return true
-    return (
-      passenger.customerName.toLowerCase().includes(normalizedQuery)
-      || passenger.customerEmail.toLowerCase().includes(normalizedQuery)
-      || String(passenger.ticketId).includes(normalizedQuery)
-      || passenger.passportNumber.toLowerCase().includes(normalizedQuery)
-    )
-  }) ?? []
+  const filteredPassengers =
+    passengers?.filter((passenger) => {
+      if (!normalizedQuery) return true
+      return (
+        passenger.customerName.toLowerCase().includes(normalizedQuery) ||
+        passenger.customerEmail.toLowerCase().includes(normalizedQuery) ||
+        String(passenger.ticketId).includes(normalizedQuery) ||
+        passenger.passportNumber.toLowerCase().includes(normalizedQuery)
+      )
+    }) ?? []
 
   if (!flight) {
     return (
       <Card className="rounded-xl border border-slate-200 bg-white shadow-none">
-        <CardContent className="p-8 text-sm text-slate-500">Choose a flight from the dashboard to open its passenger manifest.</CardContent>
+        <CardContent className="p-8 text-sm text-slate-500">
+          Choose a flight from the dashboard to open its passenger manifest.
+        </CardContent>
       </Card>
     )
   }
@@ -431,16 +653,26 @@ function ManifestSection({
     <div className="space-y-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <Button className="mb-4 px-0 text-sm text-slate-500 hover:text-slate-950" onClick={onBack} type="button" variant="ghost">
+          <Button
+            className="mb-4 px-0 text-sm text-slate-500 hover:text-slate-950"
+            onClick={onBack}
+            type="button"
+            variant="ghost"
+          >
             <ArrowLeft className="size-4" /> Back to dashboard
           </Button>
-          <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Passenger Manifest</div>
+          <div className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+            Passenger Manifest
+          </div>
           <h2 className="mt-2 flex items-center gap-3 text-3xl font-bold tracking-tight text-slate-950">
             <span>{flight.departureAirportCode}</span>
             <ArrowRight className="size-5 text-slate-400" />
             <span>{flight.arrivalAirportCode}</span>
           </h2>
-          <p className="mt-2 text-sm text-slate-500">{flight.flightNumber} · {formatDateTime(flight.departureDatetime)} · {titleCaseStatus(flight.status)}</p>
+          <p className="mt-2 text-sm text-slate-500">
+            {flight.flightNumber} · {formatDateTime(flight.departureDatetime)} ·{" "}
+            {titleCaseStatus(flight.status)}
+          </p>
         </div>
         <div className="flex flex-wrap gap-3">
           <Button disabled type="button" variant="outline">
@@ -453,61 +685,113 @@ function ManifestSection({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <KpiCard icon={Users} label="Passengers" value={String(flight.ticketCount)} />
-        <KpiCard icon={Plane} label="Capacity" value={String(flight.totalSeats)} />
-        <KpiCard icon={TrendingUp} label="Load factor" value={`${flight.totalSeats ? Math.round((flight.ticketCount / flight.totalSeats) * 100) : 0}%`} />
+        <KpiCard
+          icon={Users}
+          label="Passengers"
+          value={String(flight.ticketCount)}
+        />
+        <KpiCard
+          icon={Plane}
+          label="Capacity"
+          value={String(flight.totalSeats)}
+        />
+        <KpiCard
+          icon={TrendingUp}
+          label="Load factor"
+          value={`${flight.totalSeats ? Math.round((flight.ticketCount / flight.totalSeats) * 100) : 0}%`}
+        />
       </div>
 
       <Card className="rounded-xl border border-slate-200 bg-white shadow-none">
         <CardContent className="space-y-4 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <div className="text-lg font-semibold text-slate-950">Passenger list</div>
-              <p className="text-sm text-slate-500">Search by traveler name, ticket number, email, or passport number.</p>
+              <div className="text-lg font-semibold text-slate-950">
+                Passenger list
+              </div>
+              <p className="text-sm text-slate-500">
+                Search by traveler name, ticket number, email, or passport
+                number.
+              </p>
             </div>
             <div className="relative w-full sm:w-80">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-              <Input aria-label="Search passengers" className="h-9 bg-slate-50 pl-9" onChange={(e) => setQuery(e.target.value)} placeholder="Search manifest" value={query} />
+              <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                aria-label="Search passengers"
+                className="h-9 bg-slate-50 pl-9"
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search manifest"
+                value={query}
+              />
             </div>
           </div>
           <div className="overflow-x-auto rounded-lg border border-slate-200">
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50">
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">Passenger</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">Ticket</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">Email</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">Passport</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">Purchased</TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                    Passenger
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                    Ticket
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                    Email
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                    Passport
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                    Purchased
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPassengers.length ? filteredPassengers.map((passenger) => {
-                  const initials = passenger.customerName
-                    .split(" ")
-                    .map((part) => part[0])
-                    .join("")
-                    .slice(0, 2)
-                    .toUpperCase()
+                {filteredPassengers.length ? (
+                  filteredPassengers.map((passenger) => {
+                    const initials = passenger.customerName
+                      .split(" ")
+                      .map((part) => part[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase()
 
-                  return (
-                    <TableRow key={passenger.ticketId}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="flex size-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">{initials}</div>
-                          <div className="font-medium text-slate-950">{passenger.customerName}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm text-slate-500">TKT-{passenger.ticketId}</TableCell>
-                      <TableCell className="text-sm text-slate-500">{passenger.customerEmail}</TableCell>
-                      <TableCell className="text-sm text-slate-500">{passenger.passportNumber}</TableCell>
-                      <TableCell className="text-sm text-slate-500">{formatDateTime(passenger.purchaseDatetime)}</TableCell>
-                    </TableRow>
-                  )
-                }) : (
+                    return (
+                      <TableRow key={passenger.ticketId}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="flex size-8 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
+                              {initials}
+                            </div>
+                            <div className="font-medium text-slate-950">
+                              {passenger.customerName}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm text-slate-500">
+                          TKT-{passenger.ticketId}
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-500">
+                          {passenger.customerEmail}
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-500">
+                          {passenger.passportNumber}
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-500">
+                          {formatDateTime(passenger.purchaseDatetime)}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                ) : (
                   <TableRow>
-                    <TableCell className="py-8 text-center text-sm text-slate-500" colSpan={5}>
-                      {passengers?.length ? "No passengers matched that search." : "No tickets sold on this flight yet."}
+                    <TableCell
+                      className="py-8 text-center text-sm text-slate-500"
+                      colSpan={5}
+                    >
+                      {passengers?.length
+                        ? "No passengers matched that search."
+                        : "No tickets sold on this flight yet."}
                     </TableCell>
                   </TableRow>
                 )}
@@ -515,7 +799,8 @@ function ManifestSection({
             </Table>
           </div>
           <div className="rounded-lg border border-dashed border-slate-200 px-4 py-3 text-sm text-slate-500">
-            Bulk print and passenger messaging remain disabled until the product has real export and communications flows behind them.
+            Bulk print and passenger messaging remain disabled until the product
+            has real export and communications flows behind them.
           </div>
         </CardContent>
       </Card>
@@ -542,13 +827,20 @@ function StatusWorkflowSection({
     totalSeats: number
   } | null
   onBack: () => void
-  onRefresh: (filters?: { destination: string; endDate: string; source: string; startDate: string }) => Promise<void>
+  onRefresh: (filters?: {
+    destination: string
+    endDate: string
+    source: string
+    startDate: string
+  }) => Promise<void>
   setBusyAction: (action: string | null) => void
 }) {
   if (!flight) {
     return (
       <Card className="rounded-xl border border-slate-200 bg-white shadow-none">
-        <CardContent className="p-8 text-sm text-slate-500">Choose a flight from the dashboard to open the status workflow.</CardContent>
+        <CardContent className="p-8 text-sm text-slate-500">
+          Choose a flight from the dashboard to open the status workflow.
+        </CardContent>
       </Card>
     )
   }
@@ -556,14 +848,23 @@ function StatusWorkflowSection({
   const activeFlight = flight
 
   async function handleSubmitStatus(nextStatus: "on_time" | "delayed") {
-    setBusyAction(`status:${activeFlight.flightNumber}:${activeFlight.departureDatetime}`)
+    setBusyAction(
+      `status:${activeFlight.flightNumber}:${activeFlight.departureDatetime}`
+    )
     try {
-      const result = await updateFlightStatusFn({ data: { airlineName: activeFlight.airlineName, departureDatetime: activeFlight.departureDatetime, flightNumber: activeFlight.flightNumber, status: nextStatus } })
-      if (result?.error) {
+      const result = await updateFlightStatusFn({
+        data: {
+          airlineName: activeFlight.airlineName,
+          departureDatetime: activeFlight.departureDatetime,
+          flightNumber: activeFlight.flightNumber,
+          status: nextStatus,
+        },
+      })
+      if (result.error) {
         toast.error(result.error)
         return
       }
-      toast.success(result?.message ?? "Status updated.")
+      toast.success(result.message ?? "Status updated.")
       await onRefresh()
       onBack()
     } finally {
@@ -574,28 +875,57 @@ function StatusWorkflowSection({
   return (
     <div className="grid gap-8 xl:grid-cols-[0.85fr_1.15fr]">
       <div className="space-y-6">
-        <Button className="px-0 text-sm text-slate-500 hover:text-slate-950" onClick={onBack} type="button" variant="ghost">
+        <Button
+          className="px-0 text-sm text-slate-500 hover:text-slate-950"
+          onClick={onBack}
+          type="button"
+          variant="ghost"
+        >
           <ArrowLeft className="size-4" /> Back to dashboard
         </Button>
         <Card className="rounded-xl border border-slate-200 bg-white shadow-none">
           <CardContent className="space-y-6 p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Flight Management</div>
-                <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">Status Workflow</h2>
+                <div className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                  Flight Management
+                </div>
+                <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+                  Status Workflow
+                </h2>
               </div>
-              <Badge className={activeFlight.status === "on_time" ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-50" : "bg-red-50 text-red-700 hover:bg-red-50"} variant="secondary">
+              <Badge
+                className={
+                  activeFlight.status === "on_time"
+                    ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-50"
+                    : "bg-red-50 text-red-700 hover:bg-red-50"
+                }
+                variant="secondary"
+              >
                 {titleCaseStatus(activeFlight.status)}
               </Badge>
             </div>
             <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-5">
-              <StatusSummaryRow label="Flight" value={activeFlight.flightNumber} />
-              <StatusSummaryRow label="Route" value={`${activeFlight.departureAirportCode} → ${activeFlight.arrivalAirportCode}`} />
-              <StatusSummaryRow label="Departure" value={formatDateTime(activeFlight.departureDatetime)} />
-              <StatusSummaryRow label="Passengers" value={`${activeFlight.ticketCount}/${activeFlight.totalSeats}`} />
+              <StatusSummaryRow
+                label="Flight"
+                value={activeFlight.flightNumber}
+              />
+              <StatusSummaryRow
+                label="Route"
+                value={`${activeFlight.departureAirportCode} → ${activeFlight.arrivalAirportCode}`}
+              />
+              <StatusSummaryRow
+                label="Departure"
+                value={formatDateTime(activeFlight.departureDatetime)}
+              />
+              <StatusSummaryRow
+                label="Passengers"
+                value={`${activeFlight.ticketCount}/${activeFlight.totalSeats}`}
+              />
             </div>
             <div className="rounded-lg border border-dashed border-slate-200 px-4 py-3 text-sm text-slate-500">
-              This workflow uses the real staff status mutation. It does not yet broadcast to external systems, signage, or traveler notifications.
+              This workflow uses the real staff status mutation. It does not yet
+              broadcast to external systems, signage, or traveler notifications.
             </div>
           </CardContent>
         </Card>
@@ -604,34 +934,82 @@ function StatusWorkflowSection({
       <Card className="rounded-xl border border-slate-200 bg-white shadow-none">
         <CardContent className="space-y-6 p-6">
           <div>
-            <h3 className="text-2xl font-bold tracking-tight text-slate-950">Update Flight Status</h3>
-            <p className="mt-2 text-sm text-slate-500">Choose the operational status that best reflects the current flight state.</p>
+            <h3 className="text-2xl font-bold tracking-tight text-slate-950">
+              Update Flight Status
+            </h3>
+            <p className="mt-2 text-sm text-slate-500">
+              Choose the operational status that best reflects the current
+              flight state.
+            </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <button
               className={`rounded-lg border p-5 text-left transition-colors ${activeFlight.status === "on_time" ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 bg-slate-50 text-slate-950 hover:border-slate-300"}`}
-              disabled={busyAction === `status:${activeFlight.flightNumber}:${activeFlight.departureDatetime}` || activeFlight.status === "on_time"}
+              disabled={
+                busyAction ===
+                  `status:${activeFlight.flightNumber}:${activeFlight.departureDatetime}` ||
+                activeFlight.status === "on_time"
+              }
               onClick={() => handleSubmitStatus("on_time")}
               type="button"
             >
-              <div className="text-sm font-semibold uppercase tracking-wider">On time</div>
-              <p className={`mt-2 text-sm ${activeFlight.status === "on_time" ? "text-white/70" : "text-slate-500"}`}>Normal operation, no active departure delay.</p>
+              <div className="text-sm font-semibold tracking-wider uppercase">
+                On time
+              </div>
+              <p
+                className={`mt-2 text-sm ${activeFlight.status === "on_time" ? "text-white/70" : "text-slate-500"}`}
+              >
+                Normal operation, no active departure delay.
+              </p>
             </button>
             <button
               className={`rounded-lg border p-5 text-left transition-colors ${activeFlight.status === "delayed" ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 bg-slate-50 text-slate-950 hover:border-slate-300"}`}
-              disabled={busyAction === `status:${activeFlight.flightNumber}:${activeFlight.departureDatetime}` || activeFlight.status === "delayed"}
+              disabled={
+                busyAction ===
+                  `status:${activeFlight.flightNumber}:${activeFlight.departureDatetime}` ||
+                activeFlight.status === "delayed"
+              }
               onClick={() => handleSubmitStatus("delayed")}
               type="button"
             >
-              <div className="text-sm font-semibold uppercase tracking-wider">Delayed</div>
-              <p className={`mt-2 text-sm ${activeFlight.status === "delayed" ? "text-white/70" : "text-slate-500"}`}>Departure is running late and should be reflected in staff operations.</p>
+              <div className="text-sm font-semibold tracking-wider uppercase">
+                Delayed
+              </div>
+              <p
+                className={`mt-2 text-sm ${activeFlight.status === "delayed" ? "text-white/70" : "text-slate-500"}`}
+              >
+                Departure is running late and should be reflected in staff
+                operations.
+              </p>
             </button>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button className="rounded-lg bg-slate-950 text-white hover:bg-slate-800" disabled={busyAction === `status:${activeFlight.flightNumber}:${activeFlight.departureDatetime}`} onClick={() => handleSubmitStatus(activeFlight.status === "on_time" ? "delayed" : "on_time")} type="button">
-              {busyAction === `status:${activeFlight.flightNumber}:${activeFlight.departureDatetime}` ? "Updating…" : `Set ${activeFlight.status === "on_time" ? "Delayed" : "On Time"}`}
+            <Button
+              className="rounded-lg bg-slate-950 text-white hover:bg-slate-800"
+              disabled={
+                busyAction ===
+                `status:${activeFlight.flightNumber}:${activeFlight.departureDatetime}`
+              }
+              onClick={() =>
+                handleSubmitStatus(
+                  activeFlight.status === "on_time" ? "delayed" : "on_time"
+                )
+              }
+              type="button"
+            >
+              {busyAction ===
+              `status:${activeFlight.flightNumber}:${activeFlight.departureDatetime}`
+                ? "Updating…"
+                : `Set ${activeFlight.status === "on_time" ? "Delayed" : "On Time"}`}
             </Button>
-            <Button className="rounded-lg" onClick={onBack} type="button" variant="outline">Cancel</Button>
+            <Button
+              className="rounded-lg"
+              onClick={onBack}
+              type="button"
+              variant="outline"
+            >
+              Cancel
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -643,7 +1021,9 @@ function StatusSummaryRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="text-sm text-slate-500">{label}</div>
-      <div className="text-right text-sm font-semibold text-slate-950">{value}</div>
+      <div className="text-right text-sm font-semibold text-slate-950">
+        {value}
+      </div>
     </div>
   )
 }
@@ -687,11 +1067,16 @@ function CreateFlightSection({
             flightNumber: value.flightNumber,
           },
         })
-        if (result?.error) { toast.error(result.error); return }
-        toast.success(result?.message ?? "Flight created.")
+        if (result.error) {
+          toast.error(result.error)
+          return
+        }
+        toast.success(result.message ?? "Flight created.")
         form.reset()
         onCreated()
-      } finally { setBusyAction(null) }
+      } finally {
+        setBusyAction(null)
+      }
     },
   })
 
@@ -699,68 +1084,176 @@ function CreateFlightSection({
     <div className="mx-auto max-w-5xl space-y-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-950">Create Flight Schedule</h2>
-          <p className="mt-1 text-sm text-slate-500">Terminal operations workspace for building a flight before it is committed to the database.</p>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-950">
+            Create Flight Schedule
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Terminal operations workspace for building a flight before it is
+            committed to the database.
+          </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button disabled type="button" variant="outline">Save Draft</Button>
-          <Button className="rounded-lg bg-slate-950 text-white hover:bg-slate-800" disabled={busyAction === "create-flight"} onClick={() => form.handleSubmit()} type="button">
-            <Plane className="size-4" /> {busyAction === "create-flight" ? "Creating…" : "Schedule Flight"}
+          <Button disabled type="button" variant="outline">
+            Save Draft
+          </Button>
+          <Button
+            className="rounded-lg bg-slate-950 text-white hover:bg-slate-800"
+            disabled={busyAction === "create-flight"}
+            onClick={() => form.handleSubmit()}
+            type="button"
+          >
+            <Plane className="size-4" />{" "}
+            {busyAction === "create-flight" ? "Creating…" : "Schedule Flight"}
           </Button>
         </div>
       </div>
 
-      <form className="space-y-8" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); form.handleSubmit() }}>
+      <form
+        className="space-y-8"
+        onSubmit={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          form.handleSubmit()
+        }}
+      >
         <Card className="rounded-xl border border-slate-200 bg-white shadow-none">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg"><Plane className="size-5 text-slate-400" /> Flight Identification</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Plane className="size-5 text-slate-400" /> Flight Identification
+            </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-6 md:grid-cols-2">
-            <form.Field name="flightNumber">{(field) => (
-              <FilterField label="Flight Number">
-                <Input className="h-10 rounded-lg bg-slate-50 font-mono font-bold uppercase" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="AP-1234" value={field.state.value} />
-                <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
-                  <span>Auto-generated sequencing is not wired yet.</span>
-                  <button className="font-semibold text-slate-700" disabled type="button">Generate Next</button>
-                </div>
-              </FilterField>
-            )}</form.Field>
-            <form.Field name="airplaneId">{(field) => {
-              const selectedAirplane = airplanes.find((airplane) => airplane.airplaneId === field.state.value)
-              return (
-                <FilterField label="Assigned Aircraft">
-                  <Select onValueChange={(v) => field.handleChange(v ?? field.state.value)} value={field.state.value}>
-                    <SelectTrigger className="h-10 rounded-lg bg-slate-50"><SelectValue placeholder="Select aircraft" /></SelectTrigger>
-                    <SelectContent>{airplanes.map((a) => <SelectItem key={a.airplaneId} value={a.airplaneId}>{a.airplaneId} · {a.numberOfSeats} seats</SelectItem>)}</SelectContent>
-                  </Select>
-                  <div className="mt-2 text-[11px] text-slate-500">{selectedAirplane ? `Capacity: ${selectedAirplane.numberOfSeats} seats.` : "Choose aircraft to inspect capacity."}</div>
+            <form.Field
+              name="flightNumber"
+              validators={{
+                onChange: ({ value }) => validateFlightNumber(value),
+                onSubmit: ({ value }) => validateFlightNumber(value),
+              }}
+            >
+              {(field) => (
+                <FilterField label="Flight Number">
+                  <Input
+                    aria-invalid={Boolean(getFormFieldError(field))}
+                    className="h-10 rounded-lg bg-slate-50 font-mono font-bold uppercase"
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="AP-1234"
+                    value={field.state.value}
+                  />
+                  <p className="text-xs text-destructive">
+                    {getFormFieldError(field)}
+                  </p>
+                  <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+                    <span>Auto-generated sequencing is not wired yet.</span>
+                    <button
+                      className="font-semibold text-slate-700"
+                      disabled
+                      type="button"
+                    >
+                      Generate Next
+                    </button>
+                  </div>
                 </FilterField>
-              )
-            }}</form.Field>
+              )}
+            </form.Field>
+            <form.Field name="airplaneId">
+              {(field) => {
+                const selectedAirplane = airplanes.find(
+                  (airplane) => airplane.airplaneId === field.state.value
+                )
+                return (
+                  <FilterField label="Assigned Aircraft">
+                    <Select
+                      onValueChange={(v) =>
+                        field.handleChange(v ?? field.state.value)
+                      }
+                      value={field.state.value}
+                    >
+                      <SelectTrigger className="h-10 rounded-lg bg-slate-50">
+                        <SelectValue placeholder="Select aircraft" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {airplanes.map((a) => (
+                          <SelectItem key={a.airplaneId} value={a.airplaneId}>
+                            {a.airplaneId} · {a.numberOfSeats} seats
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="mt-2 text-[11px] text-slate-500">
+                      {selectedAirplane
+                        ? `Capacity: ${selectedAirplane.numberOfSeats} seats.`
+                        : "Choose aircraft to inspect capacity."}
+                    </div>
+                  </FilterField>
+                )
+              }}
+            </form.Field>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl border border-slate-200 bg-slate-50 shadow-none">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg"><CalendarDays className="size-5 text-slate-400" /> Routing & Schedule</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <CalendarDays className="size-5 text-slate-400" /> Routing &
+              Schedule
+            </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-6 lg:grid-cols-[1fr_auto_1fr]">
             <div className="space-y-6 rounded-lg border border-slate-200 bg-white p-5">
-              <div className="text-sm font-semibold text-slate-950">Departure</div>
-              <form.Field name="departureAirportCode">{(field) => (
-                <FilterField label="Origin Airport">
-                  <Select onValueChange={(v) => field.handleChange(v ?? field.state.value)} value={field.state.value}>
-                    <SelectTrigger className="h-10 rounded-lg bg-slate-50"><SelectValue placeholder="Choose airport" /></SelectTrigger>
-                    <SelectContent>{airports.map((a) => <SelectItem key={a.code} value={a.code}>{a.city} · {a.code}</SelectItem>)}</SelectContent>
-                  </Select>
-                </FilterField>
-              )}</form.Field>
-              <form.Field name="departureDatetime">{(field) => (
-                <FilterField label="Departure Date & Time">
-                  <Input className="h-10 rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} type="datetime-local" value={field.state.value} />
-                </FilterField>
-              )}</form.Field>
-              <div className="rounded bg-slate-50 px-3 py-2 text-xs text-slate-500">Gate and terminal assignment remain operational follow-up steps after scheduling.</div>
+              <div className="text-sm font-semibold text-slate-950">
+                Departure
+              </div>
+              <form.Field name="departureAirportCode">
+                {(field) => (
+                  <FilterField label="Origin Airport">
+                    <Select
+                      onValueChange={(v) =>
+                        field.handleChange(v ?? field.state.value)
+                      }
+                      value={field.state.value}
+                    >
+                      <SelectTrigger className="h-10 rounded-lg bg-slate-50">
+                        <SelectValue placeholder="Choose airport" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {airports.map((a) => (
+                          <SelectItem key={a.code} value={a.code}>
+                            {a.city} · {a.code}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FilterField>
+                )}
+              </form.Field>
+              <form.Field
+                name="departureDatetime"
+                validators={{
+                  onChange: ({ value }) =>
+                    validateDateValue("a departure date and time", value),
+                  onSubmit: ({ value }) =>
+                    validateDateValue("a departure date and time", value),
+                }}
+              >
+                {(field) => (
+                  <FilterField label="Departure Date & Time">
+                    <DateTimePickerButtonField
+                      className="h-10 rounded-lg bg-slate-50"
+                      error={getFormFieldError(field)}
+                      id="create-flight-departure-datetime"
+                      onBlur={field.handleBlur}
+                      onChange={field.handleChange}
+                      placeholder="Select departure date and time"
+                      value={field.state.value}
+                    />
+                  </FilterField>
+                )}
+              </form.Field>
+              <div className="rounded bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                Gate and terminal assignment remain operational follow-up steps
+                after scheduling.
+              </div>
             </div>
             <div className="hidden items-center justify-center lg:flex">
               <div className="flex flex-col items-center gap-3 text-slate-400">
@@ -770,49 +1263,135 @@ function CreateFlightSection({
               </div>
             </div>
             <div className="space-y-6 rounded-lg border border-slate-200 bg-white p-5">
-              <div className="text-sm font-semibold text-slate-950">Arrival</div>
-              <form.Field name="arrivalAirportCode">{(field) => (
-                <FilterField label="Destination Airport">
-                  <Select onValueChange={(v) => field.handleChange(v ?? field.state.value)} value={field.state.value}>
-                    <SelectTrigger className="h-10 rounded-lg bg-slate-50"><SelectValue placeholder="Choose airport" /></SelectTrigger>
-                    <SelectContent>{airports.map((a) => <SelectItem key={a.code} value={a.code}>{a.city} · {a.code}</SelectItem>)}</SelectContent>
-                  </Select>
-                </FilterField>
-              )}</form.Field>
-              <form.Field name="arrivalDatetime">{(field) => (
-                <FilterField label="Arrival Date & Time">
-                  <Input className="h-10 rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} type="datetime-local" value={field.state.value} />
-                </FilterField>
-              )}</form.Field>
-              <div className="rounded bg-slate-50 px-3 py-2 text-xs text-slate-500">Cross-day arrival handling remains operator-reviewed after the draft is scheduled.</div>
+              <div className="text-sm font-semibold text-slate-950">
+                Arrival
+              </div>
+              <form.Field name="arrivalAirportCode">
+                {(field) => (
+                  <FilterField label="Destination Airport">
+                    <Select
+                      onValueChange={(v) =>
+                        field.handleChange(v ?? field.state.value)
+                      }
+                      value={field.state.value}
+                    >
+                      <SelectTrigger className="h-10 rounded-lg bg-slate-50">
+                        <SelectValue placeholder="Choose airport" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {airports.map((a) => (
+                          <SelectItem key={a.code} value={a.code}>
+                            {a.city} · {a.code}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FilterField>
+                )}
+              </form.Field>
+              <form.Field
+                name="arrivalDatetime"
+                validators={{
+                  onChange: ({ value, fieldApi }) =>
+                    validateArrivalDateTime(
+                      value,
+                      fieldApi.form.getFieldValue("departureDatetime")
+                    ),
+                  onChangeListenTo: ["departureDatetime"],
+                  onSubmit: ({ value, fieldApi }) =>
+                    validateArrivalDateTime(
+                      value,
+                      fieldApi.form.getFieldValue("departureDatetime")
+                    ),
+                }}
+              >
+                {(field) => (
+                  <FilterField label="Arrival Date & Time">
+                    <DateTimePickerButtonField
+                      className="h-10 rounded-lg bg-slate-50"
+                      error={getFormFieldError(field)}
+                      id="create-flight-arrival-datetime"
+                      onBlur={field.handleBlur}
+                      onChange={field.handleChange}
+                      placeholder="Select arrival date and time"
+                      value={field.state.value}
+                    />
+                  </FilterField>
+                )}
+              </form.Field>
+              <div className="rounded bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                Cross-day arrival handling remains operator-reviewed after the
+                draft is scheduled.
+              </div>
             </div>
           </CardContent>
         </Card>
 
         <div className="grid gap-6 lg:grid-cols-[0.7fr_1.3fr]">
           <Card className="rounded-xl border border-slate-200 bg-white shadow-none">
-            <CardHeader><CardTitle className="text-lg">Commercials</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-lg">Commercials</CardTitle>
+            </CardHeader>
             <CardContent>
               <div className="max-w-xs">
-                <form.Field name="basePrice">{(field) => (
-                  <FilterField label="Base Ticket Price (Economy)">
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-500">$</span>
-                      <Input className="h-10 rounded-lg bg-slate-50 pl-7 font-mono font-bold" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="450.00" type="number" value={field.state.value} />
-                    </div>
-                    <div className="mt-2 text-[11px] text-slate-500">Premium cabin multipliers are not modeled separately in the current scheduling UI.</div>
-                  </FilterField>
-                )}</form.Field>
+                <form.Field
+                  name="basePrice"
+                  validators={{
+                    onChange: ({ value }) => validateBasePrice(value),
+                    onSubmit: ({ value }) => validateBasePrice(value),
+                  }}
+                >
+                  {(field) => (
+                    <FilterField label="Base Ticket Price (Economy)">
+                      <div className="relative">
+                        <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm font-medium text-slate-500">
+                          $
+                        </span>
+                        <Input
+                          aria-invalid={Boolean(getFormFieldError(field))}
+                          className="h-10 rounded-lg bg-slate-50 pl-7 font-mono font-bold"
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          placeholder="450.00"
+                          type="number"
+                          value={field.state.value}
+                        />
+                      </div>
+                      <p className="text-xs text-destructive">
+                        {getFormFieldError(field)}
+                      </p>
+                      <div className="mt-2 text-[11px] text-slate-500">
+                        Premium cabin multipliers are not modeled separately in
+                        the current scheduling UI.
+                      </div>
+                    </FilterField>
+                  )}
+                </form.Field>
               </div>
             </CardContent>
           </Card>
 
           <Card className="rounded-xl border border-slate-200 bg-slate-50 shadow-none">
-            <CardHeader><CardTitle className="text-lg">Pre-Flight Validation</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-lg">Pre-Flight Validation</CardTitle>
+            </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
-              <ValidationTile description="Selected aircraft is present in the current airline fleet." status="ok" title="Aircraft Availability" />
-              <ValidationTile description="Crew planning is still an operational follow-up outside the current database schema." status="ok" title="Crew Staffing" />
-              <ValidationTile className="sm:col-span-2" description="Airport slot approval and gate assignment are not modeled here, so operators should confirm them after scheduling." status="warning" title="Slot Restriction Warning" />
+              <ValidationTile
+                description="Selected aircraft is present in the current airline fleet."
+                status="ok"
+                title="Aircraft Availability"
+              />
+              <ValidationTile
+                description="Crew planning is still an operational follow-up outside the current database schema."
+                status="ok"
+                title="Crew Staffing"
+              />
+              <ValidationTile
+                className="sm:col-span-2"
+                description="Airport slot approval and gate assignment are not modeled here, so operators should confirm them after scheduling."
+                status="warning"
+                title="Slot Restriction Warning"
+              />
             </CardContent>
           </Card>
         </div>
@@ -833,7 +1412,9 @@ function ValidationTile({
   title: string
 }) {
   return (
-    <div className={`rounded-lg border px-4 py-4 ${status === "ok" ? "border-slate-200 bg-white" : "border-red-200 bg-red-50"} ${className ?? ""}`}>
+    <div
+      className={`rounded-lg border px-4 py-4 ${status === "ok" ? "border-slate-200 bg-white" : "border-red-200 bg-red-50"} ${className ?? ""}`}
+    >
       <div className="text-sm font-semibold text-slate-950">{title}</div>
       <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
     </div>
@@ -848,7 +1429,12 @@ function FleetSection({
   onRefresh,
   setBusyAction,
 }: {
-  airplanes: Array<{ airplaneId: string; manufacturingCompany: string; manufacturingDate: string; numberOfSeats: number }>
+  airplanes: Array<{
+    airplaneId: string
+    manufacturingCompany: string
+    manufacturingDate: string
+    numberOfSeats: number
+  }>
   busyAction: string | null
   onRefresh: () => Promise<void>
   setBusyAction: (action: string | null) => void
@@ -858,46 +1444,84 @@ function FleetSection({
   const filteredAirplanes = airplanes.filter((airplane) => {
     if (!normalizedSearch) return true
     return (
-      airplane.airplaneId.toLowerCase().includes(normalizedSearch)
-      || airplane.manufacturingCompany.toLowerCase().includes(normalizedSearch)
+      airplane.airplaneId.toLowerCase().includes(normalizedSearch) ||
+      airplane.manufacturingCompany.toLowerCase().includes(normalizedSearch)
     )
   })
 
   const form = useForm({
-    defaultValues: { airplaneId: "", manufacturingCompany: "", manufacturingDate: "", numberOfSeats: "" },
+    defaultValues: {
+      airplaneId: "",
+      manufacturingCompany: "",
+      manufacturingDate: "",
+      numberOfSeats: "",
+    },
     onSubmit: async ({ value }) => {
       setBusyAction("add-airplane")
       try {
         const result = await addAirplaneFn({
-          data: { airplaneId: value.airplaneId, manufacturingCompany: value.manufacturingCompany, manufacturingDate: value.manufacturingDate, numberOfSeats: Number(value.numberOfSeats) },
+          data: {
+            airplaneId: value.airplaneId,
+            manufacturingCompany: value.manufacturingCompany,
+            manufacturingDate: value.manufacturingDate,
+            numberOfSeats: Number(value.numberOfSeats),
+          },
         })
         toast.success(result.message)
         form.reset()
         await onRefresh()
-      } finally { setBusyAction(null) }
+      } finally {
+        setBusyAction(null)
+      }
     },
   })
 
-  const totalSeats = airplanes.reduce((sum, airplane) => sum + airplane.numberOfSeats, 0)
-  const newestAircraft = [...airplanes].sort((a, b) => new Date(b.manufacturingDate).getTime() - new Date(a.manufacturingDate).getTime())[0]
+  const totalSeats = airplanes.reduce(
+    (sum, airplane) => sum + airplane.numberOfSeats,
+    0
+  )
+  const newestAircraft = [...airplanes].sort(
+    (a, b) =>
+      new Date(b.manufacturingDate).getTime() -
+      new Date(a.manufacturingDate).getTime()
+  )[0]
 
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-950">Fleet Management</h2>
-          <p className="mt-1 text-sm text-slate-500">Monitor fleet assets, register aircraft, and review capacity from one workspace.</p>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-950">
+            Fleet Management
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Monitor fleet assets, register aircraft, and review capacity from
+            one workspace.
+          </p>
         </div>
         <div className="relative w-full lg:w-72">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-          <Input aria-label="Search aircraft" className="h-9 rounded-lg bg-slate-50 pl-9" onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search tail number or maker" value={searchTerm} />
+          <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
+          <Input
+            aria-label="Search aircraft"
+            className="h-9 rounded-lg bg-slate-50 pl-9"
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search tail number or maker"
+            value={searchTerm}
+          />
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <KpiCard icon={Plane} label="Aircraft" value={String(airplanes.length)} />
+        <KpiCard
+          icon={Plane}
+          label="Aircraft"
+          value={String(airplanes.length)}
+        />
         <KpiCard icon={Users} label="Total seats" value={String(totalSeats)} />
-        <KpiCard icon={TrendingUp} label="Newest aircraft" value={newestAircraft ? newestAircraft.airplaneId : "—"} />
+        <KpiCard
+          icon={TrendingUp}
+          label="Newest aircraft"
+          value={newestAircraft.airplaneId}
+        />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
@@ -906,37 +1530,72 @@ function FleetSection({
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="text-lg">Current Fleet</CardTitle>
               <div className="flex flex-wrap gap-2">
-                <Button disabled size="sm" type="button" variant="secondary">All Aircraft</Button>
-                <Button disabled size="sm" type="button" variant="outline">Operational</Button>
-                <Button disabled size="sm" type="button" variant="outline">Grounded</Button>
+                <Button disabled size="sm" type="button" variant="secondary">
+                  All Aircraft
+                </Button>
+                <Button disabled size="sm" type="button" variant="outline">
+                  Operational
+                </Button>
+                <Button disabled size="sm" type="button" variant="outline">
+                  Grounded
+                </Button>
               </div>
             </div>
-            <p className="text-sm text-slate-500">Search is live. Status filters remain presentation-only until fleet state is represented in the real product model.</p>
+            <p className="text-sm text-slate-500">
+              Search is live. Status filters remain presentation-only until
+              fleet state is represented in the real product model.
+            </p>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto rounded-lg border border-slate-200">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">Tail Number</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">Capacity</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">Manufacturer</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">Built</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-500">Operational Note</TableHead>
+                    <TableHead className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                      Tail Number
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                      Capacity
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                      Manufacturer
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                      Built
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                      Operational Note
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredAirplanes.length ? filteredAirplanes.map((airplane) => (
-                    <TableRow className="hover:bg-slate-50" key={airplane.airplaneId}>
-                      <TableCell className="font-medium text-slate-950">{airplane.airplaneId}</TableCell>
-                      <TableCell>{airplane.numberOfSeats}</TableCell>
-                      <TableCell>{airplane.manufacturingCompany}</TableCell>
-                      <TableCell>{formatDate(airplane.manufacturingDate)}</TableCell>
-                      <TableCell className="text-sm text-slate-500">Status not tracked in current schema</TableCell>
-                    </TableRow>
-                  )) : (
+                  {filteredAirplanes.length ? (
+                    filteredAirplanes.map((airplane) => (
+                      <TableRow
+                        className="hover:bg-slate-50"
+                        key={airplane.airplaneId}
+                      >
+                        <TableCell className="font-medium text-slate-950">
+                          {airplane.airplaneId}
+                        </TableCell>
+                        <TableCell>{airplane.numberOfSeats}</TableCell>
+                        <TableCell>{airplane.manufacturingCompany}</TableCell>
+                        <TableCell>
+                          {formatDate(airplane.manufacturingDate)}
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-500">
+                          Status not tracked in current schema
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
                     <TableRow>
-                      <TableCell className="py-8 text-center text-sm text-slate-500" colSpan={5}>No aircraft matched that search.</TableCell>
+                      <TableCell
+                        className="py-8 text-center text-sm text-slate-500"
+                        colSpan={5}
+                      >
+                        No aircraft matched that search.
+                      </TableCell>
                     </TableRow>
                   )}
                 </TableBody>
@@ -947,25 +1606,98 @@ function FleetSection({
 
         <div className="space-y-6">
           <Card className="rounded-xl border border-slate-200 bg-white shadow-none">
-            <CardHeader><CardTitle className="text-lg">Register Aircraft</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-lg">Register Aircraft</CardTitle>
+            </CardHeader>
             <CardContent>
-              <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); form.handleSubmit() }}>
-                <form.Field name="airplaneId">{(field) => <FilterField label="Tail Number"><Input className="h-10 rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="N123AP" value={field.state.value} /></FilterField>}</form.Field>
-                <form.Field name="numberOfSeats">{(field) => <FilterField label="Seat Count"><Input className="h-10 rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="290" type="number" value={field.state.value} /></FilterField>}</form.Field>
-                <form.Field name="manufacturingCompany">{(field) => <FilterField label="Manufacturer"><Input className="h-10 rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} placeholder="Boeing" value={field.state.value} /></FilterField>}</form.Field>
-                <form.Field name="manufacturingDate">{(field) => <FilterField label="Manufacturing Date"><Input className="h-10 rounded-lg bg-slate-50" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} type="date" value={field.state.value} /></FilterField>}</form.Field>
-                <Button className="rounded-lg bg-slate-950 text-white hover:bg-slate-800" disabled={busyAction === "add-airplane"} type="submit">
-                  <Plus className="mr-2 size-4" />{busyAction === "add-airplane" ? "Saving…" : "Add to Fleet"}
+              <form
+                className="grid gap-4"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  form.handleSubmit()
+                }}
+              >
+                <form.Field name="airplaneId">
+                  {(field) => (
+                    <FilterField label="Tail Number">
+                      <Input
+                        className="h-10 rounded-lg bg-slate-50"
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        placeholder="N123AP"
+                        value={field.state.value}
+                      />
+                    </FilterField>
+                  )}
+                </form.Field>
+                <form.Field name="numberOfSeats">
+                  {(field) => (
+                    <FilterField label="Seat Count">
+                      <Input
+                        className="h-10 rounded-lg bg-slate-50"
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        placeholder="290"
+                        type="number"
+                        value={field.state.value}
+                      />
+                    </FilterField>
+                  )}
+                </form.Field>
+                <form.Field name="manufacturingCompany">
+                  {(field) => (
+                    <FilterField label="Manufacturer">
+                      <Input
+                        className="h-10 rounded-lg bg-slate-50"
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        placeholder="Boeing"
+                        value={field.state.value}
+                      />
+                    </FilterField>
+                  )}
+                </form.Field>
+                <form.Field name="manufacturingDate">
+                  {(field) => (
+                    <FilterField label="Manufacturing Date">
+                      <DatePickerButtonField
+                        className="h-10 rounded-lg bg-slate-50"
+                        id="fleet-manufacturing-date"
+                        onChange={field.handleChange}
+                        placeholder="Select date"
+                        value={field.state.value}
+                      />
+                    </FilterField>
+                  )}
+                </form.Field>
+                <Button
+                  className="rounded-lg bg-slate-950 text-white hover:bg-slate-800"
+                  disabled={busyAction === "add-airplane"}
+                  type="submit"
+                >
+                  <Plus className="mr-2 size-4" />
+                  {busyAction === "add-airplane" ? "Saving…" : "Add to Fleet"}
                 </Button>
               </form>
             </CardContent>
           </Card>
 
           <Card className="rounded-xl border border-slate-200 bg-slate-50 shadow-none">
-            <CardHeader><CardTitle className="text-lg">Operational Context</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-lg">Operational Context</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-3">
-              <ValidationTile description="Aircraft registration uses the real add-airplane mutation and refreshes the current fleet list." status="ok" title="Registration Path" />
-              <ValidationTile description="Maintenance, AOG, and readiness states are intentionally not shown as live values because the current schema does not store them." status="warning" title="Unsupported Status Tracking" />
+              <ValidationTile
+                description="Aircraft registration uses the real add-airplane mutation and refreshes the current fleet list."
+                status="ok"
+                title="Registration Path"
+              />
+              <ValidationTile
+                description="Maintenance, AOG, and readiness states are intentionally not shown as live values because the current schema does not store them."
+                status="warning"
+                title="Unsupported Status Tracking"
+              />
             </CardContent>
           </Card>
         </div>
@@ -979,49 +1711,103 @@ function FleetSection({
 function RatingsSection({
   ratings,
 }: {
-  ratings: Array<{ averageRating: number | null; comments: string[]; departureDatetime: string; flightNumber: string; reviewCount: number }>
+  ratings: Array<{
+    averageRating: number | null
+    comments: Array<string>
+    departureDatetime: string
+    flightNumber: string
+    reviewCount: number
+  }>
 }) {
   const averageAcrossFlights = ratings.length
-    ? ratings.reduce((sum, rating) => sum + (rating.averageRating ?? 0), 0) / ratings.filter((rating) => rating.averageRating !== null).length || 0
+    ? ratings.reduce((sum, rating) => sum + (rating.averageRating ?? 0), 0) /
+        ratings.filter((rating) => rating.averageRating !== null).length || 0
     : 0
 
   return (
     <div className="grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">
       <div className="space-y-8">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-950">Flight Ratings</h2>
-          <p className="text-sm text-slate-500">Average ratings and written feedback for all flights.</p>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-950">
+            Flight Ratings
+          </h2>
+          <p className="text-sm text-slate-500">
+            Average ratings and written feedback for all flights.
+          </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
-          <KpiCard icon={Star} label="Average Rating" value={ratings.length && averageAcrossFlights ? averageAcrossFlights.toFixed(1) : "—"} />
-          <KpiCard icon={Users} label="Reviewed Flights" value={String(ratings.filter((rating) => rating.reviewCount > 0).length)} />
-          <KpiCard icon={BarChart3} label="Total Reviews" value={String(ratings.reduce((sum, rating) => sum + rating.reviewCount, 0))} />
+          <KpiCard
+            icon={Star}
+            label="Average Rating"
+            value={
+              ratings.length && averageAcrossFlights
+                ? averageAcrossFlights.toFixed(1)
+                : "—"
+            }
+          />
+          <KpiCard
+            icon={Users}
+            label="Reviewed Flights"
+            value={String(
+              ratings.filter((rating) => rating.reviewCount > 0).length
+            )}
+          />
+          <KpiCard
+            icon={BarChart3}
+            label="Total Reviews"
+            value={String(
+              ratings.reduce((sum, rating) => sum + rating.reviewCount, 0)
+            )}
+          />
         </div>
         <div className="space-y-4">
-          {ratings.length ? ratings.map((rating) => (
-            <Card className="rounded-xl border border-slate-200 bg-white shadow-none" key={`${rating.flightNumber}-${rating.departureDatetime}`}>
-              <CardContent className="p-5">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <div className="font-semibold text-slate-950">{rating.flightNumber}</div>
-                    <div className="text-sm text-slate-500">{formatDateTime(rating.departureDatetime)}</div>
+          {ratings.length ? (
+            ratings.map((rating) => (
+              <Card
+                className="rounded-xl border border-slate-200 bg-white shadow-none"
+                key={`${rating.flightNumber}-${rating.departureDatetime}`}
+              >
+                <CardContent className="p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className="font-semibold text-slate-950">
+                        {rating.flightNumber}
+                      </div>
+                      <div className="text-sm text-slate-500">
+                        {formatDateTime(rating.departureDatetime)}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                      <Star className="size-4 text-amber-500" />
+                      {rating.averageRating
+                        ? `${rating.averageRating.toFixed(1)} / 5`
+                        : "No ratings yet"}{" "}
+                      · {rating.reviewCount} reviews
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-600">
-                    <Star className="size-4 text-amber-500" />
-                    {rating.averageRating ? `${rating.averageRating.toFixed(1)} / 5` : "No ratings yet"} · {rating.reviewCount} reviews
-                  </div>
-                </div>
-                {rating.comments.length ? (
-                  <div className="mt-4 grid gap-3">
-                    {rating.comments.map((comment, index) => (
-                      <div className="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600" key={`${rating.flightNumber}-${index}`}>{comment}</div>
-                    ))}
-                  </div>
-                ) : <div className="mt-4 text-sm text-slate-500">No comments on this flight yet.</div>}
-              </CardContent>
-            </Card>
-          )) : (
-            <div className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">No rating data yet.</div>
+                  {rating.comments.length ? (
+                    <div className="mt-4 grid gap-3">
+                      {rating.comments.map((comment, index) => (
+                        <div
+                          className="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600"
+                          key={`${rating.flightNumber}-${index}`}
+                        >
+                          {comment}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-4 text-sm text-slate-500">
+                      No comments on this flight yet.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="rounded-xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
+              No rating data yet.
+            </div>
           )}
         </div>
       </div>
@@ -1029,29 +1815,55 @@ function RatingsSection({
       <Card className="rounded-xl border border-slate-200 bg-slate-50 shadow-none">
         <CardHeader>
           <CardTitle className="text-lg">Customer Sentiment</CardTitle>
-          <p className="text-sm text-slate-500">A layout-focused side panel for recent feedback using the reviews we actually have.</p>
+          <p className="text-sm text-slate-500">
+            A layout-focused side panel for recent feedback using the reviews we
+            actually have.
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-lg border border-slate-200 bg-white px-4 py-4">
-            <div className="text-3xl font-bold tracking-tight text-slate-950">{ratings.length && averageAcrossFlights ? averageAcrossFlights.toFixed(1) : "—"}</div>
-            <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Average Rating</div>
+            <div className="text-3xl font-bold tracking-tight text-slate-950">
+              {ratings.length && averageAcrossFlights
+                ? averageAcrossFlights.toFixed(1)
+                : "—"}
+            </div>
+            <div className="mt-1 text-xs font-semibold tracking-wider text-slate-500 uppercase">
+              Average Rating
+            </div>
           </div>
           <div className="space-y-3">
-            {ratings.flatMap((rating) => rating.comments.map((comment, index) => ({
-              comment,
-              flightNumber: rating.flightNumber,
-              id: `${rating.flightNumber}-${index}`,
-            }))).slice(0, 4).map((item) => (
-              <div className="rounded-lg border border-slate-200 bg-white p-4" key={item.id}>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">{item.flightNumber}</div>
-                  <div className="text-xs text-slate-400">Recent feedback</div>
+            {ratings
+              .flatMap((rating) =>
+                rating.comments.map((comment, index) => ({
+                  comment,
+                  flightNumber: rating.flightNumber,
+                  id: `${rating.flightNumber}-${index}`,
+                }))
+              )
+              .slice(0, 4)
+              .map((item) => (
+                <div
+                  className="rounded-lg border border-slate-200 bg-white p-4"
+                  key={item.id}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+                      {item.flightNumber}
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      Recent feedback
+                    </div>
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-slate-600">
+                    “{item.comment}”
+                  </p>
                 </div>
-                <p className="mt-3 text-sm leading-6 text-slate-600">“{item.comment}”</p>
-              </div>
-            ))}
+              ))}
             {!ratings.some((rating) => rating.comments.length) ? (
-              <div className="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">Passenger sentiment summaries become richer once more reviews accumulate.</div>
+              <div className="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+                Passenger sentiment summaries become richer once more reviews
+                accumulate.
+              </div>
             ) : null}
           </div>
         </CardContent>
@@ -1070,11 +1882,19 @@ function ReportsSection({
 }: {
   busyAction: string | null
   monthlySales: Array<{ month: string; ticketsSold: number }>
-  reportSummary: { lastMonthTickets: number; lastYearTickets: number; totalTickets: number }
+  reportSummary: {
+    lastMonthTickets: number
+    lastYearTickets: number
+    totalTickets: number
+  }
   setBusyAction: (action: string | null) => void
 }) {
   const [rangePreset, setRangePreset] = useState("last-30-days")
-  const [rangeResult, setRangeResult] = useState<{ endDate: string; startDate: string; ticketsSold: number } | null>(null)
+  const [rangeResult, setRangeResult] = useState<{
+    endDate: string
+    startDate: string
+    ticketsSold: number
+  } | null>(null)
 
   const reportForm = useForm({
     defaultValues: { endDate: "", startDate: "" },
@@ -1082,9 +1902,15 @@ function ReportsSection({
       setBusyAction("report")
       try {
         const result = await getStaffReportFn({ data: value })
-        if ("error" in result && result.error) { toast.error(result.error); setRangeResult(null); return }
+        if ("error" in result && result.error) {
+          toast.error(result.error)
+          setRangeResult(null)
+          return
+        }
         setRangeResult(result)
-      } finally { setBusyAction(null) }
+      } finally {
+        setBusyAction(null)
+      }
     },
   })
 
@@ -1093,45 +1919,91 @@ function ReportsSection({
       <div className="space-y-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-950">Reporting & Analytics</h2>
-            <p className="text-sm text-slate-500">Ticket sales analytics and custom date range reporting using the current staff backend data.</p>
+            <h2 className="text-2xl font-bold tracking-tight text-slate-950">
+              Reporting & Analytics
+            </h2>
+            <p className="text-sm text-slate-500">
+              Ticket sales analytics and custom date range reporting using the
+              current staff backend data.
+            </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Select onValueChange={(value) => setRangePreset(value ?? rangePreset)} value={rangePreset}>
-              <SelectTrigger aria-label="Reporting range preset" className="h-9 w-[180px] rounded-lg bg-slate-50"><SelectValue /></SelectTrigger>
+            <Select
+              onValueChange={(value) => setRangePreset(value ?? rangePreset)}
+              value={rangePreset}
+            >
+              <SelectTrigger
+                aria-label="Reporting range preset"
+                className="h-9 w-[180px] rounded-lg bg-slate-50"
+              >
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="last-30-days">Last 30 Days</SelectItem>
                 <SelectItem value="this-quarter">This Quarter</SelectItem>
                 <SelectItem value="year-to-date">Year to Date</SelectItem>
               </SelectContent>
             </Select>
-            <Button disabled type="button" variant="outline">Export</Button>
+            <Button disabled type="button" variant="outline">
+              Export
+            </Button>
           </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <KpiCard icon={BarChart3} label="All Tickets Sold" value={String(reportSummary.totalTickets)} />
-          <KpiCard icon={TrendingUp} label="Last Month" value={String(reportSummary.lastMonthTickets)} />
-          <KpiCard icon={Users} label="Last Year" value={String(reportSummary.lastYearTickets)} />
+          <KpiCard
+            icon={BarChart3}
+            label="All Tickets Sold"
+            value={String(reportSummary.totalTickets)}
+          />
+          <KpiCard
+            icon={TrendingUp}
+            label="Last Month"
+            value={String(reportSummary.lastMonthTickets)}
+          />
+          <KpiCard
+            icon={Users}
+            label="Last Year"
+            value={String(reportSummary.lastYearTickets)}
+          />
         </div>
 
         <Card className="rounded-xl border border-slate-200 bg-white shadow-none">
           <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-lg">Revenue & Volume Trends</CardTitle>
             <div className="flex gap-2">
-              <Button disabled size="sm" type="button" variant="secondary">Monthly</Button>
-              <Button disabled size="sm" type="button" variant="outline">Quarterly</Button>
+              <Button disabled size="sm" type="button" variant="secondary">
+                Monthly
+              </Button>
+              <Button disabled size="sm" type="button" variant="outline">
+                Quarterly
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
             <div className="h-[280px] min-w-0">
-              <ResponsiveContainer debounce={50} height="100%" minHeight={280} width="100%">
+              <ResponsiveContainer
+                debounce={50}
+                height="100%"
+                minHeight={280}
+                width="100%"
+              >
                 <BarChart data={monthlySales}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="#e2e8f0"
+                    vertical={false}
+                  />
                   <XAxis dataKey="month" stroke="#64748b" />
                   <YAxis allowDecimals={false} stroke="#64748b" />
-                  <Tooltip formatter={(value) => [`${value} tickets`, "Sold"]} />
-                  <Bar dataKey="ticketsSold" fill="#0f172a" radius={[6, 6, 0, 0]} />
+                  <Tooltip
+                    formatter={(value) => [`${value} tickets`, "Sold"]}
+                  />
+                  <Bar
+                    dataKey="ticketsSold"
+                    fill="#0f172a"
+                    radius={[6, 6, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -1139,10 +2011,14 @@ function ReportsSection({
         </Card>
 
         <Card className="rounded-xl border border-slate-200 bg-white shadow-none">
-          <CardHeader><CardTitle className="text-lg">Route Performance</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-lg">Route Performance</CardTitle>
+          </CardHeader>
           <CardContent>
             <div className="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
-              Route-level performance rows are not rendered as live data because the current backend only exposes summary counts and monthly ticket totals, not per-route analytics aggregates.
+              Route-level performance rows are not rendered as live data because
+              the current backend only exposes summary counts and monthly ticket
+              totals, not per-route analytics aggregates.
             </div>
           </CardContent>
         </Card>
@@ -1150,28 +2026,106 @@ function ReportsSection({
 
       <div className="space-y-8">
         <Card className="rounded-xl border border-slate-200 bg-white shadow-none">
-          <CardHeader><CardTitle className="text-lg">Custom Range Report</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-lg">Custom Range Report</CardTitle>
+          </CardHeader>
           <CardContent className="space-y-4">
-            <form className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end" onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); reportForm.handleSubmit() }}>
-              <reportForm.Field name="startDate">{(field) => <FilterField label="Start Date"><div className="relative"><span className={field.state.value ? "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-950" : "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400"}>{formatDateLabel(field.state.value)}</span><Input aria-label="Report Start Date" className="h-10 rounded-lg bg-slate-50 text-transparent caret-transparent" id="staff-report-start-date" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} type="date" value={field.state.value} /></div></FilterField>}</reportForm.Field>
-              <reportForm.Field name="endDate">{(field) => <FilterField label="End Date"><div className="relative"><span className={field.state.value ? "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-950" : "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400"}>{formatDateLabel(field.state.value)}</span><Input aria-label="Report End Date" className="h-10 rounded-lg bg-slate-50 text-transparent caret-transparent" id="staff-report-end-date" onBlur={field.handleBlur} onChange={(e) => field.handleChange(e.target.value)} type="date" value={field.state.value} /></div></FilterField>}</reportForm.Field>
-              <Button className="h-10 rounded-lg bg-slate-950 text-white hover:bg-slate-800" disabled={busyAction === "report"} type="submit">
+            <form
+              className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end"
+              onSubmit={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                reportForm.handleSubmit()
+              }}
+            >
+              <reportForm.Field name="startDate">
+                {(field) => (
+                  <FilterField label="Start Date">
+                    <DatePickerButtonField
+                      className="h-10 rounded-lg bg-slate-50"
+                      error={getFormFieldError(field)}
+                      id="staff-report-start-date"
+                      onBlur={field.handleBlur}
+                      onChange={field.handleChange}
+                      placeholder="Select date"
+                      value={field.state.value}
+                    />
+                  </FilterField>
+                )}
+              </reportForm.Field>
+              <reportForm.Field
+                name="endDate"
+                validators={{
+                  onChange: ({ value, fieldApi }) =>
+                    validateFilterEndDate(
+                      value,
+                      fieldApi.form.getFieldValue("startDate")
+                    ),
+                  onChangeListenTo: ["startDate"],
+                  onSubmit: ({ value, fieldApi }) =>
+                    validateFilterEndDate(
+                      value,
+                      fieldApi.form.getFieldValue("startDate")
+                    ),
+                }}
+              >
+                {(field) => (
+                  <FilterField label="End Date">
+                    <DatePickerButtonField
+                      className="h-10 rounded-lg bg-slate-50"
+                      error={getFormFieldError(field)}
+                      id="staff-report-end-date"
+                      onBlur={field.handleBlur}
+                      onChange={field.handleChange}
+                      placeholder="Select date"
+                      value={field.state.value}
+                    />
+                  </FilterField>
+                )}
+              </reportForm.Field>
+              <Button
+                className="h-10 rounded-lg bg-slate-950 text-white hover:bg-slate-800"
+                disabled={busyAction === "report"}
+                type="submit"
+              >
                 {busyAction === "report" ? "Running…" : "Run Report"}
               </Button>
             </form>
             {rangeResult ? (
               <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                Between <span className="font-medium text-slate-950">{formatDate(rangeResult.startDate)}</span> and <span className="font-medium text-slate-950">{formatDate(rangeResult.endDate)}</span>, your airline sold <span className="font-medium text-slate-950">{rangeResult.ticketsSold}</span> tickets.
+                Between{" "}
+                <span className="font-medium text-slate-950">
+                  {formatDate(rangeResult.startDate)}
+                </span>{" "}
+                and{" "}
+                <span className="font-medium text-slate-950">
+                  {formatDate(rangeResult.endDate)}
+                </span>
+                , your airline sold{" "}
+                <span className="font-medium text-slate-950">
+                  {rangeResult.ticketsSold}
+                </span>{" "}
+                tickets.
               </div>
             ) : null}
           </CardContent>
         </Card>
 
         <Card className="rounded-xl border border-slate-200 bg-slate-50 shadow-none">
-          <CardHeader><CardTitle className="text-lg">Analytics Scope</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-lg">Analytics Scope</CardTitle>
+          </CardHeader>
           <CardContent className="space-y-3">
-            <ValidationTile description="Preset range selection and export controls are layout-level affordances only until matching backend/report export support exists." status="warning" title="Presentation-Only Controls" />
-            <ValidationTile description="Custom date-range reporting and monthly ticket totals are real and remain backed by live staff queries." status="ok" title="Live Reporting Data" />
+            <ValidationTile
+              description="Preset range selection and export controls are layout-level affordances only until matching backend/report export support exists."
+              status="warning"
+              title="Presentation-Only Controls"
+            />
+            <ValidationTile
+              description="Custom date-range reporting and monthly ticket totals are real and remain backed by live staff queries."
+              status="ok"
+              title="Live Reporting Data"
+            />
           </CardContent>
         </Card>
       </div>
@@ -1181,16 +2135,37 @@ function ReportsSection({
 
 /* ─── Shared ─── */
 
-function FilterField({ children, htmlFor, label }: { children: React.ReactNode; htmlFor?: string; label: string }) {
+function FilterField({
+  children,
+  htmlFor,
+  label,
+}: {
+  children: React.ReactNode
+  htmlFor?: string
+  label: string
+}) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500" htmlFor={htmlFor}>{label}</Label>
+      <Label
+        className="text-xs font-semibold tracking-wider text-slate-500 uppercase"
+        htmlFor={htmlFor}
+      >
+        {label}
+      </Label>
       {children}
     </div>
   )
 }
 
-function KpiCard({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string }) {
+function KpiCard({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  value: string
+}) {
   return (
     <Card className="rounded-xl border border-slate-200 bg-white shadow-none">
       <CardContent className="p-4">
@@ -1199,8 +2174,12 @@ function KpiCard({ icon: Icon, label, value }: { icon: React.ComponentType<{ cla
             <Icon className="size-5 text-slate-500" />
           </div>
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">{label}</div>
-            <div className="mt-1 text-2xl font-bold tracking-tight text-slate-950">{value}</div>
+            <div className="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+              {label}
+            </div>
+            <div className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
+              {value}
+            </div>
           </div>
         </div>
       </CardContent>

@@ -1,5 +1,3 @@
-import { db } from "@/lib/db"
-import { requireUser } from "@/lib/auth.server"
 import type {
   CustomerDashboardData,
   CustomerFlight,
@@ -8,6 +6,8 @@ import type {
   PassengerRecord,
   StaffDashboardData,
 } from "@/lib/queries"
+import { db } from "@/lib/db"
+import { requireUser } from "@/lib/auth.server"
 
 const DEFAULT_STAFF_FLIGHT_WINDOW_DAYS = 30
 
@@ -31,9 +31,38 @@ function normalizeQueryValue(value: string | undefined) {
   return `%${normalized}%`
 }
 
+export async function searchAirportsInternal(input: { query: string }) {
+  const query = normalizeQueryValue(input.query)
+  if (!query) return []
+
+  return db<
+    Array<{
+      city: string
+      code: string
+      country: string
+    }>
+  >`
+    select distinct airport.city, airport.code, airport.country
+    from airport
+    where lower(airport.city) like ${query}
+      or lower(airport.code) like ${query}
+      or lower(airport.country) like ${query}
+    order by
+      case when lower(airport.code) = lower(${input.query.trim()}) then 0 else 1 end,
+      case when lower(airport.city) = lower(${input.query.trim()}) then 0 else 1 end,
+      airport.city asc,
+      airport.code asc
+    limit 8
+  `
+}
+
 export async function listReferenceData() {
-  const airlines = await db<{ name: string }[]>`select name from airline order by name asc`
-  const airports = await db<{ city: string; code: string }[]>`select city, code from airport order by city asc`
+  const airlines = await db<
+    Array<{ name: string }>
+  >`select name from airline order by name asc`
+  const airports = await db<
+    Array<{ city: string; code: string }>
+  >`select city, code from airport order by city asc`
 
   return {
     airlines: airlines.map((airline) => airline.name),
@@ -53,23 +82,25 @@ export async function searchFlightsInternal(input: {
   const sourceQuery = normalizeQueryValue(input.source)
   const destinationQuery = normalizeQueryValue(input.destination)
 
-  const outbound = await db<{
-    airline_name: string
-    arrival_airport_code: string
-    arrival_airport_name: string
-    arrival_city: string
-    arrival_datetime: string
-    average_rating: number | null
-    available_seats: number
-    base_price: string
-    departure_airport_code: string
-    departure_airport_name: string
-    departure_city: string
-    departure_datetime: string
-    flight_number: string
-    review_count: number
-    status: "on_time" | "delayed"
-  }[]>`
+  const outbound = await db<
+    Array<{
+      airline_name: string
+      arrival_airport_code: string
+      arrival_airport_name: string
+      arrival_city: string
+      arrival_datetime: string
+      average_rating: number | null
+      available_seats: number
+      base_price: string
+      departure_airport_code: string
+      departure_airport_name: string
+      departure_city: string
+      departure_datetime: string
+      flight_number: string
+      review_count: number
+      status: "on_time" | "delayed"
+    }>
+  >`
     select
       f.airline_name,
       f.flight_number,
@@ -114,24 +145,31 @@ export async function searchFlightsInternal(input: {
   `
 
   let returnOptions = outbound.slice(0, 0)
-  if (input.tripType === "round-trip" && returnDate && sourceQuery && destinationQuery) {
-    returnOptions = await db<{
-      airline_name: string
-      arrival_airport_code: string
-      arrival_airport_name: string
-      arrival_city: string
-      arrival_datetime: string
-      average_rating: number | null
-      available_seats: number
-      base_price: string
-      departure_airport_code: string
-      departure_airport_name: string
-      departure_city: string
-      departure_datetime: string
-      flight_number: string
-      review_count: number
-      status: "on_time" | "delayed"
-    }[]>`
+  if (
+    input.tripType === "round-trip" &&
+    returnDate &&
+    sourceQuery &&
+    destinationQuery
+  ) {
+    returnOptions = await db<
+      Array<{
+        airline_name: string
+        arrival_airport_code: string
+        arrival_airport_name: string
+        arrival_city: string
+        arrival_datetime: string
+        average_rating: number | null
+        available_seats: number
+        base_price: string
+        departure_airport_code: string
+        departure_airport_name: string
+        departure_city: string
+        departure_datetime: string
+        flight_number: string
+        review_count: number
+        status: "on_time" | "delayed"
+      }>
+    >`
       select
         f.airline_name,
         f.flight_number,
@@ -176,23 +214,25 @@ export async function searchFlightsInternal(input: {
     `
   }
 
-  function mapFlights(rows: Array<{
-    airline_name: string
-    arrival_airport_code: string
-    arrival_airport_name: string
-    arrival_city: string
-    arrival_datetime: string
-    average_rating: number | null
-    available_seats: number
-    base_price: string
-    departure_airport_code: string
-    departure_airport_name: string
-    departure_city: string
-    departure_datetime: string
-    flight_number: string
-    review_count: number
-    status: "on_time" | "delayed"
-  }>): FlightOption[] {
+  function mapFlights(
+    rows: Array<{
+      airline_name: string
+      arrival_airport_code: string
+      arrival_airport_name: string
+      arrival_city: string
+      arrival_datetime: string
+      average_rating: number | null
+      available_seats: number
+      base_price: string
+      departure_airport_code: string
+      departure_airport_name: string
+      departure_city: string
+      departure_datetime: string
+      flight_number: string
+      review_count: number
+      status: "on_time" | "delayed"
+    }>
+  ): Array<FlightOption> {
     return rows.map((row) => ({
       airlineName: row.airline_name,
       arrivalAirportCode: row.arrival_airport_code,
@@ -236,23 +276,25 @@ export async function getCustomerDashboardInternal(filters: {
   const startDate = normalizeFilterDate(filters.startDate)
   const endDate = normalizeFilterDate(filters.endDate)
 
-  const flights = await db<{
-    airline_name: string
-    arrival_airport_code: string
-    arrival_airport_name: string
-    arrival_city: string
-    arrival_datetime: string
-    base_price: string
-    comment: string | null
-    departure_airport_code: string
-    departure_airport_name: string
-    departure_city: string
-    departure_datetime: string
-    flight_number: string
-    purchase_datetime: string
-    rating: number | null
-    status: "on_time" | "delayed"
-  }[]>`
+  const flights = await db<
+    Array<{
+      airline_name: string
+      arrival_airport_code: string
+      arrival_airport_name: string
+      arrival_city: string
+      arrival_datetime: string
+      base_price: string
+      comment: string | null
+      departure_airport_code: string
+      departure_airport_name: string
+      departure_city: string
+      departure_datetime: string
+      flight_number: string
+      purchase_datetime: string
+      rating: number | null
+      status: "on_time" | "delayed"
+    }>
+  >`
     select
       f.airline_name,
       f.flight_number,
@@ -291,7 +333,9 @@ export async function getCustomerDashboardInternal(filters: {
     averageRating: row.rating,
     availableSeats: 0,
     basePrice: Number(row.base_price),
-    canReview: new Date(serializeTimestamp(row.arrival_datetime)) < new Date() && row.rating === null,
+    canReview:
+      new Date(serializeTimestamp(row.arrival_datetime)) < new Date() &&
+      row.rating === null,
     comment: row.comment,
     departureAirportCode: row.departure_airport_code,
     departureAirportName: row.departure_airport_name,
@@ -302,15 +346,19 @@ export async function getCustomerDashboardInternal(filters: {
     rating: row.rating,
     reviewCount: row.rating ? 1 : 0,
     status: row.status,
-  })) satisfies CustomerFlight[]
+  })) satisfies Array<CustomerFlight>
 
   return {
     currentUser: {
       displayName: user.displayName,
       email: user.email,
     },
-    pastFlights: mappedFlights.filter((flight) => new Date(flight.arrivalDatetime) < new Date()),
-    upcomingFlights: mappedFlights.filter((flight) => new Date(flight.arrivalDatetime) >= new Date()),
+    pastFlights: mappedFlights.filter(
+      (flight) => new Date(flight.arrivalDatetime) < new Date()
+    ),
+    upcomingFlights: mappedFlights.filter(
+      (flight) => new Date(flight.arrivalDatetime) >= new Date()
+    ),
   } satisfies CustomerDashboardData
 }
 
@@ -326,24 +374,26 @@ export async function getStaffDashboardInternal(filters: {
   const startDate = normalizeFilterDate(filters.startDate)
   const endDate = normalizeFilterDate(filters.endDate)
 
-  const flights = await db<{
-    airline_name: string
-    arrival_airport_code: string
-    arrival_airport_name: string
-    arrival_city: string
-    arrival_datetime: string
-    average_rating: number | null
-    available_seats: number
-    base_price: string
-    departure_airport_code: string
-    departure_airport_name: string
-    departure_city: string
-    departure_datetime: string
-    flight_number: string
-    review_count: number
-    status: "on_time" | "delayed"
-    ticket_count: number
-  }[]>`
+  const flights = await db<
+    Array<{
+      airline_name: string
+      arrival_airport_code: string
+      arrival_airport_name: string
+      arrival_city: string
+      arrival_datetime: string
+      average_rating: number | null
+      available_seats: number
+      base_price: string
+      departure_airport_code: string
+      departure_airport_name: string
+      departure_city: string
+      departure_datetime: string
+      flight_number: string
+      review_count: number
+      status: "on_time" | "delayed"
+      ticket_count: number
+    }>
+  >`
     select
       f.airline_name,
       f.flight_number,
@@ -392,35 +442,41 @@ export async function getStaffDashboardInternal(filters: {
     order by f.departure_datetime asc
   `
 
-  const airplanes = await db<{
-    airplane_id: string
-    manufacturing_company: string
-    manufacturing_date: string
-    number_of_seats: number
-  }[]>`
+  const airplanes = await db<
+    Array<{
+      airplane_id: string
+      manufacturing_company: string
+      manufacturing_date: string
+      number_of_seats: number
+    }>
+  >`
     select airplane_id, manufacturing_company, manufacturing_date, number_of_seats
     from airplane
     where airline_name = ${user.airlineName}
     order by airplane_id asc
   `
 
-  const airports = await db<{
-    city: string
-    code: string
-    country: string
-  }[]>`
+  const airports = await db<
+    Array<{
+      city: string
+      code: string
+      country: string
+    }>
+  >`
     select code, city, country
     from airport
     order by code asc
   `
 
-  const ratings = await db<{
-    average_rating: number | null
-    departure_datetime: string
-    flight_number: string
-    review_count: number
-    comment: string | null
-  }[]>`
+  const ratings = await db<
+    Array<{
+      average_rating: number | null
+      departure_datetime: string
+      flight_number: string
+      review_count: number
+      comment: string | null
+    }>
+  >`
     select
       f.flight_number,
       f.departure_datetime,
@@ -434,7 +490,16 @@ export async function getStaffDashboardInternal(filters: {
     order by f.departure_datetime desc
   `
 
-  const ratingsMap = new Map<string, { averageRating: number | null; comments: string[]; departureDatetime: string; flightNumber: string; reviewCount: number }>()
+  const ratingsMap = new Map<
+    string,
+    {
+      averageRating: number | null
+      comments: Array<string>
+      departureDatetime: string
+      flightNumber: string
+      reviewCount: number
+    }
+  >()
   for (const row of ratings) {
     const key = `${row.flight_number}:${row.departure_datetime}`
     const existing = ratingsMap.get(key)
@@ -452,11 +517,13 @@ export async function getStaffDashboardInternal(filters: {
     })
   }
 
-  const [summary] = await db<{
-    last_month_tickets: number
-    last_year_tickets: number
-    total_tickets: number
-  }[]>`
+  const summaryRows = await db<
+    Array<{
+      last_month_tickets: number
+      last_year_tickets: number
+      total_tickets: number
+    }>
+  >`
     select
       count(*)::int as total_tickets,
       count(*) filter (where purchase_datetime >= now() - interval '1 month')::int as last_month_tickets,
@@ -464,11 +531,14 @@ export async function getStaffDashboardInternal(filters: {
     from ticket
     where airline_name = ${user.airlineName}
   `
+  const summary = summaryRows[0]
 
-  const monthlySales = await db<{
-    month: string
-    tickets_sold: number
-  }[]>`
+  const monthlySales = await db<
+    Array<{
+      month: string
+      tickets_sold: number
+    }>
+  >`
     select
       to_char(date_trunc('month', purchase_datetime), 'YYYY-MM') as month,
       count(*)::int as tickets_sold
@@ -512,9 +582,9 @@ export async function getStaffDashboardInternal(filters: {
     })),
     ratings: Array.from(ratingsMap.values()),
     reportSummary: {
-      lastMonthTickets: summary?.last_month_tickets ?? 0,
-      lastYearTickets: summary?.last_year_tickets ?? 0,
-      totalTickets: summary?.total_tickets ?? 0,
+      lastMonthTickets: summary.last_month_tickets,
+      lastYearTickets: summary.last_year_tickets,
+      totalTickets: summary.total_tickets,
     },
   } satisfies StaffDashboardData
 }
@@ -531,10 +601,12 @@ export async function purchaseTicketInternal(data: {
   const user = await requireUser("customer")
 
   const result = await db.begin(async (transaction) => {
-    const [flight] = await transaction<{
-      available_seats: number
-      base_price: string
-    }[]>`
+    const flightRows = await transaction<
+      Array<{
+        available_seats: number
+        base_price: string
+      }>
+    >`
       select
         greatest(airplane.number_of_seats - count(ticket.ticket_id), 0)::int as available_seats,
         f.base_price
@@ -547,11 +619,14 @@ export async function purchaseTicketInternal(data: {
       group by f.base_price, airplane.number_of_seats
       limit 1
     `
+    if (!flightRows.length)
+      throw new Error("That flight could not be found anymore.")
 
-    if (!flight) throw new Error("That flight could not be found anymore.")
-    if (flight.available_seats <= 0) throw new Error("That flight is already full.")
+    const flight = flightRows[0]
+    if (flight.available_seats <= 0)
+      throw new Error("That flight is already full.")
 
-    const [nextTicket] = await transaction<{ next_id: number }[]>`
+    const [nextTicket] = await transaction<Array<{ next_id: number }>>`
       select coalesce(max(ticket_id), 1000) + 1 as next_id
       from ticket
     `
@@ -604,7 +679,7 @@ export async function submitReviewInternal(data: {
 }) {
   const user = await requireUser("customer")
 
-  const [eligibleFlight] = await db<{ eligible: boolean }[]>`
+  const eligibleFlightRecords = await db<Array<{ eligible: boolean }>>`
     select exists (
       select 1
       from ticket
@@ -616,12 +691,13 @@ export async function submitReviewInternal(data: {
         and flight.arrival_datetime < now()
     ) as eligible
   `
-
-  if (!eligibleFlight?.eligible) {
-    return { error: "Only completed flights that you purchased can be reviewed." }
+  if (!eligibleFlightRecords.length || !eligibleFlightRecords[0].eligible) {
+    return {
+      error: "Only completed flights that you purchased can be reviewed.",
+    }
   }
 
-  const [existingReview] = await db<{ exists: boolean }[]>`
+  const existingReviewRecords = await db<Array<{ exists: boolean }>>`
     select exists (
       select 1
       from review
@@ -631,8 +707,7 @@ export async function submitReviewInternal(data: {
         and departure_datetime::text = replace(${data.departureDatetime}, 'T', ' ')
     ) as exists
   `
-
-  if (existingReview?.exists) {
+  if (existingReviewRecords[0].exists) {
     return { error: "You already reviewed this flight." }
   }
 
@@ -679,15 +754,15 @@ export async function createFlightInternal(data: {
     return { error: "Arrival time must be after departure time." }
   }
 
-  const [airplane] = await db<{ airplane_id: string }[]>`
+  const airplaneRows = await db<Array<{ airplane_id: string }>>`
     select airplane_id
     from airplane
     where airline_name = ${user.airlineName}
       and airplane_id = ${data.airplaneId}
     limit 1
   `
-
-  if (!airplane) return { error: "Choose one of your airline's airplanes." }
+  if (!airplaneRows.length)
+    return { error: "Choose one of your airline's airplanes." }
 
   await db`
     insert into flight (
@@ -724,7 +799,8 @@ export async function updateFlightStatusInternal(data: {
   status: "on_time" | "delayed"
 }) {
   const user = await requireUser("staff")
-  if (user.airlineName !== data.airlineName) return { error: "You can only edit your airline's flights." }
+  if (user.airlineName !== data.airlineName)
+    return { error: "You can only edit your airline's flights." }
 
   await db`
     update flight
@@ -734,7 +810,9 @@ export async function updateFlightStatusInternal(data: {
       and departure_datetime::text = replace(${data.departureDatetime}, 'T', ' ')
   `
 
-  return { message: `Flight ${data.flightNumber} is now marked ${data.status.replaceAll("_", " ")}.` }
+  return {
+    message: `Flight ${data.flightNumber} is now marked ${data.status.replaceAll("_", " ")}.`,
+  }
 }
 
 export async function addAirplaneInternal(data: {
@@ -762,7 +840,9 @@ export async function addAirplaneInternal(data: {
     )
   `
 
-  return { message: `Airplane ${data.airplaneId} is now available for ${user.airlineName}.` }
+  return {
+    message: `Airplane ${data.airplaneId} is now available for ${user.airlineName}.`,
+  }
 }
 
 export async function getFlightPassengersInternal(data: {
@@ -773,13 +853,15 @@ export async function getFlightPassengersInternal(data: {
   const user = await requireUser("staff")
   if (user.airlineName !== data.airlineName) return []
 
-  const passengers = await db<{
-    customer_email: string
-    customer_name: string
-    passport_number: string
-    purchase_datetime: string
-    ticket_id: number
-  }[]>`
+  const passengers = await db<
+    Array<{
+      customer_email: string
+      customer_name: string
+      passport_number: string
+      purchase_datetime: string
+      ticket_id: number
+    }>
+  >`
     select
       ticket.ticket_id,
       ticket.customer_email,
@@ -800,10 +882,13 @@ export async function getFlightPassengersInternal(data: {
     passportNumber: row.passport_number,
     purchaseDatetime: serializeTimestamp(row.purchase_datetime),
     ticketId: row.ticket_id,
-  })) satisfies PassengerRecord[]
+  })) satisfies Array<PassengerRecord>
 }
 
-export async function getStaffReportInternal(data: { endDate: string; startDate: string }) {
+export async function getStaffReportInternal(data: {
+  endDate: string
+  startDate: string
+}) {
   const user = await requireUser("staff")
 
   if (new Date(data.startDate) > new Date(data.endDate)) {
@@ -815,16 +900,15 @@ export async function getStaffReportInternal(data: { endDate: string; startDate:
     }
   }
 
-  const [rangeSummary] = await db<{ tickets_sold: number }[]>`
+  const rangeSummaryRows = await db<Array<{ tickets_sold: number }>>`
     select count(*)::int as tickets_sold
     from ticket
     where airline_name = ${user.airlineName}
       and purchase_datetime::date between ${data.startDate}::date and ${data.endDate}::date
   `
-
   return {
     endDate: data.endDate,
     startDate: data.startDate,
-    ticketsSold: rangeSummary?.tickets_sold ?? 0,
+    ticketsSold: rangeSummaryRows[0].tickets_sold,
   }
 }

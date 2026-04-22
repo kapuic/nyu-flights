@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start"
 
 import {
   addAirplaneSchema,
+  airportSuggestionSchema,
   createFlightSchema,
   customerFlightFiltersSchema,
   flightPassengersSchema,
@@ -21,6 +22,7 @@ import {
   getStaffReportInternal,
   listReferenceData,
   purchaseTicketInternal,
+  searchAirportsInternal,
   searchFlightsInternal,
   submitReviewInternal,
   updateFlightStatusInternal,
@@ -45,8 +47,8 @@ export type FlightOption = {
 }
 
 export type FlightSearchResponse = {
-  outbound: FlightOption[]
-  returnOptions: FlightOption[]
+  outbound: Array<FlightOption>
+  returnOptions: Array<FlightOption>
   tripType: "one-way" | "round-trip"
 }
 
@@ -62,8 +64,8 @@ export type CustomerDashboardData = {
     displayName: string
     email: string
   }
-  pastFlights: CustomerFlight[]
-  upcomingFlights: CustomerFlight[]
+  pastFlights: Array<CustomerFlight>
+  upcomingFlights: Array<CustomerFlight>
 }
 
 export type PassengerRecord = {
@@ -91,7 +93,7 @@ export type StaffDashboardData = {
   monthlySales: Array<{ month: string; ticketsSold: number }>
   ratings: Array<{
     averageRating: number | null
-    comments: string[]
+    comments: Array<string>
     departureDatetime: string
     flightNumber: string
     reviewCount: number
@@ -103,7 +105,13 @@ export type StaffDashboardData = {
   }
 }
 
-export const listReferenceDataFn = createServerFn({ method: "GET" }).handler(async () => listReferenceData())
+export const listReferenceDataFn = createServerFn({ method: "GET" }).handler(
+  async () => listReferenceData()
+)
+
+export const searchAirportsFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => airportSuggestionSchema.parse(data))
+  .handler(async ({ data }) => searchAirportsInternal(data))
 
 export const searchFlightsFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => searchFlightsSchema.parse(data))

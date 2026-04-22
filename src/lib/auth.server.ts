@@ -1,8 +1,22 @@
 import bcrypt from "bcrypt"
 
-import { db, ensureAppSessionTable } from "@/lib/db"
 import type { AuthRole, AuthUser } from "@/lib/auth"
+import { db, ensureAppSessionTable } from "@/lib/db"
 import { useAppSession } from "@/lib/session"
+
+function getSessionIdentityFields(user: AuthUser) {
+  if (user.role === "customer") {
+    return {
+      customerEmail: user.id,
+      staffUsername: null,
+    }
+  }
+
+  return {
+    customerEmail: null,
+    staffUsername: user.id,
+  }
+}
 
 export async function createPersistentSession(user: AuthUser) {
   await ensureAppSessionTable()
@@ -15,17 +29,12 @@ export async function createPersistentSession(user: AuthUser) {
     await db`delete from app_session where id = ${session.data.sessionId}`
   }
 
-  if (user.role === "customer") {
-    await db`
-      insert into app_session (id, role, customer_email, expires_at)
-      values (${sessionId}, 'customer', ${user.id}, ${expiresAt})
-    `
-  } else {
-    await db`
-      insert into app_session (id, role, staff_username, expires_at)
-      values (${sessionId}, 'staff', ${user.id}, ${expiresAt})
-    `
-  }
+  const sessionIdentity = getSessionIdentityFields(user)
+
+  await db`
+    insert into app_session (id, role, customer_email, staff_username, expires_at)
+    values (${sessionId}, ${user.role}, ${sessionIdentity.customerEmail}, ${sessionIdentity.staffUsername}, ${expiresAt})
+  `
 
   await session.update({ sessionId })
 }
@@ -56,26 +65,56 @@ type StaffRow = {
   username: string
 }
 
+async function lookupSingleRecord<TRecord>(query: Promise<Array<TRecord>>) {
+  const [record] = await query
+  return record ?? null
+}
+
+function createCustomerAuthUser(customer: {
+  email: string
+  name: string
+}): AuthUser {
+  return {
+    airlineName: null,
+    displayName: customer.name,
+    email: customer.email,
+    id: customer.email,
+    role: "customer",
+  }
+}
+
+function createStaffAuthUser(staff: {
+  airline_name: string
+  email: string
+  first_name: string
+  last_name: string
+  username: string
+}): AuthUser {
+  return {
+    airlineName: staff.airline_name,
+    displayName: `${staff.first_name} ${staff.last_name}`,
+    email: staff.email,
+    id: staff.username,
+    role: "staff",
+  }
+}
+
 export async function lookupCustomer(email: string) {
-  const [customer] = await db<CustomerRow[]>`
+  return lookupSingleRecord(db<Array<CustomerRow>>`
     select email, name, password
     from customer
     where lower(email) = lower(${email})
     limit 1
-  `
-
-  return customer ?? null
+  `)
 }
 
 export async function lookupStaff(username: string) {
-  const [staff] = await db<StaffRow[]>`
+  return lookupSingleRecord(db<Array<StaffRow>>`
     select username, airline_name, email, first_name, last_name, password
     from airline_staff
     where lower(username) = lower(${username})
     limit 1
-  `
-
-  return staff ?? null
+  `)
 }
 
 export async function getCurrentUser() {
@@ -85,23 +124,26 @@ export async function getCurrentUser() {
   const sessionId = session.data.sessionId
   if (!sessionId) return null
 
-  const [sessionRow] = await db<{
-    customer_email: string | null
-    expires_at: string
-    role: AuthRole
-    staff_username: string | null
-  }[]>`
+  const sessionRows = await db<
+    Array<{
+      customer_email: string | null
+      expires_at: string
+      role: AuthRole
+      staff_username: string | null
+    }>
+  >`
     select role, customer_email, staff_username, expires_at
     from app_session
     where id = ${sessionId}
       and expires_at > now()
     limit 1
   `
-
-  if (!sessionRow) {
+  if (!sessionRows.length) {
     await session.clear()
     return null
   }
+
+  const sessionRow = sessionRows[0]
 
   if (sessionRow.role === "customer" && sessionRow.customer_email) {
     const customer = await lookupCustomer(sessionRow.customer_email)
@@ -110,13 +152,7 @@ export async function getCurrentUser() {
       return null
     }
 
-    return {
-      airlineName: null,
-      displayName: customer.name,
-      email: customer.email,
-      id: customer.email,
-      role: "customer",
-    } satisfies AuthUser
+    return createCustomerAuthUser(customer)
   }
 
   if (sessionRow.role === "staff" && sessionRow.staff_username) {
@@ -126,13 +162,7 @@ export async function getCurrentUser() {
       return null
     }
 
-    return {
-      airlineName: staff.airline_name,
-      displayName: `${staff.first_name} ${staff.last_name}`,
-      email: staff.email,
-      id: staff.username,
-      role: "staff",
-    } satisfies AuthUser
+    return createStaffAuthUser(staff)
   }
 
   await session.clear()
@@ -146,40 +176,51 @@ export async function requireUser(role?: AuthRole) {
   return user
 }
 
-export async function loginUser(data: { password: string; role: AuthRole; username: string }) {
+async function authenticateUser<TRecord>(options: {
+  createAuthUser: (record: TRecord) => AuthUser
+  errorMessage: string
+  lookup: () => Promise<TRecord | null>
+  password: string
+  redirectTo: "/customer" | "/staff/app"
+  selectPassword: (record: TRecord) => string
+}) {
+  const record = await options.lookup()
+  if (!record) return { error: options.errorMessage }
+
+  const passwordMatches = await bcrypt.compare(
+    options.password,
+    options.selectPassword(record)
+  )
+  if (!passwordMatches) return { error: options.errorMessage }
+
+  await createPersistentSession(options.createAuthUser(record))
+  return { redirectTo: options.redirectTo }
+}
+
+export async function loginUser(data: {
+  password: string
+  role: AuthRole
+  username: string
+}) {
   if (data.role === "customer") {
-    const customer = await lookupCustomer(data.username)
-    if (!customer) return { error: "We could not match that customer login." }
-
-    const passwordMatches = await bcrypt.compare(data.password, customer.password)
-    if (!passwordMatches) return { error: "We could not match that customer login." }
-
-    await createPersistentSession({
-      airlineName: null,
-      displayName: customer.name,
-      email: customer.email,
-      id: customer.email,
-      role: "customer",
+    return authenticateUser({
+      createAuthUser: createCustomerAuthUser,
+      errorMessage: "We could not match that customer login.",
+      lookup: () => lookupCustomer(data.username),
+      password: data.password,
+      redirectTo: "/customer",
+      selectPassword: (customer) => customer.password,
     })
-
-    return { redirectTo: "/customer" as const }
   }
 
-  const staff = await lookupStaff(data.username)
-  if (!staff) return { error: "We could not match that staff login." }
-
-  const passwordMatches = await bcrypt.compare(data.password, staff.password)
-  if (!passwordMatches) return { error: "We could not match that staff login." }
-
-  await createPersistentSession({
-    airlineName: staff.airline_name,
-    displayName: `${staff.first_name} ${staff.last_name}`,
-    email: staff.email,
-    id: staff.username,
-    role: "staff",
+  return authenticateUser({
+    createAuthUser: createStaffAuthUser,
+    errorMessage: "We could not match that staff login.",
+    lookup: () => lookupStaff(data.username),
+    password: data.password,
+    redirectTo: "/staff/app",
+    selectPassword: (staff) => staff.password,
   })
-
-  return { redirectTo: "/staff/app" as const }
 }
 
 export async function registerCustomer(data: {
@@ -197,7 +238,7 @@ export async function registerCustomer(data: {
   street: string
 }) {
   const existingCustomer = await lookupCustomer(data.email)
-  if (existingCustomer) {
+  if (existingCustomer !== null) {
     return { error: "A customer with that email already exists." }
   }
 
@@ -234,13 +275,9 @@ export async function registerCustomer(data: {
     )
   `
 
-  await createPersistentSession({
-    airlineName: null,
-    displayName: data.name,
-    email: data.email,
-    id: data.email,
-    role: "customer",
-  })
+  await createPersistentSession(
+    createCustomerAuthUser({ email: data.email, name: data.name })
+  )
 
   return { redirectTo: "/customer" as const }
 }
@@ -256,14 +293,15 @@ export async function registerStaff(data: {
   username: string
 }) {
   const existingStaff = await lookupStaff(data.username)
-  if (existingStaff) {
+  if (existingStaff !== null) {
     return { error: "That staff username is already taken." }
   }
 
-  const [airline] = await db<{ name: string }[]>`
+  const airlines = await db<Array<{ name: string }>>`
     select name from airline where name = ${data.airlineName} limit 1
   `
-  if (!airline) return { error: "Choose an airline that already exists in the system." }
+  if (!airlines.length)
+    return { error: "Choose an airline that already exists in the system." }
 
   const hashedPassword = await bcrypt.hash(data.password, 10)
 
@@ -302,13 +340,15 @@ export async function registerStaff(data: {
     }
   })
 
-  await createPersistentSession({
-    airlineName: data.airlineName,
-    displayName: `${data.firstName} ${data.lastName}`,
-    email: data.email,
-    id: data.username,
-    role: "staff",
-  })
+  await createPersistentSession(
+    createStaffAuthUser({
+      airline_name: data.airlineName,
+      email: data.email,
+      first_name: data.firstName,
+      last_name: data.lastName,
+      username: data.username,
+    })
+  )
 
   return { redirectTo: "/staff/app" as const }
 }

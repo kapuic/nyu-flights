@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start"
 
-import { loginSchema, customerRegistrationSchema, staffRegistrationSchema } from "@/lib/schemas"
+import {
+  customerRegistrationSchema,
+  loginSchema,
+  staffRegistrationSchema,
+} from "@/lib/schemas"
 import {
   deletePersistentSession,
   getCurrentUser,
@@ -19,9 +23,11 @@ export type AuthUser = {
   role: AuthRole
 }
 
-export const getCurrentUserFn = createServerFn({ method: "GET" }).handler(async () => {
-  return getCurrentUser()
-})
+export const getCurrentUserFn = createServerFn({ method: "GET" }).handler(
+  async () => {
+    return getCurrentUser()
+  }
+)
 
 export const loginFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => loginSchema.parse(data))
