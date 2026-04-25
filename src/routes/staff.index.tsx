@@ -13,5 +13,5 @@ export const Route = createFileRoute("/staff/")({
 })
 
 function StaffIndexPage() {
-  return null
+  return <></>
 }

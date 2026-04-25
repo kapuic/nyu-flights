@@ -6,7 +6,6 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import { DatePickerButtonField } from "@/components/flight-search-panel"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Field,
@@ -221,12 +220,15 @@ function StaffRegisterPage() {
                                                       <FieldLabel htmlFor="staff-dob">
                                                         Date of Birth
                                                       </FieldLabel>
-                                                      <DatePickerButtonField
+                                                      <Input
                                                         id="staff-dob"
-                                                        onChange={
-                                                          dateOfBirthField.handleChange
+                                                        onChange={(event) =>
+                                                          dateOfBirthField.handleChange(
+                                                            event.target.value
+                                                          )
                                                         }
-                                                        placeholder="Select date"
+                                                        required
+                                                        type="date"
                                                         value={
                                                           dateOfBirthField.state
                                                             .value
