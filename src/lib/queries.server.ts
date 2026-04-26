@@ -31,6 +31,22 @@ function normalizeQueryValue(value: string | undefined) {
   return `%${normalized}%`
 }
 
+export async function listGlobeRoutesInternal() {
+  const routes = await db<
+    Array<{
+      arrival_airport_code: string
+      departure_airport_code: string
+    }>
+  >`
+    select distinct departure_airport_code, arrival_airport_code
+    from flight
+  `
+  return routes.map((r) => ({
+    arrivalCode: r.arrival_airport_code.trim(),
+    departureCode: r.departure_airport_code.trim(),
+  }))
+}
+
 export async function searchAirportsInternal(input: { query: string }) {
   const query = normalizeQueryValue(input.query)
   if (!query) return []
@@ -42,7 +58,7 @@ export async function searchAirportsInternal(input: { query: string }) {
       country: string
     }>
   >`
-    select distinct airport.city, airport.code, airport.country
+    select airport.city, airport.code, airport.country
     from airport
     where lower(airport.city) like ${query}
       or lower(airport.code) like ${query}

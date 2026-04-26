@@ -145,3 +145,26 @@ When building pages or flows:
 - put real effort into each page
 
 A page is not done just because it renders. It must be good.
+## Data sourcing rules
+
+Good frontends require additional data beyond the core DB schema. Follow these rules:
+
+### Data that lives in the DB
+
+For autocomplete, suggestions, search, and other features that can draw from existing tables (airports, airlines, flights), query the database and expose via server functions. Add new server function endpoints as needed for autocomplete or filtered data.
+
+### Data that does NOT live in the DB
+
+Some features need data that is not in the Part 2 schema (e.g. satellite imagery, airport GPS coordinates, globe textures, map tiles). Do NOT augment the database schema for this. Instead:
+
+- Download static JSON/CSV/data files from the internet and commit them to the repo (e.g. `src/data/airport-coordinates.json`).
+- Use external third-party APIs or CDN-hosted assets where appropriate.
+- Expose the data through server functions or import it directly in frontend code.
+
+### Ephemeral/draft data
+
+Drafts, unsaved form state, and other non-persistent data must be stored in browser local storage, not in the database. Use TanStack DB for structured local-first state.
+
+## Per-page playbook
+
+Each major page has a dedicated spec document in `docs/playbook/`. These capture creative direction, interaction design, animations, edge cases, and implementation notes. Always read the relevant playbook before building or modifying a page.

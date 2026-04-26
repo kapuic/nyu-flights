@@ -20,6 +20,7 @@ import {
   getFlightPassengersInternal,
   getStaffDashboardInternal,
   getStaffReportInternal,
+  listGlobeRoutesInternal,
   listReferenceData,
   purchaseTicketInternal,
   searchAirportsInternal,
@@ -107,6 +108,15 @@ export type StaffDashboardData = {
 
 export const listReferenceDataFn = createServerFn({ method: "GET" }).handler(
   async () => listReferenceData()
+)
+
+export type GlobeRoute = {
+  arrivalCode: string
+  departureCode: string
+}
+
+export const listGlobeRoutesFn = createServerFn({ method: "GET" }).handler(
+  async () => listGlobeRoutesInternal()
 )
 
 export const searchAirportsFn = createServerFn({ method: "POST" })
