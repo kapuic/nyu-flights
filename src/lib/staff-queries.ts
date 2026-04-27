@@ -12,6 +12,10 @@ import {
   getFlightPassengersFn,
   getStaffDashboardFn,
   getStaffReportFn,
+  listAllAirlinesFn,
+  listAllAirportsFn,
+  listAllCustomersFn,
+  listAllStaffFn,
 } from "@/lib/queries"
 
 export type StaffFilters = {
@@ -62,5 +66,37 @@ export function staffReportQueryOptions(range: {
     queryKey: ["staff-report", range.startDate, range.endDate] as const,
     queryFn: () => getStaffReportFn({ data: range }),
     staleTime: 60_000,
+  })
+}
+
+export function staffCustomersQueryOptions() {
+  return queryOptions({
+    queryKey: ["staff-customers"] as const,
+    queryFn: () => listAllCustomersFn(),
+    staleTime: 30_000,
+  })
+}
+
+export function staffMembersQueryOptions() {
+  return queryOptions({
+    queryKey: ["staff-members"] as const,
+    queryFn: () => listAllStaffFn(),
+    staleTime: 30_000,
+  })
+}
+
+export function staffAirlinesQueryOptions() {
+  return queryOptions({
+    queryKey: ["staff-airlines"] as const,
+    queryFn: () => listAllAirlinesFn(),
+    staleTime: 30_000,
+  })
+}
+
+export function staffAirportsQueryOptions() {
+  return queryOptions({
+    queryKey: ["staff-airports"] as const,
+    queryFn: () => listAllAirportsFn(),
+    staleTime: 30_000,
   })
 }

@@ -1,25 +1,29 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { useSuspenseQuery, useQuery } from "@tanstack/react-query"
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
+import type { ColumnDef } from "@tanstack/react-table"
 import { useState } from "react"
 import { Star } from "lucide-react"
 
 import { DatePickerField } from "@/components/date-time-picker"
+import {
+  DashboardDataTable,
+  DashboardDataTableColumnHeader,
+} from "@/components/dashboard-data-table"
 import { Button } from "@/components/ui/button"
-
 import { Card, CardContent } from "@/components/ui/card"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import {
   staffDashboardQueryOptions,
   staffReportQueryOptions,
 } from "@/lib/staff-queries"
+
+type RatingRow = {
+  averageRating: number | null
+  comments: Array<string>
+  departureDatetime: string
+  flightNumber: string
+  reviewCount: number
+}
 
 export const Route = createFileRoute("/staff/_dashboard/reports")({
   component: StaffReportsPage,
@@ -38,8 +42,8 @@ function StaffReportsPage() {
 
   const reportQuery = useQuery({
     ...staffReportQueryOptions({
-      startDate: queryRange?.startDate ?? "",
       endDate: queryRange?.endDate ?? "",
+      startDate: queryRange?.startDate ?? "",
     }),
     enabled: !!queryRange,
   })
@@ -58,11 +62,74 @@ function StaffReportsPage() {
   }
 
   const maxBarValue = Math.max(
-    ...data.monthlySales.map((m) => m.ticketsSold),
+    ...data.monthlySales.map((month) => month.ticketsSold),
     1
   )
 
-  const ratedFlights = data.ratings.filter((r) => r.reviewCount > 0)
+  const ratedFlights = data.ratings.filter((rating) => rating.reviewCount > 0)
+  const columns: Array<ColumnDef<RatingRow>> = [
+    {
+      accessorKey: "flightNumber",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Flight" />
+      ),
+      cell: ({ row }) => (
+        <span className="font-medium">{row.original.flightNumber}</span>
+      ),
+    },
+    {
+      accessorKey: "averageRating",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Rating" />
+      ),
+      cell: ({ row }) => (
+        <span className="inline-flex items-center gap-1 tabular-nums">
+          <Star className="size-3.5 fill-current text-amber-500" />
+          {row.original.averageRating?.toFixed(1) ?? "—"}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "reviewCount",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Reviews" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground tabular-nums">
+          {row.original.reviewCount}
+        </span>
+      ),
+    },
+    {
+      id: "comments",
+      accessorFn: (row) => row.comments.join(" "),
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Comments" />
+      ),
+      cell: ({ row }) => {
+        if (row.original.comments.length === 0)
+          return <span className="text-sm text-muted-foreground">—</span>
+
+        return (
+          <div className="flex max-w-xs flex-col gap-1">
+            {row.original.comments.slice(0, 3).map((comment) => (
+              <span
+                key={comment}
+                className="truncate text-sm text-muted-foreground"
+              >
+                “{comment}”
+              </span>
+            ))}
+            {row.original.comments.length > 3 ? (
+              <span className="text-xs text-muted-foreground">
+                +{row.original.comments.length - 3} more
+              </span>
+            ) : null}
+          </div>
+        )
+      },
+    },
+  ]
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -73,7 +140,6 @@ function StaffReportsPage() {
         </p>
       </div>
 
-      {/* Summary stats */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="rounded-md border bg-card p-3">
           <span className="text-xs text-muted-foreground">Total Tickets</span>
@@ -95,7 +161,6 @@ function StaffReportsPage() {
         </div>
       </div>
 
-      {/* Date range report */}
       <Card>
         <CardContent className="pt-6">
           <form onSubmit={handleReportSubmit}>
@@ -150,7 +215,6 @@ function StaffReportsPage() {
         </CardContent>
       </Card>
 
-      {/* Monthly sales chart */}
       <div>
         <h2 className="mb-3 text-sm font-medium">Monthly Ticket Sales</h2>
         {data.monthlySales.length === 0 ? (
@@ -160,25 +224,25 @@ function StaffReportsPage() {
         ) : (
           <div className="rounded-md border p-4">
             <div className="flex items-end gap-1.5" style={{ height: 160 }}>
-              {data.monthlySales.map((m) => {
-                const pct = (m.ticketsSold / maxBarValue) * 100
+              {data.monthlySales.map((month) => {
+                const percentage = (month.ticketsSold / maxBarValue) * 100
                 return (
                   <div
-                    key={m.month}
+                    key={month.month}
                     className="group relative flex flex-1 flex-col items-center"
                   >
                     <div
                       className="w-full rounded-t bg-primary/80 transition-colors group-hover:bg-primary"
                       style={{
-                        height: `${Math.max(pct, 2)}%`,
+                        height: `${Math.max(percentage, 2)}%`,
                         minHeight: 2,
                       }}
                     />
                     <span className="mt-1.5 text-[10px] text-muted-foreground">
-                      {m.month.slice(5)}
+                      {month.month.slice(5)}
                     </span>
                     <div className="absolute -top-6 hidden rounded bg-popover px-1.5 py-0.5 text-[10px] font-medium shadow group-hover:block">
-                      {m.ticketsSold}
+                      {month.ticketsSold}
                     </div>
                   </div>
                 )
@@ -188,72 +252,17 @@ function StaffReportsPage() {
         )}
       </div>
 
-      {/* Ratings */}
       <div>
         <h2 className="mb-3 text-sm font-medium">Flight Ratings</h2>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Flight</TableHead>
-                <TableHead>Rating</TableHead>
-                <TableHead className="hidden sm:table-cell">Reviews</TableHead>
-                <TableHead className="hidden md:table-cell">Comments</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {ratedFlights.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={4}
-                    className="h-24 text-center text-muted-foreground"
-                  >
-                    No ratings yet.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                ratedFlights.map((r) => (
-                  <TableRow key={`${r.flightNumber}-${r.departureDatetime}`}>
-                    <TableCell className="font-medium">
-                      {r.flightNumber}
-                    </TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center gap-1 tabular-nums">
-                        <Star className="size-3.5 fill-current text-amber-500" />
-                        {r.averageRating?.toFixed(1) ?? "—"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="hidden text-sm text-muted-foreground tabular-nums sm:table-cell">
-                      {r.reviewCount}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      {r.comments.length > 0 ? (
-                        <ul className="space-y-1">
-                          {r.comments.slice(0, 3).map((c, i) => (
-                            <li
-                              key={i}
-                              className="max-w-xs truncate text-sm text-muted-foreground"
-                            >
-                              "{c}"
-                            </li>
-                          ))}
-                          {r.comments.length > 3 ? (
-                            <li className="text-xs text-muted-foreground">
-                              +{r.comments.length - 3} more
-                            </li>
-                          ) : null}
-                        </ul>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        <DashboardDataTable
+          columns={columns}
+          data={ratedFlights}
+          emptyMessage="No ratings yet."
+          searchPlaceholder="Search ratings..."
+          queryPrefix="ratings"
+        />
       </div>
     </div>
   )
 }
+

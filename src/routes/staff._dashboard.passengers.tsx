@@ -1,9 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { useSuspenseQuery, useQuery } from "@tanstack/react-query"
-import { useState } from "react"
-import { Search } from "lucide-react"
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
+import type { ColumnDef } from "@tanstack/react-table"
+import { parseAsString, useQueryStates } from "nuqs"
 
-import { Input } from "@/components/ui/input"
+import {
+  DashboardDataTable,
+  DashboardDataTableColumnHeader,
+} from "@/components/dashboard-data-table"
 import {
   Select,
   SelectContent,
@@ -12,17 +15,21 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
   staffDashboardQueryOptions,
   staffPassengersQueryOptions,
 } from "@/lib/staff-queries"
+
+type PassengerRow = {
+  customerEmail: string
+  customerName: string
+  passportNumber: string
+  purchaseDatetime: string
+  ticketId: number
+}
+
+const passengerSearchParams = {
+  flight: parseAsString.withDefault(""),
+}
 
 export const Route = createFileRoute("/staff/_dashboard/passengers")({
   component: StaffPassengersPage,
@@ -40,8 +47,9 @@ function formatDateShort(iso: string) {
 
 function StaffPassengersPage() {
   const { data } = useSuspenseQuery(staffDashboardQueryOptions())
-  const [selectedFlightKey, setSelectedFlightKey] = useState("")
-  const [searchQuery, setSearchQuery] = useState("")
+  const [{ flight: selectedFlightKey }, setSearchParams] = useQueryStates(
+    passengerSearchParams
+  )
 
   const selectedFlight = data.flights.find(
     (f) => `${f.flightNumber}::${f.departureDatetime}` === selectedFlightKey
@@ -57,16 +65,56 @@ function StaffPassengersPage() {
   })
 
   const passengers = passengersQuery.data ?? []
-  const filteredPassengers = passengers.filter((p) => {
-    if (!searchQuery) return true
-    const q = searchQuery.toLowerCase()
-    return (
-      p.customerName.toLowerCase().includes(q) ||
-      p.customerEmail.toLowerCase().includes(q) ||
-      p.passportNumber.toLowerCase().includes(q) ||
-      String(p.ticketId).includes(q)
-    )
-  })
+  const columns: Array<ColumnDef<PassengerRow>> = [
+    {
+      accessorKey: "ticketId",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Ticket" />
+      ),
+      cell: ({ row }) => (
+        <span className="font-medium tabular-nums">#{row.original.ticketId}</span>
+      ),
+    },
+    {
+      accessorKey: "customerName",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Name" />
+      ),
+    },
+    {
+      accessorKey: "customerEmail",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Email" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">
+          {row.original.customerEmail}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "passportNumber",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Passport" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">
+          {row.original.passportNumber}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "purchaseDatetime",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Purchased" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">
+          {formatDateShort(row.original.purchaseDatetime)}
+        </span>
+      ),
+    },
+  ]
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -78,42 +126,30 @@ function StaffPassengersPage() {
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="flex-1 max-w-sm">
+        <div className="max-w-sm flex-1">
           <label className="mb-1.5 block text-sm font-medium">Flight</label>
           <Select
             value={selectedFlightKey}
-            onValueChange={(v) => {
-              setSelectedFlightKey(v ?? "")
-              setSearchQuery("")
+            onValueChange={(value) => {
+              void setSearchParams({ flight: value ?? "" })
             }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select a flight" />
             </SelectTrigger>
             <SelectContent>
-              {data.flights.map((f) => {
-                const key = `${f.flightNumber}::${f.departureDatetime}`
+              {data.flights.map((flight) => {
+                const key = `${flight.flightNumber}::${flight.departureDatetime}`
                 return (
                   <SelectItem key={key} value={key}>
-                    {f.flightNumber} — {f.departureAirportCode} →{" "}
-                    {f.arrivalAirportCode} ({formatDateShort(f.departureDatetime)})
+                    {flight.flightNumber} — {flight.departureAirportCode} →{" "}
+                    {flight.arrivalAirportCode} ({formatDateShort(flight.departureDatetime)})
                   </SelectItem>
                 )
               })}
             </SelectContent>
           </Select>
         </div>
-        {selectedFlight ? (
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="pl-9"
-              placeholder="Search passengers..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        ) : null}
       </div>
 
       {!selectedFlight ? (
@@ -129,63 +165,22 @@ function StaffPassengersPage() {
           Loading passengers...
         </div>
       ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Ticket</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead className="hidden sm:table-cell">Email</TableHead>
-                <TableHead className="hidden md:table-cell">
-                  Passport
-                </TableHead>
-                <TableHead className="hidden lg:table-cell">
-                  Purchased
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredPassengers.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="h-24 text-center text-muted-foreground"
-                  >
-                    {passengers.length === 0
-                      ? "No passengers on this flight."
-                      : "No passengers match your search."}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredPassengers.map((p) => (
-                  <TableRow key={p.ticketId}>
-                    <TableCell className="font-medium tabular-nums">
-                      #{p.ticketId}
-                    </TableCell>
-                    <TableCell>{p.customerName}</TableCell>
-                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
-                      {p.customerEmail}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                      {p.passportNumber}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                      {formatDateShort(p.purchaseDatetime)}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-          {selectedFlight ? (
-            <div className="border-t px-4 py-2 text-xs text-muted-foreground">
-              {passengers.length} passenger{passengers.length !== 1 ? "s" : ""}{" "}
-              · {selectedFlight.availableSeats} seat
-              {selectedFlight.availableSeats !== 1 ? "s" : ""} remaining
-            </div>
-          ) : null}
-        </div>
+        <>
+          <DashboardDataTable
+            columns={columns}
+            data={passengers}
+            emptyMessage="No passengers on this flight."
+            searchPlaceholder="Search passengers..."
+            queryPrefix="passengers"
+          />
+          <div className="rounded-md border px-4 py-2 text-xs text-muted-foreground">
+            {passengers.length} passenger{passengers.length !== 1 ? "s" : ""} ·{" "}
+            {selectedFlight.availableSeats} seat
+            {selectedFlight.availableSeats !== 1 ? "s" : ""} remaining
+          </div>
+        </>
       )}
     </div>
   )
 }
+

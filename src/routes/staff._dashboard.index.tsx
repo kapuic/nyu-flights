@@ -1,25 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { useState } from "react"
+import type { ColumnDef } from "@tanstack/react-table"
 import {
   PlaneTakeoff,
   Clock,
   AlertTriangle,
   Ticket,
-  Search,
 } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+  DashboardDataTable,
+  DashboardDataTableColumnHeader,
+} from "@/components/dashboard-data-table"
+import { Badge } from "@/components/ui/badge"
 import { staffDashboardQueryOptions } from "@/lib/staff-queries"
+
+type DashboardFlightRow = {
+  arrivalAirportCode: string
+  arrivalAirportName: string
+  arrivalCity: string
+  arrivalDatetime: string
+  departureAirportCode: string
+  departureAirportName: string
+  departureCity: string
+  departureDatetime: string
+  flightNumber: string
+  status: "on_time" | "delayed"
+  ticketCount: number
+}
 
 export const Route = createFileRoute("/staff/_dashboard/")({
   component: StaffDashboardPage,
@@ -37,19 +45,80 @@ function formatDateShort(iso: string) {
 
 function StaffDashboardPage() {
   const { data } = useSuspenseQuery(staffDashboardQueryOptions())
-  const [searchQuery, setSearchQuery] = useState("")
 
-  const filteredFlights = data.flights.filter((f) => {
-    if (!searchQuery) return true
-    const q = searchQuery.toLowerCase()
-    return (
-      f.flightNumber.toLowerCase().includes(q) ||
-      f.departureAirportName.toLowerCase().includes(q) ||
-      f.arrivalAirportName.toLowerCase().includes(q) ||
-      f.departureCity.toLowerCase().includes(q) ||
-      f.arrivalCity.toLowerCase().includes(q)
-    )
-  })
+  const columns: Array<ColumnDef<DashboardFlightRow>> = [
+    {
+      accessorKey: "flightNumber",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Flight" />
+      ),
+      cell: ({ row }) => (
+        <span className="font-medium">{row.original.flightNumber}</span>
+      ),
+    },
+    {
+      id: "route",
+      accessorFn: (row) =>
+        `${row.departureAirportCode} ${row.arrivalAirportCode} ${row.departureCity} ${row.arrivalCity}`,
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Route" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-xs">
+          {row.original.departureAirportCode} → {row.original.arrivalAirportCode}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "departureDatetime",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Departure" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">
+          {formatDateShort(row.original.departureDatetime)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "arrivalDatetime",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Arrival" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">
+          {formatDateShort(row.original.arrivalDatetime)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Status" />
+      ),
+      cell: ({ row }) => (
+        <Badge
+          variant={row.original.status === "on_time" ? "secondary" : "destructive"}
+          className="text-xs"
+        >
+          {row.original.status === "on_time" ? "On Time" : "Delayed"}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "ticketCount",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader
+          column={column}
+          title="Tickets"
+          className="ms-auto"
+        />
+      ),
+      cell: ({ row }) => (
+        <div className="text-right tabular-nums">{row.original.ticketCount}</div>
+      ),
+    },
+  ]
 
   const onTimeCount = data.flights.filter((f) => f.status === "on_time").length
   const delayedCount = data.flights.filter((f) => f.status === "delayed").length
@@ -87,74 +156,14 @@ function StaffDashboardPage() {
         />
       </div>
 
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="pl-9"
-            placeholder="Search flights..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-      </div>
+      <DashboardDataTable
+        columns={columns}
+        data={data.flights}
+        emptyMessage="No flights found."
+        searchPlaceholder="Search flights..."
+        queryPrefix="dashboard"
+      />
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Flight</TableHead>
-              <TableHead>Route</TableHead>
-              <TableHead className="hidden sm:table-cell">Departure</TableHead>
-              <TableHead className="hidden md:table-cell">Arrival</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Tickets</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredFlights.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  No flights found.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredFlights.map((flight) => (
-                <TableRow key={`${flight.flightNumber}-${flight.departureDatetime}`}>
-                  <TableCell className="font-medium">
-                    {flight.flightNumber}
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-xs">
-                      {flight.departureAirportCode} → {flight.arrivalAirportCode}
-                    </span>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
-                    {formatDateShort(flight.departureDatetime)}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                    {formatDateShort(flight.arrivalDatetime)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={flight.status === "on_time" ? "secondary" : "destructive"}
-                      className="text-xs"
-                    >
-                      {flight.status === "on_time" ? "On Time" : "Delayed"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {flight.ticketCount}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
     </div>
   )
 }

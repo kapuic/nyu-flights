@@ -1,25 +1,29 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query"
 import { useForm } from "@tanstack/react-form"
+import type { ColumnDef } from "@tanstack/react-table"
 import { useState } from "react"
 import { toast } from "sonner"
 import { Plus } from "lucide-react"
 
 import { DatePickerField } from "@/components/date-time-picker"
+import {
+  DashboardDataTable,
+  DashboardDataTableColumnHeader,
+} from "@/components/dashboard-data-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { ResponsiveModal } from "@/components/responsive-modal"
 import { staffDashboardQueryOptions } from "@/lib/staff-queries"
 import { addAirplaneFn } from "@/lib/queries"
+
+type AirplaneRow = {
+  airplaneId: string
+  manufacturingCompany: string
+  manufacturingDate: string
+  numberOfSeats: number
+}
 
 export const Route = createFileRoute("/staff/_dashboard/fleet")({
   component: StaffFleetPage,
@@ -65,6 +69,54 @@ function StaffFleetPage() {
       setError(err instanceof Error ? err.message : "Failed to add airplane.")
     }
   }
+
+  const columns: Array<ColumnDef<AirplaneRow>> = [
+    {
+      accessorKey: "airplaneId",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Airplane ID" />
+      ),
+      cell: ({ row }) => (
+        <span className="font-medium">{row.original.airplaneId}</span>
+      ),
+    },
+    {
+      accessorKey: "manufacturingCompany",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Manufacturer" />
+      ),
+    },
+    {
+      accessorKey: "manufacturingDate",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Mfg. Date" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">
+          {new Date(row.original.manufacturingDate).toLocaleDateString("en-US", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "numberOfSeats",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader
+          column={column}
+          title="Seats"
+          className="ms-auto"
+        />
+      ),
+      cell: ({ row }) => (
+        <div className="text-right tabular-nums">
+          {row.original.numberOfSeats}
+        </div>
+      ),
+    },
+  ]
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -164,52 +216,14 @@ function StaffFleetPage() {
         </form.Subscribe>
       </ResponsiveModal>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Airplane ID</TableHead>
-              <TableHead>Manufacturer</TableHead>
-              <TableHead className="hidden sm:table-cell">Mfg. Date</TableHead>
-              <TableHead className="text-right">Seats</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.airplanes.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={4}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  No aircraft registered.
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.airplanes.map((airplane) => (
-                <TableRow key={airplane.airplaneId}>
-                  <TableCell className="font-medium">
-                    {airplane.airplaneId}
-                  </TableCell>
-                  <TableCell>{airplane.manufacturingCompany}</TableCell>
-                  <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">
-                    {new Date(airplane.manufacturingDate).toLocaleDateString(
-                      "en-US",
-                      {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      }
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {airplane.numberOfSeats}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DashboardDataTable
+        columns={columns}
+        data={data.airplanes}
+        emptyMessage="No aircraft registered."
+        searchPlaceholder="Search fleet..."
+        queryPrefix="fleet"
+      />
+
     </div>
   )
 }

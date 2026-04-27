@@ -1,14 +1,25 @@
+import type { QueryClient } from "@tanstack/react-query"
 import {
   HeadContent,
+  Link,
   Outlet,
   Scripts,
   createRootRouteWithContext,
+  useRouter,
 } from "@tanstack/react-router"
 import { QueryClientProvider } from "@tanstack/react-query"
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
 import { ThemeProvider } from "next-themes"
+import { NuqsAdapter } from "nuqs/adapters/tanstack-router"
 import { useEffect } from "react"
+import {
+  AlertTriangle,
+  DatabaseZap,
+  FileQuestion,
+  Home,
+  RefreshCw,
+} from "lucide-react"
 
 import appCss from "../styles.css?url"
 import type { AuthUser } from "@/lib/auth"
@@ -19,6 +30,7 @@ import { getQueryClient } from "@/lib/query-client"
 
 type RouterContext = {
   currentUser: AuthUser | null
+  queryClient: QueryClient
 }
 
 const queryClient = getQueryClient()
@@ -86,6 +98,8 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   }),
   shellComponent: RootDocument,
   component: RootComponent,
+  notFoundComponent: NotFoundPage,
+  errorComponent: RootErrorPage,
 })
 
 function RootComponent() {
@@ -102,9 +116,96 @@ function RootComponent() {
     void navigator.serviceWorker.register("/sw.js")
   }, [])
 
-  return <Outlet />
+  return (
+    <NuqsAdapter>
+      <Outlet />
+    </NuqsAdapter>
+  )
 }
 
+
+function isDbConnectionError(error: Error): boolean {
+  const msg = error.message.toLowerCase()
+  return (
+    msg.includes("econnrefused") ||
+    msg.includes("connection refused") ||
+    msg.includes("connect etimedout") ||
+    msg.includes("database") ||
+    msg.includes("postgres") ||
+    msg.includes("pg_hba")
+  )
+}
+
+function NotFoundPage() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4 text-center">
+      <FileQuestion className="size-16 text-muted-foreground/40" />
+      <div className="space-y-2">
+        <h1 className="text-4xl font-bold tracking-tight">404</h1>
+        <p className="text-lg text-muted-foreground">
+          This page doesn't exist.
+        </p>
+      </div>
+      <Link
+        to="/"
+        className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+      >
+        <Home className="size-4" />
+        Back to Home
+      </Link>
+    </div>
+  )
+}
+
+function RootErrorPage({ error, reset }: { error: Error; reset: () => void }) {
+  const router = useRouter()
+  const isDbError = isDbConnectionError(error)
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4 text-center">
+      {isDbError ? (
+        <DatabaseZap className="size-16 text-destructive/60" />
+      ) : (
+        <AlertTriangle className="size-16 text-destructive/60" />
+      )}
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight">
+          {isDbError ? "Database Unavailable" : "Something Went Wrong"}
+        </h1>
+        <p className="max-w-md text-sm text-muted-foreground">
+          {isDbError
+            ? "The application can't connect to the database. Please make sure the database server is running and try again."
+            : "An unexpected error occurred. Please try again."}
+        </p>
+        {import.meta.env.DEV && (
+          <pre className="mt-4 max-w-lg overflow-auto rounded-md bg-muted p-3 text-left text-xs text-muted-foreground">
+            {error.message}
+          </pre>
+        )}
+      </div>
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            reset()
+            void router.invalidate()
+          }}
+          className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        >
+          <RefreshCw className="size-4" />
+          Try Again
+        </button>
+        <Link
+          to="/"
+          className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-background px-4 text-sm font-medium hover:bg-muted"
+        >
+          <Home className="size-4" />
+          Home
+        </Link>
+      </div>
+    </div>
+  )
+}
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>

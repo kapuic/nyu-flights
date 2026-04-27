@@ -1,21 +1,18 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { useSuspenseQuery, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
 import { useForm } from "@tanstack/react-form"
+import type { ColumnDef } from "@tanstack/react-table"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Plus } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+  DashboardDataTable,
+  DashboardDataTableColumnHeader,
+} from "@/components/dashboard-data-table"
+import { Input } from "@/components/ui/input"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import {
   AirplaneComboboxField,
@@ -28,6 +25,17 @@ import { staffDashboardQueryOptions } from "@/lib/staff-queries"
 import { getAirportOption } from "@/lib/airports"
 
 import { createFlightFn, listDbAirportsFn, updateFlightStatusFn } from "@/lib/queries"
+
+type FlightRow = {
+  airlineName: string
+  arrivalAirportCode: string
+  arrivalDatetime: string
+  basePrice: number
+  departureAirportCode: string
+  departureDatetime: string
+  flightNumber: string
+  status: "on_time" | "delayed"
+}
 
 export const Route = createFileRoute("/staff/_dashboard/flights")({
   component: StaffFlightsPage,
@@ -167,6 +175,73 @@ function StaffFlightsPage() {
       toast.error("Failed to update flight status.")
     }
   }
+
+  const columns: Array<ColumnDef<FlightRow>> = [
+    {
+      accessorKey: "flightNumber",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Flight" />
+      ),
+      cell: ({ row }) => (
+        <span className="font-medium">{row.original.flightNumber}</span>
+      ),
+    },
+    {
+      id: "route",
+      accessorFn: (row) =>
+        `${row.departureAirportCode} ${row.arrivalAirportCode}`,
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Route" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-xs">
+          {row.original.departureAirportCode} → {row.original.arrivalAirportCode}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "departureDatetime",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Departure" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">
+          {formatDateShort(row.original.departureDatetime)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Status" />
+      ),
+      cell: ({ row }) => (
+        <Badge
+          variant={row.original.status === "on_time" ? "secondary" : "destructive"}
+          className="text-xs"
+        >
+          {row.original.status === "on_time" ? "On Time" : "Delayed"}
+        </Badge>
+      ),
+    },
+    {
+      id: "actions",
+      enableHiding: false,
+      enableSorting: false,
+      header: () => <span className="sr-only">Action</span>,
+      cell: ({ row }) => (
+        <div className="text-right">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleStatusToggle(row.original)}
+          >
+            {row.original.status === "on_time" ? "Mark Delayed" : "Mark On Time"}
+          </Button>
+        </div>
+      ),
+    },
+  ]
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -321,70 +396,14 @@ function StaffFlightsPage() {
         </form.Subscribe>
       </ResponsiveModal>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Flight</TableHead>
-              <TableHead>Route</TableHead>
-              <TableHead className="hidden sm:table-cell">Departure</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.flights.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  No flights scheduled.
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.flights.map((flight) => (
-                <TableRow
-                  key={`${flight.flightNumber}-${flight.departureDatetime}`}
-                >
-                  <TableCell className="font-medium">
-                    {flight.flightNumber}
-                  </TableCell>
-                  <TableCell className="text-xs">
-                    {flight.departureAirportCode} → {flight.arrivalAirportCode}
-                  </TableCell>
-                  <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">
-                    {formatDateShort(flight.departureDatetime)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        flight.status === "on_time"
-                          ? "secondary"
-                          : "destructive"
-                      }
-                      className="text-xs"
-                    >
-                      {flight.status === "on_time" ? "On Time" : "Delayed"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleStatusToggle(flight)}
-                    >
-                      {flight.status === "on_time"
-                        ? "Mark Delayed"
-                        : "Mark On Time"}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DashboardDataTable
+        columns={columns}
+        data={data.flights}
+        emptyMessage="No flights scheduled."
+        searchPlaceholder="Search flights..."
+        queryPrefix="flights"
+      />
+
     </div>
   )
 }

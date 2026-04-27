@@ -1,15 +1,22 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { useEffect, useMemo, useState } from "react"
+import { createFileRoute, useRouter } from "@tanstack/react-router"
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
+import type { ColumnDef } from "@tanstack/react-table"
+import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Plus, Trash2 } from "lucide-react"
 
 import { AirportComboboxField } from "@/components/combobox-fields"
+import {
+  DashboardDataTable,
+  DashboardDataTableColumnHeader,
+} from "@/components/dashboard-data-table"
 import {
   DeleteConfirmation,
   useDeleteConfirmation,
 } from "@/components/delete-confirmation"
 import { DialogGlobe } from "@/components/dialog-globe"
 import { ResponsiveModal } from "@/components/responsive-modal"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import {
@@ -19,35 +26,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { REAL_AIRPORT_OPTIONS, getAirportOption } from "@/lib/airports"
-import {
-  createAirportFn,
-  deleteAirportFn,
-  listAllAirportsFn,
-} from "@/lib/queries"
+import { createAirportFn, deleteAirportFn } from "@/lib/queries"
+import { staffAirportsQueryOptions } from "@/lib/staff-queries"
+
+type AirportRow = {
+  airport_type: string
+  city: string
+  code: string
+  country: string
+}
 
 export const Route = createFileRoute("/staff/_dashboard/airports")({
+  loader: async ({ context }) => {
+    await context.queryClient.ensureQueryData(staffAirportsQueryOptions())
+  },
   component: ManageAirportsPage,
 })
 
 function ManageAirportsPage() {
-  const [airports, setAirports] = useState<
-    Array<{ airport_type: string; city: string; code: string; country: string }>
-  >([])
-  const [loading, setLoading] = useState(true)
+  const { data: airports } = useSuspenseQuery(staffAirportsQueryOptions())
   const [createOpen, setCreateOpen] = useState(false)
   const [selectedAirportCode, setSelectedAirportCode] = useState("")
   const [airportType, setAirportType] = useState("")
   const [error, setError] = useState<string | null>(null)
   const deleteConfirm = useDeleteConfirmation()
+  const queryClient = useQueryClient()
+  const router = useRouter()
 
   const selectedAirport = useMemo(
     () => getAirportOption(selectedAirportCode),
@@ -66,23 +71,13 @@ function ManageAirportsPage() {
     ]
   }, [selectedAirport])
 
-  async function load() {
-    try {
-      const data = await listAllAirportsFn()
-      setAirports(data)
-    } catch {
-      toast.error("Failed to load airports.")
-    } finally {
-      setLoading(false)
-    }
+  async function refreshAirports() {
+    await queryClient.invalidateQueries({ queryKey: ["staff-airports"] })
+    await router.invalidate()
   }
 
-  useEffect(() => {
-    load()
-  }, [])
-
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleCreate(event: React.FormEvent) {
+    event.preventDefault()
     setError(null)
     try {
       if (!selectedAirport) {
@@ -92,17 +87,17 @@ function ManageAirportsPage() {
 
       const result = await createAirportFn({
         data: {
-          code: selectedAirport.code,
-          city: selectedAirport.city,
-          country: selectedAirport.country,
           airportType: airportType.toLowerCase(),
+          city: selectedAirport.city,
+          code: selectedAirport.code,
+          country: selectedAirport.country,
         },
       })
       toast.success(result.message)
       setSelectedAirportCode("")
       setAirportType("")
       setCreateOpen(false)
-      await load()
+      await refreshAirports()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create airport.")
     }
@@ -112,11 +107,69 @@ function ManageAirportsPage() {
     try {
       const result = await deleteAirportFn({ data: { code: airportCode } })
       toast.success(result.message)
-      await load()
+      await refreshAirports()
     } catch {
       toast.error("Failed to delete airport. It may have dependent flights.")
     }
   }
+
+  const columns: Array<ColumnDef<AirportRow>> = [
+    {
+      accessorKey: "code",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Code" />
+      ),
+      cell: ({ row }) => <span className="font-medium">{row.original.code}</span>,
+    },
+    {
+      accessorKey: "city",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="City" />
+      ),
+    },
+    {
+      accessorKey: "country",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Country" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{row.original.country}</span>
+      ),
+    },
+    {
+      accessorKey: "airport_type",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Type" />
+      ),
+      cell: ({ row }) => (
+        <Badge variant="secondary" className="capitalize">
+          {row.original.airport_type}
+        </Badge>
+      ),
+    },
+    {
+      id: "actions",
+      enableHiding: false,
+      enableSorting: false,
+      header: () => <span className="sr-only">Actions</span>,
+      cell: ({ row }) => (
+        <div className="text-right">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Delete ${row.original.code}`}
+            onClick={() =>
+              deleteConfirm.requestDelete(row.original.code, () =>
+                handleDelete(row.original.code)
+              )
+            }
+          >
+            <Trash2 className="text-destructive" />
+          </Button>
+        </div>
+      ),
+    },
+  ]
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -128,7 +181,7 @@ function ManageAirportsPage() {
           </p>
         </div>
         <Button size="sm" onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-1.5 size-4" />
+          <Plus data-icon="inline-start" />
           Create
         </Button>
       </div>
@@ -158,7 +211,7 @@ function ManageAirportsPage() {
                 <FieldLabel>Type</FieldLabel>
                 <Select
                   value={airportType}
-                  onValueChange={(v) => setAirportType(v ?? "")}
+                  onValueChange={(value) => setAirportType(value ?? "")}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select type" />
@@ -184,66 +237,14 @@ function ManageAirportsPage() {
         onClose={deleteConfirm.close}
       />
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Code</TableHead>
-              <TableHead>City</TableHead>
-              <TableHead className="hidden sm:table-cell">Country</TableHead>
-              <TableHead className="hidden md:table-cell">Type</TableHead>
-              <TableHead className="w-16" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : airports.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  No airports.
-                </TableCell>
-              </TableRow>
-            ) : (
-              airports.map((a) => (
-                <TableRow key={a.code}>
-                  <TableCell className="font-medium">{a.code}</TableCell>
-                  <TableCell>{a.city}</TableCell>
-                  <TableCell className="hidden text-muted-foreground sm:table-cell">
-                    {a.country}
-                  </TableCell>
-                  <TableCell className="hidden text-muted-foreground capitalize md:table-cell">
-                    {a.airport_type}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        deleteConfirm.requestDelete(a.code, () =>
-                          handleDelete(a.code)
-                        )
-                      }
-                    >
-                      <Trash2 className="size-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DashboardDataTable
+        columns={columns}
+        data={airports}
+        emptyMessage="No airports."
+        searchPlaceholder="Search airports..."
+        queryPrefix="airports"
+      />
     </div>
   )
 }
+

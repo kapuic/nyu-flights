@@ -1,61 +1,112 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { useState, useEffect } from "react"
+import { createFileRoute, useRouter } from "@tanstack/react-router"
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
+import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
 import { Trash2 } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+  DashboardDataTable,
+  DashboardDataTableColumnHeader,
+} from "@/components/dashboard-data-table"
+import { Button } from "@/components/ui/button"
 import {
   DeleteConfirmation,
   useDeleteConfirmation,
 } from "@/components/delete-confirmation"
-import { listAllCustomersFn, deleteCustomerFn } from "@/lib/queries"
+import { deleteCustomerFn } from "@/lib/queries"
+import { staffCustomersQueryOptions } from "@/lib/staff-queries"
+
+type CustomerRow = {
+  city: string
+  email: string
+  name: string
+  phone_number: string
+}
 
 export const Route = createFileRoute("/staff/_dashboard/manage-customers")({
+  loader: async ({ context }) => {
+    await context.queryClient.ensureQueryData(staffCustomersQueryOptions())
+  },
   component: ManageCustomersPage,
 })
 
 function ManageCustomersPage() {
-  const [customers, setCustomers] = useState<
-    Array<{
-      city: string
-      email: string
-      name: string
-      phone_number: string
-    }>
-  >([])
-  const [loading, setLoading] = useState(true)
+  const { data: customers } = useSuspenseQuery(staffCustomersQueryOptions())
   const deleteConfirm = useDeleteConfirmation()
-
-  async function load() {
-    try {
-      const data = await listAllCustomersFn()
-      setCustomers(data)
-    } catch {
-      toast.error("Failed to load customers.")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => { load() }, [])
+  const queryClient = useQueryClient()
+  const router = useRouter()
 
   async function handleDelete(email: string) {
     try {
       const result = await deleteCustomerFn({ data: { email } })
       toast.success(result.message)
-      await load()
+      await queryClient.invalidateQueries({ queryKey: ["staff-customers"] })
+      await router.invalidate()
     } catch {
       toast.error("Failed to delete customer.")
     }
   }
+
+  const columns: Array<ColumnDef<CustomerRow>> = [
+    {
+      accessorKey: "name",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Name" />
+      ),
+      cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+    },
+    {
+      accessorKey: "email",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Email" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">
+          {row.original.email}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "city",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="City" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{row.original.city}</span>
+      ),
+    },
+    {
+      accessorKey: "phone_number",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Phone" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground">{row.original.phone_number}</span>
+      ),
+    },
+    {
+      id: "actions",
+      enableHiding: false,
+      enableSorting: false,
+      header: () => <span className="sr-only">Actions</span>,
+      cell: ({ row }) => (
+        <div className="text-right">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Delete ${row.original.name}`}
+            onClick={() =>
+              deleteConfirm.requestDelete(row.original.email, () =>
+                handleDelete(row.original.email)
+              )
+            }
+          >
+            <Trash2 className="text-destructive" />
+          </Button>
+        </div>
+      ),
+    },
+  ]
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -71,62 +122,14 @@ function ManageCustomersPage() {
         onClose={deleteConfirm.close}
       />
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead className="hidden sm:table-cell">City</TableHead>
-              <TableHead className="hidden md:table-cell">Phone</TableHead>
-              <TableHead className="w-16" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                  Loading...
-                </TableCell>
-              </TableRow>
-            ) : customers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                  No customers.
-                </TableCell>
-              </TableRow>
-            ) : (
-              customers.map((c) => (
-                <TableRow key={c.email}>
-                  <TableCell className="font-medium">{c.name}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {c.email}
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell text-muted-foreground">
-                    {c.city}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground">
-                    {c.phone_number}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        deleteConfirm.requestDelete(c.email, () =>
-                          handleDelete(c.email)
-                        )
-                      }
-                    >
-                      <Trash2 className="size-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DashboardDataTable
+        columns={columns}
+        data={customers}
+        emptyMessage="No customers."
+        searchPlaceholder="Search customers..."
+        queryPrefix="customers"
+      />
     </div>
   )
 }
+
