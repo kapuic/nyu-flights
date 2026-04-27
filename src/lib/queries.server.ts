@@ -8,6 +8,7 @@ import type {
 } from "@/lib/queries"
 import { db } from "@/lib/db"
 import { requireUser } from "@/lib/auth.server"
+import { isSuperadmin } from "@/lib/staff-permissions"
 
 const DEFAULT_STAFF_FLIGHT_WINDOW_DAYS = 30
 
@@ -927,4 +928,115 @@ export async function getStaffReportInternal(data: {
     startDate: data.startDate,
     ticketsSold: rangeSummaryRows[0].tickets_sold,
   }
+}
+
+// --- Superadmin operations ---
+
+async function requireSuperadmin() {
+  const user = await requireUser("staff")
+  if (!user.staffPermission || !isSuperadmin(user.staffPermission)) {
+    throw new Error("AUTH_FORBIDDEN")
+  }
+  return user
+}
+
+export async function listAllAirlinesInternal() {
+  await requireSuperadmin()
+  return db<Array<{ name: string }>>`
+    select name from airline order by name asc
+  `
+}
+
+export async function createAirlineInternal(data: { name: string }) {
+  await requireSuperadmin()
+  await db`insert into airline (name) values (${data.name})`
+  return { message: `Airline "${data.name}" created.` }
+}
+
+export async function deleteAirlineInternal(data: { name: string }) {
+  await requireSuperadmin()
+  await db`delete from airline where name = ${data.name}`
+  return { message: `Airline "${data.name}" deleted.` }
+}
+
+export async function listAllAirportsInternal() {
+  await requireSuperadmin()
+  return db<
+    Array<{
+      airport_type: string
+      city: string
+      code: string
+      country: string
+    }>
+  >`
+    select code, city, country, airport_type from airport order by code asc
+  `
+}
+
+export async function createAirportInternal(data: {
+  airportType: string
+  city: string
+  code: string
+  country: string
+}) {
+  await requireSuperadmin()
+  await db`
+    insert into airport (code, city, country, airport_type)
+    values (${data.code}, ${data.city}, ${data.country}, ${data.airportType})
+  `
+  return { message: `Airport ${data.code} created.` }
+}
+
+export async function deleteAirportInternal(data: { code: string }) {
+  await requireSuperadmin()
+  await db`delete from airport where code = ${data.code}`
+  return { message: `Airport ${data.code} deleted.` }
+}
+
+export async function listAllStaffInternal() {
+  await requireSuperadmin()
+  return db<
+    Array<{
+      airline_name: string
+      email: string
+      first_name: string
+      last_name: string
+      username: string
+    }>
+  >`
+    select username, airline_name, first_name, last_name, email
+    from airline_staff
+    order by username asc
+  `
+}
+
+export async function deleteStaffInternal(data: { username: string }) {
+  await requireSuperadmin()
+  await db`delete from airline_staff_phone where username = ${data.username}`
+  await db`delete from airline_staff where username = ${data.username}`
+  return { message: `Staff "${data.username}" deleted.` }
+}
+
+export async function listAllCustomersInternal() {
+  await requireSuperadmin()
+  return db<
+    Array<{
+      city: string
+      email: string
+      name: string
+      phone_number: string
+    }>
+  >`
+    select email, name, city, phone_number
+    from customer
+    order by name asc
+  `
+}
+
+export async function deleteCustomerInternal(data: { email: string }) {
+  await requireSuperadmin()
+  await db`delete from review where customer_email = ${data.email}`
+  await db`delete from ticket where customer_email = ${data.email}`
+  await db`delete from customer where email = ${data.email}`
+  return { message: `Customer "${data.email}" deleted.` }
 }

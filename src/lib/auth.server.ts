@@ -2,6 +2,7 @@ import bcrypt from "bcrypt"
 
 import type { AuthRole, AuthUser } from "@/lib/auth"
 import { db, ensureAppSessionTable } from "@/lib/db"
+import { getStaffPermission } from "@/lib/staff-permissions"
 import { useAppSession } from "@/lib/session"
 
 function getSessionIdentityFields(user: AuthUser) {
@@ -80,6 +81,7 @@ function createCustomerAuthUser(customer: {
     email: customer.email,
     id: customer.email,
     role: "customer",
+    staffPermission: null,
   }
 }
 
@@ -96,6 +98,7 @@ function createStaffAuthUser(staff: {
     email: staff.email,
     id: staff.username,
     role: "staff",
+    staffPermission: getStaffPermission(staff.username),
   }
 }
 
@@ -181,7 +184,7 @@ async function authenticateUser<TRecord>(options: {
   errorMessage: string
   lookup: () => Promise<TRecord | null>
   password: string
-  redirectTo: "/customer" | "/staff/app"
+  redirectTo: "/customer" | "/staff"
   selectPassword: (record: TRecord) => string
 }) {
   const record = await options.lookup()
@@ -218,7 +221,7 @@ export async function loginUser(data: {
     errorMessage: "We could not match that staff login.",
     lookup: () => lookupStaff(data.username),
     password: data.password,
-    redirectTo: "/staff/app",
+    redirectTo: "/staff",
     selectPassword: (staff) => staff.password,
   })
 }
@@ -350,5 +353,5 @@ export async function registerStaff(data: {
     })
   )
 
-  return { redirectTo: "/staff/app" as const }
+  return { redirectTo: "/staff" as const }
 }

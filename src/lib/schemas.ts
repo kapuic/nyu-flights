@@ -265,3 +265,35 @@ export const reportRangeSchema = withDateRangeValidation({
   endDate: z.string().min(1, "End date is required."),
   startDate: z.string().min(1, "Start date is required."),
 })
+
+// --- Superadmin schemas ---
+
+export const createAirlineSchema = z.object({
+  name: z.string().min(1, "Airline name is required.").max(100),
+})
+
+export const createAirportSchema = z.object({
+  code: z
+    .string()
+    .length(3, "Airport code must be 3 characters.")
+    .transform((v) => v.toUpperCase()),
+  city: z.string().min(1, "City is required.").max(100),
+  country: z.string().min(1, "Country is required.").max(100),
+  airportType: z.enum(["domestic", "international", "both"]),
+})
+
+export const deleteAirlineSchema = z.object({
+  name: z.string().min(1),
+})
+
+export const deleteAirportSchema = z.object({
+  code: z.string().length(3),
+})
+
+export const deleteStaffSchema = z.object({
+  username: z.string().min(1),
+})
+
+export const deleteCustomerSchema = z.object({
+  email: z.email(),
+})

@@ -13,6 +13,8 @@ import {
   registerStaff,
 } from "@/lib/auth.server"
 
+import type { StaffPermission } from "@/lib/staff-permissions"
+
 export type AuthRole = "customer" | "staff"
 
 export type AuthUser = {
@@ -21,6 +23,7 @@ export type AuthUser = {
   email: string
   id: string
   role: AuthRole
+  staffPermission: StaffPermission | null
 }
 
 export const getCurrentUserFn = createServerFn({ method: "GET" }).handler(

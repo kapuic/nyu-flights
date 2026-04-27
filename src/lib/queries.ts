@@ -3,8 +3,14 @@ import { createServerFn } from "@tanstack/react-start"
 import {
   addAirplaneSchema,
   airportSuggestionSchema,
+  createAirlineSchema,
+  createAirportSchema,
   createFlightSchema,
   customerFlightFiltersSchema,
+  deleteAirlineSchema,
+  deleteAirportSchema,
+  deleteCustomerSchema,
+  deleteStaffSchema,
   flightPassengersSchema,
   purchaseTicketSchema,
   reportRangeSchema,
@@ -15,11 +21,21 @@ import {
 } from "@/lib/schemas"
 import {
   addAirplaneInternal,
+  createAirlineInternal,
+  createAirportInternal,
   createFlightInternal,
+  deleteAirlineInternal,
+  deleteAirportInternal,
+  deleteCustomerInternal,
+  deleteStaffInternal,
   getCustomerDashboardInternal,
   getFlightPassengersInternal,
   getStaffDashboardInternal,
   getStaffReportInternal,
+  listAllAirlinesInternal,
+  listAllAirportsInternal,
+  listAllCustomersInternal,
+  listAllStaffInternal,
   listGlobeRoutesInternal,
   listReferenceData,
   purchaseTicketInternal,
@@ -162,3 +178,45 @@ export const getFlightPassengersFn = createServerFn({ method: "POST" })
 export const getStaffReportFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => reportRangeSchema.parse(data))
   .handler(async ({ data }) => getStaffReportInternal(data))
+
+// --- Superadmin server functions ---
+
+export const listAllAirlinesFn = createServerFn({ method: "GET" }).handler(
+  async () => listAllAirlinesInternal()
+)
+
+export const createAirlineFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => createAirlineSchema.parse(data))
+  .handler(async ({ data }) => createAirlineInternal(data))
+
+export const deleteAirlineFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => deleteAirlineSchema.parse(data))
+  .handler(async ({ data }) => deleteAirlineInternal(data))
+
+export const listAllAirportsFn = createServerFn({ method: "GET" }).handler(
+  async () => listAllAirportsInternal()
+)
+
+export const createAirportFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => createAirportSchema.parse(data))
+  .handler(async ({ data }) => createAirportInternal(data))
+
+export const deleteAirportFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => deleteAirportSchema.parse(data))
+  .handler(async ({ data }) => deleteAirportInternal(data))
+
+export const listAllStaffFn = createServerFn({ method: "GET" }).handler(
+  async () => listAllStaffInternal()
+)
+
+export const deleteStaffFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => deleteStaffSchema.parse(data))
+  .handler(async ({ data }) => deleteStaffInternal(data))
+
+export const listAllCustomersFn = createServerFn({ method: "GET" }).handler(
+  async () => listAllCustomersInternal()
+)
+
+export const deleteCustomerFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => deleteCustomerSchema.parse(data))
+  .handler(async ({ data }) => deleteCustomerInternal(data))

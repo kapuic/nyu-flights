@@ -53,8 +53,8 @@ function StaffRegisterPage() {
       const result = await registerStaffFn({ data: value })
       if (result.error) throw new Error(result.error)
       await router.invalidate()
-      await router.navigate({ to: result.redirectTo ?? "/staff/app" })
       toast.success("Staff account created.")
+      await router.navigate({ to: result.redirectTo ?? "/staff" })
     },
   })
 

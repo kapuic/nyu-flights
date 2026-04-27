@@ -7,7 +7,7 @@ export const Route = createFileRoute("/customer")({
   loader: async () => {
     const currentUser = await getCurrentUserFn()
     if (!currentUser) throw redirect({ to: "/login" })
-    if (currentUser.role !== "customer") throw redirect({ to: "/staff/app" })
+    if (currentUser.role !== "customer") throw redirect({ to: "/staff" })
 
     return getCustomerDashboardFn({
       data: { destination: "", endDate: "", source: "", startDate: "" },

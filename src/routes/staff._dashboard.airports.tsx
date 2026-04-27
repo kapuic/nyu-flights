@@ -1,0 +1,234 @@
+import { createFileRoute } from "@tanstack/react-router"
+import { useState, useEffect } from "react"
+import { toast } from "sonner"
+import { Plus, Trash2 } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { ResponsiveModal } from "@/components/responsive-modal"
+import {
+  DeleteConfirmation,
+  useDeleteConfirmation,
+} from "@/components/delete-confirmation"
+import {
+  listAllAirportsFn,
+  createAirportFn,
+  deleteAirportFn,
+} from "@/lib/queries"
+
+export const Route = createFileRoute("/staff/_dashboard/airports")({
+  component: ManageAirportsPage,
+})
+
+function ManageAirportsPage() {
+  const [airports, setAirports] = useState<
+    Array<{ airport_type: string; city: string; code: string; country: string }>
+  >([])
+  const [loading, setLoading] = useState(true)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [code, setCode] = useState("")
+  const [city, setCity] = useState("")
+  const [country, setCountry] = useState("")
+  const [airportType, setAirportType] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const deleteConfirm = useDeleteConfirmation()
+
+  async function load() {
+    try {
+      const data = await listAllAirportsFn()
+      setAirports(data)
+    } catch {
+      toast.error("Failed to load airports.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { load() }, [])
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    try {
+      const result = await createAirportFn({
+        data: { code, city, country, airportType },
+      })
+      toast.success(result.message)
+      setCode("")
+      setCity("")
+      setCountry("")
+      setAirportType("")
+      setCreateOpen(false)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create airport.")
+    }
+  }
+
+  async function handleDelete(airportCode: string) {
+    try {
+      const result = await deleteAirportFn({ data: { code: airportCode } })
+      toast.success(result.message)
+      await load()
+    } catch {
+      toast.error("Failed to delete airport. It may have dependent flights.")
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-6 p-4 md:p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold">Airports</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage airports in the system
+          </p>
+        </div>
+        <Button size="sm" onClick={() => setCreateOpen(true)}>
+          <Plus className="mr-1.5 size-4" />
+          Create
+        </Button>
+      </div>
+
+      <ResponsiveModal
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title="Create Airport"
+        description="Add a new airport to the system."
+      >
+        <form onSubmit={handleCreate}>
+          <FieldGroup>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field>
+                <FieldLabel>Code (3 letters)</FieldLabel>
+                <Input
+                  required
+                  maxLength={3}
+                  placeholder="LAX"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                />
+              </Field>
+              <Field>
+                <FieldLabel>City</FieldLabel>
+                <Input
+                  required
+                  placeholder="Los Angeles"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                />
+              </Field>
+              <Field>
+                <FieldLabel>Country</FieldLabel>
+                <Input
+                  required
+                  placeholder="USA"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                />
+              </Field>
+              <Field>
+                <FieldLabel>Type</FieldLabel>
+                <Select
+                  value={airportType}
+                  onValueChange={(v) => setAirportType(v ?? "")}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="domestic">Domestic</SelectItem>
+                    <SelectItem value="international">International</SelectItem>
+                    <SelectItem value="both">Both</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+            {error ? (
+              <p className="text-sm text-destructive">{error}</p>
+            ) : null}
+            <Button type="submit" className="w-full sm:w-auto">
+              Create Airport
+            </Button>
+          </FieldGroup>
+        </form>
+      </ResponsiveModal>
+
+      <DeleteConfirmation
+        pending={deleteConfirm.pending}
+        onClose={deleteConfirm.close}
+      />
+
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Code</TableHead>
+              <TableHead>City</TableHead>
+              <TableHead className="hidden sm:table-cell">Country</TableHead>
+              <TableHead className="hidden md:table-cell">Type</TableHead>
+              <TableHead className="w-16" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                  Loading...
+                </TableCell>
+              </TableRow>
+            ) : airports.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                  No airports.
+                </TableCell>
+              </TableRow>
+            ) : (
+              airports.map((a) => (
+                <TableRow key={a.code}>
+                  <TableCell className="font-medium">{a.code}</TableCell>
+                  <TableCell>{a.city}</TableCell>
+                  <TableCell className="hidden sm:table-cell text-muted-foreground">
+                    {a.country}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-muted-foreground capitalize">
+                    {a.airport_type}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        deleteConfirm.requestDelete(a.code, () =>
+                          handleDelete(a.code)
+                        )
+                      }
+                    >
+                      <Trash2 className="size-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  )
+}
