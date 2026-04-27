@@ -57,7 +57,7 @@ function StaffLoginPage() {
         return
       }
       await router.invalidate()
-      toast.success("Operations unlocked.")
+      toast.success("Signed in.")
       await router.navigate({ to: result.redirectTo ?? "/staff" })
     },
   })

@@ -1,6 +1,5 @@
-import { type FormEvent, useEffect, useId, useRef, useState } from "react"
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { useForm } from "@tanstack/react-form"
 import {
   ArrowLeft,
   ArrowRight,
@@ -9,45 +8,26 @@ import {
   CreditCard,
   Plane,
 } from "lucide-react"
-import { IMaskInput } from "react-imask"
-import { z } from "zod"
 
 import { useBookingStore } from "@/lib/booking-store"
 import { purchaseTicketFn } from "@/lib/queries"
 import type { FlightOption } from "@/lib/queries"
 import { formatCurrency } from "@/lib/format"
-import { FieldError } from "@/components/ui/field"
+import {
+  type PaymentCardFieldErrors,
+  type PaymentCardValues,
+  PaymentCardForm,
+  validatePaymentCard,
+} from "@/components/ui/payment-form"
 import { cn, getErrorMessage } from "@/lib/utils"
-
-const paymentSchema = z.object({
-  cardType: z.enum(["credit", "debit"]),
-  cardNumber: z
-    .string()
-    .refine(
-      (v) => /^\d+$/.test(v.replace(/\s/g, "")) && v.replace(/\s/g, "").length >= 12,
-      "Card number must contain only digits and be at least 12 digits."
-    ),
-  nameOnCard: z.string().min(2, "Name on card is required."),
-  cardExpiration: z.string().refine((value) => {
-    if (!/^\d{2}\/\d{2}$/.test(value)) return false
-    const [monthText, yearText] = value.split("/")
-    const month = Number(monthText)
-    const year = Number(yearText)
-    if (!Number.isInteger(month) || !Number.isInteger(year)) return false
-    if (month < 1 || month > 12) return false
-
-    const now = new Date()
-    const currentMonth = now.getMonth() + 1
-    const currentYear = now.getFullYear() % 100
-    if (year < currentYear) return false
-    if (year === currentYear && month < currentMonth) return false
-    return true
-  }, "Enter a valid future expiration (MM/YY)."),
-})
 
 export const Route = createFileRoute("/_globe/checkout")({
   component: CheckoutPage,
 })
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function formatTime(datetime: string) {
   return new Date(datetime).toLocaleTimeString("en-US", {
@@ -72,6 +52,20 @@ function formatDuration(departure: string, arrival: string) {
   return `${hours}h ${minutes}m`
 }
 
+/**
+ * Map detected card brand to DB card_type.
+ * The DB only stores "credit" or "debit". Since debit vs credit can't be
+ * reliably determined from the PAN alone, we default to "credit" and let
+ * the user toggle explicitly.
+ */
+function inferCardType(cardType: "credit" | "debit"): "credit" | "debit" {
+  return cardType
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
 function CheckoutPage() {
   const navigate = useNavigate()
   const selectedOutbound = useBookingStore((s) => s.selectedOutbound)
@@ -80,7 +74,6 @@ function CheckoutPage() {
   const setConfirmation = useBookingStore((s) => s.setConfirmation)
   const reset = useBookingStore((s) => s.reset)
 
-  // Redirect if no flight selected
   useEffect(() => {
     if (!selectedOutbound && !confirmation) {
       void navigate({ to: "/" })
@@ -102,7 +95,17 @@ function CheckoutPage() {
   )
 }
 
-// --- Checkout Form ---
+// ---------------------------------------------------------------------------
+// Checkout form
+// ---------------------------------------------------------------------------
+
+const INITIAL_CARD: PaymentCardValues = {
+  cardNumber: "",
+  nameOnCard: "",
+  cardExpiration: "",
+  cvv: "",
+  brand: "unknown",
+}
 
 function CheckoutForm({
   outbound,
@@ -117,45 +120,76 @@ function CheckoutForm({
     totalPrice: number
   }) => void
 }) {
-  const formId = useId()
   const formRef = useRef<HTMLFormElement>(null)
   const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [cardType, setCardType] = useState<"credit" | "debit">("credit")
+
+  // Payment card state (controlled)
+  const [card, setCard] = useState<PaymentCardValues>(INITIAL_CARD)
+  const [cardErrors, setCardErrors] = useState<PaymentCardFieldErrors>({})
+  const [cardTouched, setCardTouched] = useState<Partial<Record<keyof PaymentCardValues, boolean>>>({})
+  const [submitted, setSubmitted] = useState(false)
 
   const totalPrice =
     outbound.basePrice + (returnFlight ? returnFlight.basePrice : 0)
 
-  const form = useForm({
-    defaultValues: {
-      cardType: "credit" as "credit" | "debit",
-      cardNumber: "",
-      nameOnCard: "",
-      cardExpiration: "",
-    },
-    validators: {
-      onSubmit: paymentSchema,
-    },
-    onSubmit: async ({ value }) => {
-      // Strip mask characters from card number
-      const rawCardNumber = value.cardNumber.replace(/\s/g, "")
+  const handleCardChange = useCallback((next: PaymentCardValues) => {
+    setCard(next)
+    setError(null)
+  }, [])
 
+  const handleCardBlur = useCallback(
+    (field: keyof PaymentCardValues) => {
+      setCardTouched((prev) => ({ ...prev, [field]: true }))
+      // Validate on blur
+      const errs = validatePaymentCard(card)
+      setCardErrors(errs)
+    },
+    [card]
+  )
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setError(null)
+    setSubmitted(true)
+
+    // Mark all touched
+    setCardTouched({
+      cardNumber: true,
+      nameOnCard: true,
+      cardExpiration: true,
+      cvv: true,
+    })
+
+    const errs = validatePaymentCard(card)
+    setCardErrors(errs)
+    if (Object.keys(errs).length > 0) return
+
+    setSubmitting(true)
+    try {
+      const rawCardNumber = card.cardNumber.replace(/\s/g, "")
       const ticketIds: number[] = []
       const flights: FlightOption[] = [outbound]
 
-      // Purchase outbound
+      const purchaseData = {
+        cardType: inferCardType(cardType),
+        cardNumber: rawCardNumber,
+        nameOnCard: card.nameOnCard,
+        cardExpiration: card.cardExpiration,
+      }
+
       const outboundResult = await purchaseTicketFn({
         data: {
           airlineName: outbound.airlineName,
           flightNumber: outbound.flightNumber,
           departureDatetime: outbound.departureDatetime,
-          cardType: value.cardType,
-          cardNumber: rawCardNumber,
-          nameOnCard: value.nameOnCard,
-          cardExpiration: value.cardExpiration,
+          ...purchaseData,
         },
       })
       ticketIds.push(outboundResult.ticketId)
 
-      // Purchase return if round-trip
       if (returnFlight) {
         flights.push(returnFlight)
         const returnResult = await purchaseTicketFn({
@@ -163,33 +197,24 @@ function CheckoutForm({
             airlineName: returnFlight.airlineName,
             flightNumber: returnFlight.flightNumber,
             departureDatetime: returnFlight.departureDatetime,
-            cardType: value.cardType,
-            cardNumber: rawCardNumber,
-            nameOnCard: value.nameOnCard,
-            cardExpiration: value.cardExpiration,
+            ...purchaseData,
           },
         })
         ticketIds.push(returnResult.ticketId)
       }
 
-      onConfirmation({
-        flights,
-        ticketIds,
-        totalPrice,
-      })
-    },
-  })
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    setError(null)
-    try {
-      await form.handleSubmit()
+      onConfirmation({ flights, ticketIds, totalPrice })
     } catch (err) {
       setError(getErrorMessage(err, "Booking failed."))
+    } finally {
+      setSubmitting(false)
     }
   }
+
+  // Use submitted state to show all errors
+  const effectiveTouched = submitted
+    ? { cardNumber: true, nameOnCard: true, cardExpiration: true, cvv: true, brand: true }
+    : cardTouched
 
   return (
     <main className="relative z-10 mx-auto max-w-5xl px-4 pt-4 pb-24">
@@ -209,7 +234,6 @@ function CheckoutForm({
       </p>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
-        {/* Left: Payment form */}
         <div>
           {/* Flight review */}
           <div className="mb-6 space-y-3">
@@ -219,7 +243,7 @@ function CheckoutForm({
             ) : null}
           </div>
 
-          {/* Payment */}
+          {/* Payment section */}
           <div className="rounded-xl border border-white/[0.08] bg-white/[0.04] p-6 backdrop-blur-xl">
             <div className="mb-5 flex items-center gap-2">
               <CreditCard className="size-4 text-white/40" />
@@ -229,160 +253,56 @@ function CheckoutForm({
             </div>
 
             <form noValidate ref={formRef} onSubmit={handleSubmit}>
-              {/* Card type toggle */}
+              {/* Card type toggle (credit/debit for DB) */}
               <div className="mb-5">
                 <label className="mb-2 block text-[10px] font-medium tracking-widest text-white/40 uppercase">
                   Card Type
                 </label>
-                <form.Field name="cardType">
-                  {(field) => (
-                    <div className="flex gap-2">
-                      {(["credit", "debit"] as const).map((type) => (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => field.handleChange(type)}
-                          className={cn(
-                            "rounded-lg border px-4 py-2 text-sm font-medium capitalize transition-colors",
-                            field.state.value === type
-                              ? "border-white/20 bg-white/10 text-white"
-                              : "border-white/[0.06] text-white/40 hover:border-white/10 hover:text-white/60"
-                          )}
-                        >
-                          {type}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </form.Field>
-              </div>
-
-              {/* Card number */}
-              <div className="mb-5">
-                <form.Field name="cardNumber">
-                  {(field) => {
-                    const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
-                    return (
-                      <>
-                        <label
-                          htmlFor={`${formId}-card`}
-                          className="mb-2 block text-[10px] font-medium tracking-widest text-white/40 uppercase"
-                        >
-                          Card Number
-                        </label>
-                        <IMaskInput
-                          id={`${formId}-card`}
-                          mask="0000 0000 0000 0000"
-                          placeholder="0000 0000 0000 0000"
-                          value={field.state.value}
-                          onAccept={(value) => field.handleChange(String(value))}
-                          onBlur={field.handleBlur}
-                          aria-invalid={isInvalid}
-                          className={cn(
-                            "h-10 w-full rounded-lg border bg-white/[0.04] px-3 text-sm text-white placeholder:text-white/25 outline-none transition-colors focus:border-white/20 focus:ring-1 focus:ring-white/10",
-                            isInvalid ? "border-red-500/50" : "border-white/10"
-                          )}
-                        />
-                        {isInvalid && field.state.meta.errors.length > 0 && (
-                          <FieldError className="mt-1 text-xs text-red-400" errors={field.state.meta.errors} />
-                        )}
-                      </>
-                    )
-                  }}
-                </form.Field>
-              </div>
-
-              <div className="mb-6 grid grid-cols-2 gap-4">
-                <div>
-                  <form.Field name="cardExpiration">
-                    {(field) => {
-                      const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
-                      return (
-                        <>
-                          <label
-                            htmlFor={`${formId}-exp`}
-                            className="mb-2 block text-[10px] font-medium tracking-widest text-white/40 uppercase"
-                          >
-                            Expiration
-                          </label>
-                          <IMaskInput
-                            id={`${formId}-exp`}
-                            mask="00/00"
-                            placeholder="MM/YY"
-                            value={field.state.value}
-                            onAccept={(value) =>
-                              field.handleChange(String(value))
-                            }
-                            onBlur={field.handleBlur}
-                            aria-invalid={isInvalid}
-                            className={cn(
-                              "h-10 w-full rounded-lg border bg-white/[0.04] px-3 text-sm text-white placeholder:text-white/25 outline-none transition-colors focus:border-white/20 focus:ring-1 focus:ring-white/10",
-                              isInvalid ? "border-red-500/50" : "border-white/10"
-                            )}
-                          />
-                          {isInvalid && field.state.meta.errors.length > 0 && (
-                            <FieldError className="mt-1 text-xs text-red-400" errors={field.state.meta.errors} />
-                          )}
-                        </>
-                      )
-                    }}
-                  </form.Field>
-                </div>
-                <div>
-                  <form.Field name="nameOnCard">
-                    {(field) => {
-                      const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
-                      return (
-                        <>
-                          <label
-                            htmlFor={`${formId}-name`}
-                            className="mb-2 block text-[10px] font-medium tracking-widest text-white/40 uppercase"
-                          >
-                            Name on Card
-                          </label>
-                          <input
-                            id={`${formId}-name`}
-                            type="text"
-                            placeholder="Full Name"
-                            value={field.state.value}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                            onBlur={field.handleBlur}
-                            aria-invalid={isInvalid}
-                            className={cn(
-                              "h-10 w-full rounded-lg border bg-white/[0.04] px-3 text-sm text-white placeholder:text-white/25 outline-none transition-colors focus:border-white/20 focus:ring-1 focus:ring-white/10",
-                              isInvalid ? "border-red-500/50" : "border-white/10"
-                            )}
-                          />
-                          {isInvalid && field.state.meta.errors.length > 0 && (
-                            <FieldError className="mt-1 text-xs text-red-400" errors={field.state.meta.errors} />
-                          )}
-                        </>
-                      )
-                    }}
-                  </form.Field>
+                <div className="flex gap-2">
+                  {(["credit", "debit"] as const).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setCardType(type)}
+                      className={cn(
+                        "rounded-lg border px-4 py-2 text-sm font-medium capitalize transition-colors",
+                        cardType === type
+                          ? "border-white/20 bg-white/10 text-white"
+                          : "border-white/[0.06] text-white/40 hover:border-white/10 hover:text-white/60"
+                      )}
+                    >
+                      {type}
+                    </button>
+                  ))}
                 </div>
               </div>
+
+              {/* Payment card form (reusable component) */}
+              <PaymentCardForm
+                values={card}
+                onChange={handleCardChange}
+                errors={cardErrors}
+                touched={effectiveTouched}
+                onBlur={handleCardBlur}
+                showCard
+              />
 
               {error ? (
-                <div className="mb-4 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                <div className="mt-4 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
                   {error}
                 </div>
               ) : null}
 
-              {/* Submit — visible on mobile, hidden on lg (sidebar has the button) */}
-              <form.Subscribe selector={(s) => s.isSubmitting}>
-                {(isSubmitting) => (
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full rounded-lg bg-white px-6 py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-50 lg:hidden"
-                  >
-                    {isSubmitting
-                      ? "Processing…"
-                      : `Confirm & Pay ${formatCurrency(totalPrice)}`}
-                  </button>
-                )}
-              </form.Subscribe>
+              {/* Mobile submit */}
+              <button
+                type="submit"
+                disabled={submitting}
+                className="mt-6 w-full rounded-lg bg-white px-6 py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-50 lg:hidden"
+              >
+                {submitting
+                  ? "Processing…"
+                  : `Confirm & Pay ${formatCurrency(totalPrice)}`}
+              </button>
             </form>
           </div>
         </div>
@@ -427,20 +347,14 @@ function CheckoutForm({
             </div>
 
             {/* Desktop submit */}
-            <form.Subscribe selector={(s) => s.isSubmitting}>
-              {(isSubmitting) => (
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={() => formRef.current?.requestSubmit()}
-                  className="mt-6 hidden w-full rounded-lg bg-white px-6 py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-50 lg:block"
-                >
-                  {isSubmitting
-                    ? "Processing…"
-                    : `Confirm & Pay`}
-                </button>
-              )}
-            </form.Subscribe>
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={() => formRef.current?.requestSubmit()}
+              className="mt-6 hidden w-full rounded-lg bg-white px-6 py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-50 lg:block"
+            >
+              {submitting ? "Processing…" : "Confirm & Pay"}
+            </button>
           </div>
         </div>
       </div>
@@ -448,7 +362,9 @@ function CheckoutForm({
   )
 }
 
-// --- Flight Summary Card ---
+// ---------------------------------------------------------------------------
+// Flight Summary Card
+// ---------------------------------------------------------------------------
 
 function FlightSummaryCard({
   flight,
@@ -505,7 +421,9 @@ function FlightSummaryCard({
   )
 }
 
-// --- Confirmation View ---
+// ---------------------------------------------------------------------------
+// Confirmation View
+// ---------------------------------------------------------------------------
 
 function ConfirmationView({
   confirmation,
