@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start"
 import {
   addAirplaneSchema,
   airportSuggestionSchema,
+  changePasswordSchema,
   createAirlineSchema,
   createAirportSchema,
   createFlightSchema,
@@ -17,10 +18,12 @@ import {
   reviewSchema,
   searchFlightsSchema,
   staffFlightFiltersSchema,
+  updateCustomerFieldSchema,
   updateStatusSchema,
 } from "@/lib/schemas"
 import {
   addAirplaneInternal,
+  changePasswordInternal,
   createAirlineInternal,
   createAirportInternal,
   createFlightInternal,
@@ -29,7 +32,9 @@ import {
   deleteCustomerInternal,
   deleteStaffInternal,
   getCustomerDashboardInternal,
+  getCustomerProfileInternal,
   getFlightPassengersInternal,
+  getPaymentHistoryInternal,
   getStaffDashboardInternal,
   getStaffReportInternal,
   listAllAirlinesInternal,
@@ -43,6 +48,7 @@ import {
   searchAirportsInternal,
   searchFlightsInternal,
   submitReviewInternal,
+  updateCustomerFieldInternal,
   updateFlightStatusInternal,
 } from "@/lib/queries.server"
 
@@ -224,3 +230,21 @@ export const listAllCustomersFn = createServerFn({ method: "GET" }).handler(
 export const deleteCustomerFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => deleteCustomerSchema.parse(data))
   .handler(async ({ data }) => deleteCustomerInternal(data))
+
+// --- Account server functions ---
+
+export const getCustomerProfileFn = createServerFn({ method: "GET" }).handler(
+  async () => getCustomerProfileInternal()
+)
+
+export const updateCustomerFieldFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => updateCustomerFieldSchema.parse(data))
+  .handler(async ({ data }) => updateCustomerFieldInternal(data))
+
+export const changePasswordFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => changePasswordSchema.parse(data))
+  .handler(async ({ data }) => changePasswordInternal(data))
+
+export const getPaymentHistoryFn = createServerFn({ method: "GET" }).handler(
+  async () => getPaymentHistoryInternal()
+)

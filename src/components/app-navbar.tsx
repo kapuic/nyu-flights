@@ -5,7 +5,7 @@ import type { AuthUser } from "@/lib/auth"
 import { APP_NAME } from "@/lib/app-config"
 
 type AppNavbarProps = {
-  activeTab: "search" | "trips"
+  activeTab?: "search" | "trips"
   currentUser: AuthUser | null
 }
 

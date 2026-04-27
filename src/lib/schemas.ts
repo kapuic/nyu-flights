@@ -297,3 +297,15 @@ export const deleteStaffSchema = z.object({
 export const deleteCustomerSchema = z.object({
   email: z.email(),
 })
+
+// --- Account schemas ---
+
+export const updateCustomerFieldSchema = z.object({
+  field: z.string().min(1),
+  value: z.string().min(1, "Value cannot be empty."),
+})
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required."),
+  newPassword: z.string().min(8, "New password must be at least 8 characters."),
+})

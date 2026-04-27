@@ -14,11 +14,15 @@ import { Route as StaffRouteImport } from './routes/staff'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CustomerRouteImport } from './routes/customer'
+import { Route as AccountRouteImport } from './routes/account'
 import { Route as GlobeRouteImport } from './routes/_globe'
+import { Route as AccountIndexRouteImport } from './routes/account.index'
 import { Route as GlobeIndexRouteImport } from './routes/_globe.index'
 import { Route as StaffRegisterRouteImport } from './routes/staff.register'
 import { Route as StaffLoginRouteImport } from './routes/staff.login'
 import { Route as StaffDashboardRouteImport } from './routes/staff._dashboard'
+import { Route as AccountSecurityRouteImport } from './routes/account.security'
+import { Route as AccountPaymentsRouteImport } from './routes/account.payments'
 import { Route as GlobeCheckoutRouteImport } from './routes/_globe.checkout'
 import { Route as StaffDashboardIndexRouteImport } from './routes/staff._dashboard.index'
 import { Route as StaffDashboardReportsRouteImport } from './routes/staff._dashboard.reports'
@@ -55,9 +59,19 @@ const CustomerRoute = CustomerRouteImport.update({
   path: '/customer',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GlobeRoute = GlobeRouteImport.update({
   id: '/_globe',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AccountIndexRoute = AccountIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AccountRoute,
 } as any)
 const GlobeIndexRoute = GlobeIndexRouteImport.update({
   id: '/',
@@ -77,6 +91,16 @@ const StaffLoginRoute = StaffLoginRouteImport.update({
 const StaffDashboardRoute = StaffDashboardRouteImport.update({
   id: '/_dashboard',
   getParentRoute: () => StaffRoute,
+} as any)
+const AccountSecurityRoute = AccountSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountPaymentsRoute = AccountPaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => AccountRoute,
 } as any)
 const GlobeCheckoutRoute = GlobeCheckoutRouteImport.update({
   id: '/checkout',
@@ -134,14 +158,18 @@ const StaffDashboardAirlinesRoute = StaffDashboardAirlinesRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof GlobeIndexRoute
+  '/account': typeof AccountRouteWithChildren
   '/customer': typeof CustomerRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/staff': typeof StaffDashboardRouteWithChildren
   '/trips': typeof TripsRoute
   '/checkout': typeof GlobeCheckoutRoute
+  '/account/payments': typeof AccountPaymentsRoute
+  '/account/security': typeof AccountSecurityRoute
   '/staff/login': typeof StaffLoginRoute
   '/staff/register': typeof StaffRegisterRoute
+  '/account/': typeof AccountIndexRoute
   '/staff/airlines': typeof StaffDashboardAirlinesRoute
   '/staff/airports': typeof StaffDashboardAirportsRoute
   '/staff/fleet': typeof StaffDashboardFleetRoute
@@ -159,9 +187,12 @@ export interface FileRoutesByTo {
   '/staff': typeof StaffDashboardIndexRoute
   '/trips': typeof TripsRoute
   '/checkout': typeof GlobeCheckoutRoute
+  '/account/payments': typeof AccountPaymentsRoute
+  '/account/security': typeof AccountSecurityRoute
   '/staff/login': typeof StaffLoginRoute
   '/staff/register': typeof StaffRegisterRoute
   '/': typeof GlobeIndexRoute
+  '/account': typeof AccountIndexRoute
   '/staff/airlines': typeof StaffDashboardAirlinesRoute
   '/staff/airports': typeof StaffDashboardAirportsRoute
   '/staff/fleet': typeof StaffDashboardFleetRoute
@@ -174,16 +205,20 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_globe': typeof GlobeRouteWithChildren
+  '/account': typeof AccountRouteWithChildren
   '/customer': typeof CustomerRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/staff': typeof StaffRouteWithChildren
   '/trips': typeof TripsRoute
   '/_globe/checkout': typeof GlobeCheckoutRoute
+  '/account/payments': typeof AccountPaymentsRoute
+  '/account/security': typeof AccountSecurityRoute
   '/staff/_dashboard': typeof StaffDashboardRouteWithChildren
   '/staff/login': typeof StaffLoginRoute
   '/staff/register': typeof StaffRegisterRoute
   '/_globe/': typeof GlobeIndexRoute
+  '/account/': typeof AccountIndexRoute
   '/staff/_dashboard/airlines': typeof StaffDashboardAirlinesRoute
   '/staff/_dashboard/airports': typeof StaffDashboardAirportsRoute
   '/staff/_dashboard/fleet': typeof StaffDashboardFleetRoute
@@ -198,14 +233,18 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account'
     | '/customer'
     | '/login'
     | '/register'
     | '/staff'
     | '/trips'
     | '/checkout'
+    | '/account/payments'
+    | '/account/security'
     | '/staff/login'
     | '/staff/register'
+    | '/account/'
     | '/staff/airlines'
     | '/staff/airports'
     | '/staff/fleet'
@@ -223,9 +262,12 @@ export interface FileRouteTypes {
     | '/staff'
     | '/trips'
     | '/checkout'
+    | '/account/payments'
+    | '/account/security'
     | '/staff/login'
     | '/staff/register'
     | '/'
+    | '/account'
     | '/staff/airlines'
     | '/staff/airports'
     | '/staff/fleet'
@@ -237,16 +279,20 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_globe'
+    | '/account'
     | '/customer'
     | '/login'
     | '/register'
     | '/staff'
     | '/trips'
     | '/_globe/checkout'
+    | '/account/payments'
+    | '/account/security'
     | '/staff/_dashboard'
     | '/staff/login'
     | '/staff/register'
     | '/_globe/'
+    | '/account/'
     | '/staff/_dashboard/airlines'
     | '/staff/_dashboard/airports'
     | '/staff/_dashboard/fleet'
@@ -260,6 +306,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   GlobeRoute: typeof GlobeRouteWithChildren
+  AccountRoute: typeof AccountRouteWithChildren
   CustomerRoute: typeof CustomerRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
@@ -304,12 +351,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CustomerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_globe': {
       id: '/_globe'
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof GlobeRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/account/': {
+      id: '/account/'
+      path: '/'
+      fullPath: '/account/'
+      preLoaderRoute: typeof AccountIndexRouteImport
+      parentRoute: typeof AccountRoute
     }
     '/_globe/': {
       id: '/_globe/'
@@ -338,6 +399,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/staff'
       preLoaderRoute: typeof StaffDashboardRouteImport
       parentRoute: typeof StaffRoute
+    }
+    '/account/security': {
+      id: '/account/security'
+      path: '/security'
+      fullPath: '/account/security'
+      preLoaderRoute: typeof AccountSecurityRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/payments': {
+      id: '/account/payments'
+      path: '/payments'
+      fullPath: '/account/payments'
+      preLoaderRoute: typeof AccountPaymentsRouteImport
+      parentRoute: typeof AccountRoute
     }
     '/_globe/checkout': {
       id: '/_globe/checkout'
@@ -424,6 +499,21 @@ const GlobeRouteChildren: GlobeRouteChildren = {
 
 const GlobeRouteWithChildren = GlobeRoute._addFileChildren(GlobeRouteChildren)
 
+interface AccountRouteChildren {
+  AccountPaymentsRoute: typeof AccountPaymentsRoute
+  AccountSecurityRoute: typeof AccountSecurityRoute
+  AccountIndexRoute: typeof AccountIndexRoute
+}
+
+const AccountRouteChildren: AccountRouteChildren = {
+  AccountPaymentsRoute: AccountPaymentsRoute,
+  AccountSecurityRoute: AccountSecurityRoute,
+  AccountIndexRoute: AccountIndexRoute,
+}
+
+const AccountRouteWithChildren =
+  AccountRoute._addFileChildren(AccountRouteChildren)
+
 interface StaffDashboardRouteChildren {
   StaffDashboardAirlinesRoute: typeof StaffDashboardAirlinesRoute
   StaffDashboardAirportsRoute: typeof StaffDashboardAirportsRoute
@@ -468,6 +558,7 @@ const StaffRouteWithChildren = StaffRoute._addFileChildren(StaffRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   GlobeRoute: GlobeRouteWithChildren,
+  AccountRoute: AccountRouteWithChildren,
   CustomerRoute: CustomerRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,

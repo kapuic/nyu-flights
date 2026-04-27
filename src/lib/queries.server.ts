@@ -1062,3 +1062,107 @@ export async function deleteCustomerInternal(data: { email: string }) {
   await db`delete from customer where email = ${data.email}`
   return { message: `Customer "${data.email}" deleted.` }
 }
+
+
+export async function getCustomerProfileInternal() {
+  const user = await requireUser("customer")
+  const rows = await db<
+    Array<{
+      building_number: string
+      city: string
+      date_of_birth: string
+      email: string
+      name: string
+      passport_country: string
+      passport_expiration: string
+      passport_number: string
+      phone_number: string
+      state: string
+      street: string
+    }>
+  >`
+    select email, name, phone_number, building_number, street, city, state,
+           passport_number, passport_expiration, passport_country, date_of_birth
+    from customer
+    where email = ${user.email}
+  `
+  const row = rows[0]
+  if (!row) throw new Error("Customer not found.")
+  return {
+    buildingNumber: row.building_number,
+    city: row.city,
+    dateOfBirth: String(row.date_of_birth),
+    email: row.email,
+    name: row.name,
+    passportCountry: row.passport_country,
+    passportExpiration: String(row.passport_expiration),
+    passportNumber: row.passport_number,
+    phoneNumber: row.phone_number,
+    state: row.state,
+    street: row.street,
+  }
+}
+
+const EDITABLE_CUSTOMER_FIELDS: Record<string, string> = {
+  buildingNumber: "building_number",
+  city: "city",
+  name: "name",
+  passportCountry: "passport_country",
+  passportExpiration: "passport_expiration",
+  passportNumber: "passport_number",
+  phoneNumber: "phone_number",
+  state: "state",
+  street: "street",
+}
+
+export async function updateCustomerFieldInternal(data: {
+  field: string
+  value: string
+}) {
+  const user = await requireUser("customer")
+  const column = EDITABLE_CUSTOMER_FIELDS[data.field]
+  if (!column) throw new Error(`Field "${data.field}" is not editable.`)
+  if (!data.value.trim()) throw new Error("Value cannot be empty.")
+  await db`
+    update customer
+    set ${db(column)} = ${data.value.trim()}
+    where email = ${user.email}
+  `
+  return { success: true }
+}
+
+export async function changePasswordInternal(data: {
+  currentPassword: string
+  newPassword: string
+}) {
+  const bcrypt = (await import("bcrypt")).default
+  const user = await requireUser("customer")
+  const rows = await db<Array<{ password: string }>>`
+    select password from customer where email = ${user.email}
+  `
+  const row = rows[0]
+  if (!row) throw new Error("Customer not found.")
+  const valid = await bcrypt.compare(data.currentPassword, row.password)
+  if (!valid) throw new Error("Current password is incorrect.")
+  if (data.newPassword.length < 8) throw new Error("New password must be at least 8 characters.")
+  const hashed = await bcrypt.hash(data.newPassword, 10)
+  await db`update customer set password = ${hashed} where email = ${user.email}`
+  return { success: true }
+}
+
+export async function getPaymentHistoryInternal() {
+  const user = await requireUser("customer")
+  return db<
+    Array<{
+      card_expiration: string
+      card_number: string
+      card_type: string
+      name_on_card: string
+    }>
+  >`
+    select distinct on (card_number) card_number, card_type, name_on_card, card_expiration
+    from ticket
+    where customer_email = ${user.email}
+    order by card_number, card_expiration desc
+  `
+}
