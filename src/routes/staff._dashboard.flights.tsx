@@ -9,13 +9,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   Table,
   TableBody,
   TableCell,
@@ -24,8 +17,14 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  AirplaneComboboxField,
+  AirportComboboxField,
+} from "@/components/combobox-fields"
+import { DateTimePickerField } from "@/components/date-time-picker"
 import { ResponsiveModal } from "@/components/responsive-modal"
 import { staffDashboardQueryOptions } from "@/lib/staff-queries"
+import { REAL_AIRPORT_OPTIONS } from "@/lib/airports"
 import { createFlightFn, updateFlightStatusFn } from "@/lib/queries"
 
 export const Route = createFileRoute("/staff/_dashboard/flights")({
@@ -158,21 +157,12 @@ function StaffFlightsPage() {
                     {(field) => (
                       <Field>
                         <FieldLabel>Departure Airport</FieldLabel>
-                        <Select
+                        <AirportComboboxField
+                          items={REAL_AIRPORT_OPTIONS}
                           value={field.state.value}
-                          onValueChange={(v) => field.handleChange(v ?? "")}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select airport" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {data.airports.map((a) => (
-                              <SelectItem key={a.code} value={a.code}>
-                                {a.city} ({a.code})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          onChange={(value) => field.handleChange(value)}
+                          placeholder="Search departure airport"
+                        />
                       </Field>
                     )}
                   </form.Field>
@@ -180,21 +170,12 @@ function StaffFlightsPage() {
                     {(field) => (
                       <Field>
                         <FieldLabel>Arrival Airport</FieldLabel>
-                        <Select
+                        <AirportComboboxField
+                          items={REAL_AIRPORT_OPTIONS}
                           value={field.state.value}
-                          onValueChange={(v) => field.handleChange(v ?? "")}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select airport" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {data.airports.map((a) => (
-                              <SelectItem key={a.code} value={a.code}>
-                                {a.city} ({a.code})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          onChange={(value) => field.handleChange(value)}
+                          placeholder="Search arrival airport"
+                        />
                       </Field>
                     )}
                   </form.Field>
@@ -202,11 +183,10 @@ function StaffFlightsPage() {
                     {(field) => (
                       <Field>
                         <FieldLabel>Departure Time</FieldLabel>
-                        <Input
-                          type="datetime-local"
-                          required
+                        <DateTimePickerField
                           value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
+                          onChange={(value) => field.handleChange(value)}
+                          placeholder="Pick departure time"
                         />
                       </Field>
                     )}
@@ -215,11 +195,10 @@ function StaffFlightsPage() {
                     {(field) => (
                       <Field>
                         <FieldLabel>Arrival Time</FieldLabel>
-                        <Input
-                          type="datetime-local"
-                          required
+                        <DateTimePickerField
                           value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
+                          onChange={(value) => field.handleChange(value)}
+                          placeholder="Pick arrival time"
                         />
                       </Field>
                     )}
@@ -244,24 +223,12 @@ function StaffFlightsPage() {
                     {(field) => (
                       <Field>
                         <FieldLabel>Airplane</FieldLabel>
-                        <Select
+                        <AirplaneComboboxField
+                          items={data.airplanes}
                           value={field.state.value}
-                          onValueChange={(v) => field.handleChange(v ?? "")}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select airplane" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {data.airplanes.map((a) => (
-                              <SelectItem
-                                key={a.airplaneId}
-                                value={a.airplaneId}
-                              >
-                                {a.airplaneId} — {a.numberOfSeats} seats
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          onChange={(value) => field.handleChange(value)}
+                          placeholder="Search airplanes"
+                        />
                       </Field>
                     )}
                   </form.Field>
@@ -271,7 +238,11 @@ function StaffFlightsPage() {
                     {error}
                   </div>
                 ) : null}
-                <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto"
+                >
                   {isSubmitting ? "Creating…" : "Create Flight"}
                 </Button>
               </FieldGroup>
@@ -312,7 +283,7 @@ function StaffFlightsPage() {
                   <TableCell className="text-xs">
                     {flight.departureAirportCode} → {flight.arrivalAirportCode}
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                  <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">
                     {formatDateShort(flight.departureDatetime)}
                   </TableCell>
                   <TableCell>

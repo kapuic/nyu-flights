@@ -1,10 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Plus, Trash2 } from "lucide-react"
 
+import { AirportComboboxField } from "@/components/combobox-fields"
+import {
+  DeleteConfirmation,
+  useDeleteConfirmation,
+} from "@/components/delete-confirmation"
+import { ResponsiveModal } from "@/components/responsive-modal"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import {
   Select,
   SelectContent,
@@ -12,7 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import {
   Table,
   TableBody,
@@ -21,15 +26,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ResponsiveModal } from "@/components/responsive-modal"
+import { REAL_AIRPORT_OPTIONS, getAirportOption } from "@/lib/airports"
 import {
-  DeleteConfirmation,
-  useDeleteConfirmation,
-} from "@/components/delete-confirmation"
-import {
-  listAllAirportsFn,
   createAirportFn,
   deleteAirportFn,
+  listAllAirportsFn,
 } from "@/lib/queries"
 
 export const Route = createFileRoute("/staff/_dashboard/airports")({
@@ -42,9 +43,7 @@ function ManageAirportsPage() {
   >([])
   const [loading, setLoading] = useState(true)
   const [createOpen, setCreateOpen] = useState(false)
-  const [code, setCode] = useState("")
-  const [city, setCity] = useState("")
-  const [country, setCountry] = useState("")
+  const [selectedAirportCode, setSelectedAirportCode] = useState("")
   const [airportType, setAirportType] = useState("")
   const [error, setError] = useState<string | null>(null)
   const deleteConfirm = useDeleteConfirmation()
@@ -60,19 +59,30 @@ function ManageAirportsPage() {
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+  }, [])
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     try {
+      const selectedAirport = getAirportOption(selectedAirportCode)
+      if (!selectedAirport) {
+        setError("Choose a real airport from the list.")
+        return
+      }
+
       const result = await createAirportFn({
-        data: { code, city, country, airportType },
+        data: {
+          code: selectedAirport.code,
+          city: selectedAirport.city,
+          country: selectedAirport.country,
+          airportType,
+        },
       })
       toast.success(result.message)
-      setCode("")
-      setCity("")
-      setCountry("")
+      setSelectedAirportCode("")
       setAirportType("")
       setCreateOpen(false)
       await load()
@@ -110,37 +120,18 @@ function ManageAirportsPage() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         title="Create Airport"
-        description="Add a new airport to the system."
+        description="Add a real-world airport to the system."
       >
         <form onSubmit={handleCreate}>
           <FieldGroup>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field>
-                <FieldLabel>Code (3 letters)</FieldLabel>
-                <Input
-                  required
-                  maxLength={3}
-                  placeholder="LAX"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                />
-              </Field>
-              <Field>
-                <FieldLabel>City</FieldLabel>
-                <Input
-                  required
-                  placeholder="Los Angeles"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                />
-              </Field>
-              <Field>
-                <FieldLabel>Country</FieldLabel>
-                <Input
-                  required
-                  placeholder="USA"
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
+                <FieldLabel>Airport</FieldLabel>
+                <AirportComboboxField
+                  items={REAL_AIRPORT_OPTIONS}
+                  value={selectedAirportCode}
+                  onChange={(value) => setSelectedAirportCode(value)}
+                  placeholder="Search real-world airports"
                 />
               </Field>
               <Field>
@@ -160,9 +151,7 @@ function ManageAirportsPage() {
                 </Select>
               </Field>
             </div>
-            {error ? (
-              <p className="text-sm text-destructive">{error}</p>
-            ) : null}
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
             <Button type="submit" className="w-full sm:w-auto">
               Create Airport
             </Button>
@@ -189,13 +178,19 @@ function ManageAirportsPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={5}
+                  className="h-24 text-center text-muted-foreground"
+                >
                   Loading...
                 </TableCell>
               </TableRow>
             ) : airports.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={5}
+                  className="h-24 text-center text-muted-foreground"
+                >
                   No airports.
                 </TableCell>
               </TableRow>
@@ -204,10 +199,10 @@ function ManageAirportsPage() {
                 <TableRow key={a.code}>
                   <TableCell className="font-medium">{a.code}</TableCell>
                   <TableCell>{a.city}</TableCell>
-                  <TableCell className="hidden sm:table-cell text-muted-foreground">
+                  <TableCell className="hidden text-muted-foreground sm:table-cell">
                     {a.country}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground capitalize">
+                  <TableCell className="hidden text-muted-foreground capitalize md:table-cell">
                     {a.airport_type}
                   </TableCell>
                   <TableCell className="text-right">

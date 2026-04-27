@@ -5,6 +5,8 @@ import { IMaskInput } from "react-imask"
 import { type FormEvent, useState } from "react"
 import { toast } from "sonner"
 
+import { DatePickerField } from "@/components/date-time-picker"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -220,19 +222,18 @@ function StaffRegisterPage() {
                                                       <FieldLabel htmlFor="staff-dob">
                                                         Date of Birth
                                                       </FieldLabel>
-                                                      <Input
+                                                      <DatePickerField
                                                         id="staff-dob"
-                                                        onChange={(event) =>
-                                                          dateOfBirthField.handleChange(
-                                                            event.target.value
-                                                          )
-                                                        }
-                                                        required
-                                                        type="date"
                                                         value={
                                                           dateOfBirthField.state
                                                             .value
                                                         }
+                                                        onChange={(value) =>
+                                                          dateOfBirthField.handleChange(
+                                                            value
+                                                          )
+                                                        }
+                                                        placeholder="Pick date of birth"
                                                       />
                                                     </Field>
                                                     <Field>

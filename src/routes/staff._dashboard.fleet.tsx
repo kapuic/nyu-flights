@@ -5,6 +5,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { Plus } from "lucide-react"
 
+import { DatePickerField } from "@/components/date-time-picker"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -136,11 +137,10 @@ function StaffFleetPage() {
                     {(field) => (
                       <Field>
                         <FieldLabel>Manufacturing Date</FieldLabel>
-                        <Input
-                          type="date"
-                          required
+                        <DatePickerField
                           value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
+                          onChange={(value) => field.handleChange(value)}
+                          placeholder="Pick manufacturing date"
                         />
                       </Field>
                     )}
@@ -151,7 +151,11 @@ function StaffFleetPage() {
                     {error}
                   </div>
                 ) : null}
-                <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full sm:w-auto"
+                >
                   {isSubmitting ? "Adding…" : "Add Airplane"}
                 </Button>
               </FieldGroup>
@@ -187,10 +191,14 @@ function StaffFleetPage() {
                     {airplane.airplaneId}
                   </TableCell>
                   <TableCell>{airplane.manufacturingCompany}</TableCell>
-                  <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                  <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">
                     {new Date(airplane.manufacturingDate).toLocaleDateString(
                       "en-US",
-                      { year: "numeric", month: "short", day: "numeric" }
+                      {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      }
                     )}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">

@@ -10,6 +10,7 @@ import {
   Search,
 } from "lucide-react"
 
+import { REAL_AIRPORT_OPTIONS } from "@/lib/airports"
 import { searchFlightsFn } from "@/lib/queries"
 import type { FlightOption, FlightSearchResponse } from "@/lib/queries"
 import { useBookingStore } from "@/lib/booking-store"
@@ -55,7 +56,6 @@ function formatTime(datetime: string) {
     hour12: true,
   })
 }
-
 
 function PublicHomePage() {
   const navigate = useNavigate()
@@ -292,7 +292,6 @@ function PublicHomePage() {
         transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)",
       }}
     >
-      {/* Search cluster */}
       <div className="w-full">
         <form
           onSubmit={(e) => {
@@ -301,16 +300,15 @@ function PublicHomePage() {
             void form.handleSubmit()
           }}
         >
-          {/* Glass search bar */}
           <div className="flex flex-col gap-0 rounded-2xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-xl backdrop-saturate-150 md:flex-row md:items-stretch">
-            {/* From */}
-            <div className="flex-[1.4] border-b border-white/[0.06] py-3 md:border-b-0 md:border-r">
+            <div className="flex-[1.4] border-b border-white/[0.06] py-3 md:border-r md:border-b-0">
               <label className="mb-1 block px-3 text-[10px] font-medium tracking-widest text-white/40 uppercase">
                 From
               </label>
               <form.Field name="source">
                 {(field) => (
                   <AirportCombobox
+                    items={REAL_AIRPORT_OPTIONS}
                     value={field.state.value}
                     onValueChange={(v) => {
                       field.handleChange(v)
@@ -328,7 +326,6 @@ function PublicHomePage() {
               </form.Field>
             </div>
 
-            {/* Swap button */}
             <div className="relative z-10 flex items-center justify-center md:-mx-4">
               <button
                 type="button"
@@ -339,14 +336,14 @@ function PublicHomePage() {
               </button>
             </div>
 
-            {/* To */}
-            <div className="flex-[1.4] border-b border-white/[0.06] py-3 md:border-b-0 md:border-r">
+            <div className="flex-[1.4] border-b border-white/[0.06] py-3 md:border-r md:border-b-0">
               <label className="mb-1 block px-3 text-[10px] font-medium tracking-widest text-white/40 uppercase">
                 To
               </label>
               <form.Field name="destination">
                 {(field) => (
                   <AirportCombobox
+                    items={REAL_AIRPORT_OPTIONS}
                     value={field.state.value}
                     onValueChange={(v) => {
                       field.handleChange(v)
@@ -364,8 +361,7 @@ function PublicHomePage() {
               </form.Field>
             </div>
 
-            {/* Depart */}
-            <div className="flex-1 border-b border-white/[0.06] py-3 md:border-b-0 md:border-r">
+            <div className="flex-1 border-b border-white/[0.06] py-3 md:border-r md:border-b-0">
               <label className="mb-1 block px-3 text-[10px] font-medium tracking-widest text-white/40 uppercase">
                 Depart
               </label>
@@ -377,9 +373,7 @@ function PublicHomePage() {
                       const key = formatDateKey(d)
                       field.handleChange(key)
                       setDepartureDateValue(key)
-                      const ret = parseDateKey(
-                        form.getFieldValue("returnDate")
-                      )
+                      const ret = parseDateKey(form.getFieldValue("returnDate"))
                       if (d && ret && ret < d) {
                         form.setFieldValue("returnDate", "")
                         setReturnDateValue("")
@@ -392,11 +386,10 @@ function PublicHomePage() {
               </form.Field>
             </div>
 
-            {/* Return */}
             <form.Subscribe selector={(s) => s.values.tripType}>
               {(tripType) =>
                 tripType === "round-trip" ? (
-                  <div className="flex-1 border-b border-white/[0.06] py-3 md:border-b-0 md:border-r">
+                  <div className="flex-1 border-b border-white/[0.06] py-3 md:border-r md:border-b-0">
                     <label className="mb-1 block px-3 text-[10px] font-medium tracking-widest text-white/40 uppercase">
                       Return
                     </label>
@@ -411,9 +404,8 @@ function PublicHomePage() {
                           }}
                           placeholder="Any date"
                           minDate={
-                            parseDateKey(
-                              form.getFieldValue("departureDate")
-                            ) ?? new Date()
+                            parseDateKey(form.getFieldValue("departureDate")) ??
+                            new Date()
                           }
                         />
                       )}
@@ -423,7 +415,6 @@ function PublicHomePage() {
               }
             </form.Subscribe>
 
-            {/* Search button */}
             <button
               type="submit"
               className="flex items-center justify-center gap-2 rounded-b-2xl border-t border-white/[0.06] px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-white/[0.06] active:scale-[0.98] md:rounded-r-2xl md:rounded-bl-none md:border-t-0 md:border-l md:border-white/[0.06]"
@@ -434,14 +425,12 @@ function PublicHomePage() {
           </div>
         </form>
 
-        {/* Validation error */}
         {validationError && (
           <div className="mt-2 text-center text-sm text-red-400">
             {validationError}
           </div>
         )}
 
-        {/* Trip type toggle */}
         <div className="mt-3 flex items-center justify-center gap-1">
           <form.Subscribe selector={(s) => s.values.tripType}>
             {(tripType) => (
@@ -485,7 +474,6 @@ function PublicHomePage() {
         </div>
       </div>
 
-      {/* Results */}
       {showResults && (
         <div className="mt-8 w-full pb-24">
           {isLoading && (
@@ -511,10 +499,8 @@ function PublicHomePage() {
             </div>
           )}
 
-          {/* Phase 2: Return flight picker (round-trip, outbound selected) */}
           {pickingReturn && results ? (
             <div className="space-y-4">
-              {/* Pinned outbound summary */}
               <div className="rounded-xl border border-white/[0.08] bg-white/[0.06] p-4 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -544,7 +530,6 @@ function PublicHomePage() {
                 </div>
               </div>
 
-              {/* Return flights */}
               <div className="mb-2 text-xs font-medium tracking-widest text-white/30 uppercase">
                 Select your return flight
                 {eligibleReturns.length > 0 &&
@@ -570,7 +555,6 @@ function PublicHomePage() {
             </div>
           ) : null}
 
-          {/* Phase 1: Outbound results */}
           {!pickingReturn && results && results.outbound.length > 0 && (
             <div className="space-y-3">
               <div className="mb-2 text-xs font-medium tracking-widest text-white/30 uppercase">
@@ -583,13 +567,15 @@ function PublicHomePage() {
                     ? getReturnPreview(flight)
                     : null
                 return (
-                  <div key={`${flight.flightNumber}-${flight.departureDatetime}`}>
+                  <div
+                    key={`${flight.flightNumber}-${flight.departureDatetime}`}
+                  >
                     <FlightResultCard
                       flight={flight}
                       index={i}
                       onBook={handleBook}
                     />
-                    {/* Return flight preview strip */}
+
                     {returnInfo && (
                       <div className="mx-2 -mt-1 rounded-b-lg border border-t-0 border-white/[0.06] bg-white/[0.02] px-4 py-2.5">
                         <div className="mb-1.5 text-[10px] font-medium tracking-widest text-white/30 uppercase">
@@ -658,7 +644,6 @@ function PublicHomePage() {
   )
 }
 
-// Date picker field for the glass search bar
 function DatePickerField({
   value,
   onChange,
@@ -683,9 +668,7 @@ function DatePickerField({
         }
       >
         <CalendarIcon className="size-4 shrink-0 text-white/40" />
-        <span
-          className={cn("text-sm", value ? "text-white" : "text-white/30")}
-        >
+        <span className={cn("text-sm", value ? "text-white" : "text-white/30")}>
           {value
             ? value.toLocaleDateString("en-US", {
                 month: "short",

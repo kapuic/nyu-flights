@@ -3,8 +3,9 @@ import { useSuspenseQuery, useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { Star } from "lucide-react"
 
+import { DatePickerField } from "@/components/date-time-picker"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+
 import { Card, CardContent } from "@/components/ui/card"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import {
@@ -99,24 +100,21 @@ function StaffReportsPage() {
         <CardContent className="pt-6">
           <form onSubmit={handleReportSubmit}>
             <FieldGroup>
-              <h2 className="text-sm font-medium">Sales by Date Range</h2>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                 <Field>
                   <FieldLabel>Start Date</FieldLabel>
-                  <Input
-                    type="date"
-                    required
+                  <DatePickerField
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    onChange={setStartDate}
+                    placeholder="Pick start date"
                   />
                 </Field>
                 <Field>
                   <FieldLabel>End Date</FieldLabel>
-                  <Input
-                    type="date"
-                    required
+                  <DatePickerField
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    onChange={setEndDate}
+                    placeholder="Pick end date"
                   />
                 </Field>
                 <Button type="submit">Query</Button>
@@ -124,7 +122,9 @@ function StaffReportsPage() {
               {reportError ? (
                 <p className="text-sm text-destructive">{reportError}</p>
               ) : reportQuery.isError ? (
-                <p className="text-sm text-destructive">Failed to load report.</p>
+                <p className="text-sm text-destructive">
+                  Failed to load report.
+                </p>
               ) : reportQuery.isLoading ? (
                 <p className="text-sm text-muted-foreground">Loading...</p>
               ) : reportQuery.data ? (
@@ -198,9 +198,7 @@ function StaffReportsPage() {
                 <TableHead>Flight</TableHead>
                 <TableHead>Rating</TableHead>
                 <TableHead className="hidden sm:table-cell">Reviews</TableHead>
-                <TableHead className="hidden md:table-cell">
-                  Comments
-                </TableHead>
+                <TableHead className="hidden md:table-cell">Comments</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -215,46 +213,42 @@ function StaffReportsPage() {
                 </TableRow>
               ) : (
                 ratedFlights.map((r) => (
-                    <TableRow
-                      key={`${r.flightNumber}-${r.departureDatetime}`}
-                    >
-                      <TableCell className="font-medium">
-                        {r.flightNumber}
-                      </TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center gap-1 tabular-nums">
-                          <Star className="size-3.5 fill-current text-amber-500" />
-                          {r.averageRating?.toFixed(1) ?? "—"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-sm text-muted-foreground tabular-nums">
-                        {r.reviewCount}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {r.comments.length > 0 ? (
-                          <ul className="space-y-1">
-                            {r.comments.slice(0, 3).map((c, i) => (
-                              <li
-                                key={i}
-                                className="text-sm text-muted-foreground truncate max-w-xs"
-                              >
-                                "{c}"
-                              </li>
-                            ))}
-                            {r.comments.length > 3 ? (
-                              <li className="text-xs text-muted-foreground">
-                                +{r.comments.length - 3} more
-                              </li>
-                            ) : null}
-                          </ul>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            —
-                          </span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  <TableRow key={`${r.flightNumber}-${r.departureDatetime}`}>
+                    <TableCell className="font-medium">
+                      {r.flightNumber}
+                    </TableCell>
+                    <TableCell>
+                      <span className="inline-flex items-center gap-1 tabular-nums">
+                        <Star className="size-3.5 fill-current text-amber-500" />
+                        {r.averageRating?.toFixed(1) ?? "—"}
+                      </span>
+                    </TableCell>
+                    <TableCell className="hidden text-sm text-muted-foreground tabular-nums sm:table-cell">
+                      {r.reviewCount}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {r.comments.length > 0 ? (
+                        <ul className="space-y-1">
+                          {r.comments.slice(0, 3).map((c, i) => (
+                            <li
+                              key={i}
+                              className="max-w-xs truncate text-sm text-muted-foreground"
+                            >
+                              "{c}"
+                            </li>
+                          ))}
+                          {r.comments.length > 3 ? (
+                            <li className="text-xs text-muted-foreground">
+                              +{r.comments.length - 3} more
+                            </li>
+                          ) : null}
+                        </ul>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>

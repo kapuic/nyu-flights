@@ -3,18 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { MapPin } from "lucide-react"
 
-import { searchAirportsFn } from "@/lib/queries"
+import { getAirportDisplayValue, getFlagEmoji } from "@/lib/airports"
+import type { AirportOption } from "@/lib/airports"
 import { cn } from "@/lib/utils"
 
-type AirportSuggestion = {
-  city: string
-  code: string
-  country: string
-}
+type AirportSuggestion = AirportOption
 
 type AirportComboboxProps = {
   className?: string
   icon?: React.ReactNode
+  items?: Array<AirportSuggestion>
   onSelect: (airport: AirportSuggestion) => void
   placeholder?: string
   value: string
@@ -24,6 +22,7 @@ type AirportComboboxProps = {
 export function AirportCombobox({
   className,
   icon,
+  items = [],
   onSelect,
   placeholder = "Select airport",
   value,
@@ -37,26 +36,34 @@ export function AirportCombobox({
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
-  const fetchSuggestions = useCallback(async (query: string) => {
-    if (query.trim().length === 0) {
-      setSuggestions([])
-      setOpen(false)
-      return
-    }
+  const fetchSuggestions = useCallback(
+    (query: string) => {
+      const normalizedQuery = query.trim().toLowerCase()
+      if (normalizedQuery.length === 0) {
+        setSuggestions([])
+        setOpen(false)
+        setLoading(false)
+        return
+      }
 
-    setLoading(true)
-    try {
-      const results = await searchAirportsFn({ data: { query } })
-      setSuggestions(results)
-      setOpen(results.length > 0)
-      setHighlightIndex(-1)
-    } catch {
-      setSuggestions([])
-      setOpen(false)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+      const nextSuggestions = items
+        .filter((airport) =>
+          `${airport.code} ${airport.city} ${airport.name} ${airport.country}`
+            .toLowerCase()
+            .includes(normalizedQuery)
+        )
+        .slice(0, 12)
+
+      setLoading(true)
+      window.setTimeout(() => {
+        setSuggestions(nextSuggestions)
+        setOpen(nextSuggestions.length > 0)
+        setHighlightIndex(-1)
+        setLoading(false)
+      }, 0)
+    },
+    [items]
+  )
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,7 +78,7 @@ export function AirportCombobox({
 
   const handleSelect = useCallback(
     (airport: AirportSuggestion) => {
-      onValueChange(`${airport.city} (${airport.code})`)
+      onValueChange(getAirportDisplayValue(airport))
       onSelect(airport)
       setOpen(false)
       setSuggestions([])
@@ -100,7 +107,6 @@ export function AirportCombobox({
     [open, suggestions, highlightIndex, handleSelect]
   )
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (
@@ -135,7 +141,7 @@ export function AirportCombobox({
             if (suggestions.length > 0) setOpen(true)
           }}
           placeholder={placeholder}
-          className="h-9 w-full min-w-0 bg-transparent text-sm text-white placeholder:text-white/30 outline-none"
+          className="h-9 w-full min-w-0 bg-transparent text-sm text-white outline-none placeholder:text-white/30"
           autoComplete="off"
         />
       </div>
@@ -159,13 +165,15 @@ export function AirportCombobox({
                   : "text-white/70 hover:bg-white/5"
               )}
             >
-              <MapPin className="size-3.5 shrink-0 text-white/30" />
+              <span aria-hidden className="shrink-0 text-base leading-none">
+                {getFlagEmoji(airport.countryCode)}
+              </span>
               <div className="min-w-0">
                 <div className="truncate font-medium text-white/90">
-                  {airport.city}
+                  {getAirportDisplayValue(airport)}
                 </div>
-                <div className="text-xs text-white/40">
-                  {airport.code} · {airport.country}
+                <div className="truncate text-xs text-white/40">
+                  {airport.name} · {airport.country}
                 </div>
               </div>
             </button>
@@ -176,12 +184,14 @@ export function AirportCombobox({
         </div>
       )}
 
-      {open && suggestions.length === 0 && !loading && value.trim().length > 0 && (
-        <div className="absolute top-full left-0 z-50 mt-2 w-64 rounded-lg border border-white/10 bg-black/80 px-3 py-3 text-sm text-white/40 shadow-2xl backdrop-blur-2xl">
-          No airports found
-        </div>
-      )}
+      {open &&
+        suggestions.length === 0 &&
+        !loading &&
+        value.trim().length > 0 && (
+          <div className="absolute top-full left-0 z-50 mt-2 w-64 rounded-lg border border-white/10 bg-black/80 px-3 py-3 text-sm text-white/40 shadow-2xl backdrop-blur-2xl">
+            No airports found
+          </div>
+        )}
     </div>
   )
 }
-
