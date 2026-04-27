@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react"
+import { type FormEvent, useEffect, useId, useRef, useState } from "react"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { useForm } from "@tanstack/react-form"
 import {
@@ -10,12 +10,39 @@ import {
   Plane,
 } from "lucide-react"
 import { IMaskInput } from "react-imask"
+import { z } from "zod"
 
 import { useBookingStore } from "@/lib/booking-store"
 import { purchaseTicketFn } from "@/lib/queries"
 import type { FlightOption } from "@/lib/queries"
 import { formatCurrency } from "@/lib/format"
 import { cn } from "@/lib/utils"
+
+const paymentSchema = z.object({
+  cardType: z.enum(["credit", "debit"]),
+  cardNumber: z
+    .string()
+    .refine(
+      (v) => /^\d+$/.test(v.replace(/\s/g, "")) && v.replace(/\s/g, "").length >= 12,
+      "Card number must contain only digits and be at least 12 digits."
+    ),
+  nameOnCard: z.string().min(2, "Name on card is required."),
+  cardExpiration: z.string().refine((value) => {
+    if (!/^\d{2}\/\d{2}$/.test(value)) return false
+    const [monthText, yearText] = value.split("/")
+    const month = Number(monthText)
+    const year = Number(yearText)
+    if (!Number.isInteger(month) || !Number.isInteger(year)) return false
+    if (month < 1 || month > 12) return false
+
+    const now = new Date()
+    const currentMonth = now.getMonth() + 1
+    const currentYear = now.getFullYear() % 100
+    if (year < currentYear) return false
+    if (year === currentYear && month < currentMonth) return false
+    return true
+  }, "Enter a valid future expiration (MM/YY)."),
+})
 
 export const Route = createFileRoute("/_globe/checkout")({
   component: CheckoutPage,
@@ -103,6 +130,9 @@ function CheckoutForm({
       nameOnCard: "",
       cardExpiration: "",
     },
+    validators: {
+      onSubmit: paymentSchema,
+    },
     onSubmit: async ({ value }) => {
       // Strip mask characters from card number
       const rawCardNumber = value.cardNumber.replace(/\s/g, "")
@@ -149,14 +179,28 @@ function CheckoutForm({
     },
   })
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     e.stopPropagation()
     setError(null)
     try {
       await form.handleSubmit()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Booking failed.")
+      // Format server errors nicely
+      if (err instanceof Error) {
+        try {
+          const parsed = JSON.parse(err.message)
+          if (Array.isArray(parsed)) {
+            setError(parsed.map((e: { message?: string }) => e.message).filter(Boolean).join(" "))
+            return
+          }
+        } catch {
+          // not JSON, use as-is
+        }
+        setError(err.message)
+      } else {
+        setError("Booking failed.")
+      }
     }
   }
 
@@ -228,68 +272,112 @@ function CheckoutForm({
 
               {/* Card number */}
               <div className="mb-5">
-                <label
-                  htmlFor={`${formId}-card`}
-                  className="mb-2 block text-[10px] font-medium tracking-widest text-white/40 uppercase"
-                >
-                  Card Number
-                </label>
                 <form.Field name="cardNumber">
-                  {(field) => (
-                    <IMaskInput
-                      id={`${formId}-card`}
-                      mask="0000 0000 0000 0000"
-                      placeholder="0000 0000 0000 0000"
-                      value={field.state.value}
-                      onAccept={(value) => field.handleChange(String(value))}
-                      className="h-10 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white placeholder:text-white/25 outline-none transition-colors focus:border-white/20 focus:ring-1 focus:ring-white/10"
-                    />
-                  )}
+                  {(field) => {
+                    const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+                    return (
+                      <>
+                        <label
+                          htmlFor={`${formId}-card`}
+                          className="mb-2 block text-[10px] font-medium tracking-widest text-white/40 uppercase"
+                        >
+                          Card Number
+                        </label>
+                        <IMaskInput
+                          id={`${formId}-card`}
+                          mask="0000 0000 0000 0000"
+                          placeholder="0000 0000 0000 0000"
+                          value={field.state.value}
+                          onAccept={(value) => field.handleChange(String(value))}
+                          onBlur={field.handleBlur}
+                          aria-invalid={isInvalid}
+                          className={cn(
+                            "h-10 w-full rounded-lg border bg-white/[0.04] px-3 text-sm text-white placeholder:text-white/25 outline-none transition-colors focus:border-white/20 focus:ring-1 focus:ring-white/10",
+                            isInvalid ? "border-red-500/50" : "border-white/10"
+                          )}
+                        />
+                        {isInvalid && field.state.meta.errors.length > 0 && (
+                          <p className="mt-1 text-xs text-red-400">
+                            {String(field.state.meta.errors[0])}
+                          </p>
+                        )}
+                      </>
+                    )
+                  }}
                 </form.Field>
               </div>
 
-              {/* Expiration + Name on card */}
               <div className="mb-6 grid grid-cols-2 gap-4">
                 <div>
-                  <label
-                    htmlFor={`${formId}-exp`}
-                    className="mb-2 block text-[10px] font-medium tracking-widest text-white/40 uppercase"
-                  >
-                    Expiration
-                  </label>
                   <form.Field name="cardExpiration">
-                    {(field) => (
-                      <IMaskInput
-                        id={`${formId}-exp`}
-                        mask="00/00"
-                        placeholder="MM/YY"
-                        value={field.state.value}
-                        onAccept={(value) =>
-                          field.handleChange(String(value))
-                        }
-                        className="h-10 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white placeholder:text-white/25 outline-none transition-colors focus:border-white/20 focus:ring-1 focus:ring-white/10"
-                      />
-                    )}
+                    {(field) => {
+                      const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+                      return (
+                        <>
+                          <label
+                            htmlFor={`${formId}-exp`}
+                            className="mb-2 block text-[10px] font-medium tracking-widest text-white/40 uppercase"
+                          >
+                            Expiration
+                          </label>
+                          <IMaskInput
+                            id={`${formId}-exp`}
+                            mask="00/00"
+                            placeholder="MM/YY"
+                            value={field.state.value}
+                            onAccept={(value) =>
+                              field.handleChange(String(value))
+                            }
+                            onBlur={field.handleBlur}
+                            aria-invalid={isInvalid}
+                            className={cn(
+                              "h-10 w-full rounded-lg border bg-white/[0.04] px-3 text-sm text-white placeholder:text-white/25 outline-none transition-colors focus:border-white/20 focus:ring-1 focus:ring-white/10",
+                              isInvalid ? "border-red-500/50" : "border-white/10"
+                            )}
+                          />
+                          {isInvalid && field.state.meta.errors.length > 0 && (
+                            <p className="mt-1 text-xs text-red-400">
+                              {String(field.state.meta.errors[0])}
+                            </p>
+                          )}
+                        </>
+                      )
+                    }}
                   </form.Field>
                 </div>
                 <div>
-                  <label
-                    htmlFor={`${formId}-name`}
-                    className="mb-2 block text-[10px] font-medium tracking-widest text-white/40 uppercase"
-                  >
-                    Name on Card
-                  </label>
                   <form.Field name="nameOnCard">
-                    {(field) => (
-                      <input
-                        id={`${formId}-name`}
-                        type="text"
-                        placeholder="Full Name"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        className="h-10 w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-white placeholder:text-white/25 outline-none transition-colors focus:border-white/20 focus:ring-1 focus:ring-white/10"
-                      />
-                    )}
+                    {(field) => {
+                      const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid
+                      return (
+                        <>
+                          <label
+                            htmlFor={`${formId}-name`}
+                            className="mb-2 block text-[10px] font-medium tracking-widest text-white/40 uppercase"
+                          >
+                            Name on Card
+                          </label>
+                          <input
+                            id={`${formId}-name`}
+                            type="text"
+                            placeholder="Full Name"
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            onBlur={field.handleBlur}
+                            aria-invalid={isInvalid}
+                            className={cn(
+                              "h-10 w-full rounded-lg border bg-white/[0.04] px-3 text-sm text-white placeholder:text-white/25 outline-none transition-colors focus:border-white/20 focus:ring-1 focus:ring-white/10",
+                              isInvalid ? "border-red-500/50" : "border-white/10"
+                            )}
+                          />
+                          {isInvalid && field.state.meta.errors.length > 0 && (
+                            <p className="mt-1 text-xs text-red-400">
+                              {String(field.state.meta.errors[0])}
+                            </p>
+                          )}
+                        </>
+                      )
+                    }}
                   </form.Field>
                 </div>
               </div>

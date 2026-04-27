@@ -1,7 +1,7 @@
 import { getData as getCountries } from "country-list"
 import { faker } from "@faker-js/faker"
 import { useForm } from "@tanstack/react-form"
-import { useRouter } from "@tanstack/react-router"
+import { Link, useRouter } from "@tanstack/react-router"
 import { addYears, format } from "date-fns"
 import {
   Calendar as CalendarIcon,
@@ -10,7 +10,7 @@ import {
   UserRoundPlus,
 } from "lucide-react"
 import { IMaskInput } from "react-imask"
-import { useId, useMemo, useState } from "react"
+import { type ComponentProps, type FormEvent, type ReactNode, useId, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -38,6 +38,7 @@ import {
 import { APP_NAME } from "@/lib/app-config"
 import { registerCustomerFn } from "@/lib/auth"
 import { TRAVELER_AUTH_IMAGE_URLS } from "@/lib/auth-images"
+import { customerRegistrationSchema } from "@/lib/schemas"
 import { cn } from "@/lib/utils"
 
 type RegionOption = {
@@ -121,11 +122,13 @@ function getFlagEmoji(code: string) {
 
 function DatePickerField({
   id,
+  onBlur,
   onChange,
   placeholder,
   value,
 }: {
   id: string
+  onBlur?: () => void
   onChange: (value: string) => void
   placeholder: string
   value: string
@@ -156,7 +159,10 @@ function DatePickerField({
           captionLayout="dropdown"
           mode="single"
           selected={selectedDate}
-          onSelect={(date) => onChange(formatDateValue(date))}
+          onSelect={(date) => {
+            onChange(formatDateValue(date))
+            onBlur?.()
+          }}
         />
       </PopoverContent>
     </Popover>
@@ -165,12 +171,14 @@ function DatePickerField({
 
 function RegionCombobox({
   ariaLabel,
+  onBlur,
   onChange,
   options,
   placeholder,
   value,
 }: {
   ariaLabel: string
+  onBlur?: () => void
   onChange: (value: string) => void
   options: Array<RegionOption>
   placeholder: string
@@ -185,7 +193,10 @@ function RegionCombobox({
       items={options}
       itemToStringValue={(option) => `${option.label} ${option.code}`}
       value={selectedOption}
-      onValueChange={(option) => onChange(option?.label ?? "")}
+      onValueChange={(option) => {
+        onChange(option?.label ?? "")
+        onBlur?.()
+      }}
     >
       <ComboboxInput
         aria-label={ariaLabel}
@@ -221,7 +232,7 @@ export function SignupFormFields({
   footer,
 }: {
   onSuccess: () => void
-  footer?: React.ReactNode
+  footer?: ReactNode
 }) {
   const router = useRouter()
   const formId = useId()
@@ -244,9 +255,14 @@ export function SignupFormFields({
       state: "",
       street: "",
     },
+    validators: {
+      onSubmit: customerRegistrationSchema,
+    },
     onSubmit: async ({ value }) => {
       const result = await registerCustomerFn({ data: value })
-      if (result.error) throw new Error(result.error)
+      if (result.error) {
+        throw new Error(result.error)
+      }
       await router.invalidate()
       onSuccess()
     },
@@ -291,10 +307,11 @@ export function SignupFormFields({
     form.setFieldValue("street", faker.location.streetAddress())
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     e.stopPropagation()
     setError(null)
+
     try {
       await form.handleSubmit()
     } catch (err) {
@@ -303,7 +320,39 @@ export function SignupFormFields({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form
+      noValidate
+      onSubmit={(e) => {
+        if (step === 1) {
+          e.preventDefault()
+          e.stopPropagation()
+
+          const values = form.state.values
+          const stepOneValid = customerRegistrationSchema
+            .pick({
+              email: true,
+              name: true,
+              password: true,
+            })
+            .safeParse({
+              email: values.email,
+              name: values.name,
+              password: values.password,
+            })
+
+          if (stepOneValid.success) {
+            setError(null)
+            setStep(2)
+            return
+          }
+
+          setError(stepOneValid.error.issues.map((issue) => issue.message).join(" "))
+          return
+        }
+
+        void handleSubmit(e)
+      }}
+    >
       <FieldGroup>
         <div className="flex flex-col items-center gap-2 text-center">
           <div className="mb-2 inline-flex size-10 items-center justify-center rounded-md bg-slate-950 text-white">
@@ -325,20 +374,21 @@ export function SignupFormFields({
               {(field) => (
                 <Field
                   data-invalid={
-                    field.state.meta.isTouched && !field.state.value
+                    field.state.meta.isTouched && !field.state.meta.isValid
                   }
                 >
                   <FieldLabel htmlFor={`${formId}-name`}>Full Name</FieldLabel>
                   <Input
                     id={`${formId}-name`}
+                    onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
                     placeholder="John Smith"
                     required
                     value={field.state.value}
                   />
-                  {field.state.meta.isTouched && !field.state.value ? (
+                  {field.state.meta.isTouched && !field.state.meta.isValid ? (
                     <FieldDescription className="text-destructive">
-                      Full name is required.
+                      {String(field.state.meta.errors[0])}
                     </FieldDescription>
                   ) : null}
                 </Field>
@@ -349,21 +399,22 @@ export function SignupFormFields({
               {(field) => (
                 <Field
                   data-invalid={
-                    field.state.meta.isTouched && !field.state.value
+                    field.state.meta.isTouched && !field.state.meta.isValid
                   }
                 >
                   <FieldLabel htmlFor={`${formId}-email`}>Email</FieldLabel>
                   <Input
                     id={`${formId}-email`}
+                    onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
                     placeholder="name@example.com"
                     required
                     type="email"
                     value={field.state.value}
                   />
-                  {field.state.meta.isTouched && !field.state.value ? (
+                  {field.state.meta.isTouched && !field.state.meta.isValid ? (
                     <FieldDescription className="text-destructive">
-                      Email is required.
+                      {String(field.state.meta.errors[0])}
                     </FieldDescription>
                   ) : (
                     <FieldDescription>
@@ -378,7 +429,7 @@ export function SignupFormFields({
               {(field) => (
                 <Field
                   data-invalid={
-                    field.state.meta.isTouched && !field.state.value
+                    field.state.meta.isTouched && !field.state.meta.isValid
                   }
                 >
                   <FieldLabel htmlFor={`${formId}-password`}>
@@ -389,6 +440,7 @@ export function SignupFormFields({
                       autoComplete="new-password"
                       className="pr-10"
                       id={`${formId}-password`}
+                      onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
                       placeholder="••••••••"
                       required
@@ -396,8 +448,10 @@ export function SignupFormFields({
                       value={field.state.value}
                     />
                     <Button
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-pressed={showPassword}
                       className="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      onClick={() => setShowPassword(!showPassword)}
+                      onClick={() => setShowPassword((prev) => !prev)}
                       size="icon-sm"
                       type="button"
                       variant="ghost"
@@ -405,9 +459,9 @@ export function SignupFormFields({
                       <Eye className="size-4" />
                     </Button>
                   </div>
-                  {field.state.meta.isTouched && !field.state.value ? (
+                  {field.state.meta.isTouched && !field.state.meta.isValid ? (
                     <FieldDescription className="text-destructive">
-                      Password is required.
+                      {String(field.state.meta.errors[0])}
                     </FieldDescription>
                   ) : (
                     <FieldDescription>
@@ -440,10 +494,16 @@ export function SignupFormFields({
                       </FieldLabel>
                       <DatePickerField
                         id={`${formId}-dob`}
+                        onBlur={field.handleBlur}
                         onChange={field.handleChange}
                         placeholder="Select date"
                         value={field.state.value}
                       />
+                      {field.state.meta.isTouched && !field.state.meta.isValid ? (
+                        <FieldDescription className="text-destructive">
+                          {String(field.state.meta.errors[0])}
+                        </FieldDescription>
+                      ) : null}
                     </Field>
                   )}
                 </form.Field>
@@ -456,9 +516,15 @@ export function SignupFormFields({
                         className={maskedInputClassName}
                         mask="+{1} (000) 000-0000"
                         onAccept={(value) => field.handleChange(String(value))}
+                        onBlur={field.handleBlur}
                         placeholder="+1 (555) 000-0000"
                         value={field.state.value}
                       />
+                      {field.state.meta.isTouched && !field.state.meta.isValid ? (
+                        <FieldDescription className="text-destructive">
+                          {String(field.state.meta.errors[0])}
+                        </FieldDescription>
+                      ) : null}
                     </Field>
                   )}
                 </form.Field>
@@ -483,11 +549,17 @@ export function SignupFormFields({
                       </FieldLabel>
                       <Input
                         id={`${formId}-street`}
+                        onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
                         placeholder="123 Main St"
                         required
                         value={field.state.value}
                       />
+                      {field.state.meta.isTouched && !field.state.meta.isValid ? (
+                        <FieldDescription className="text-destructive">
+                          {String(field.state.meta.errors[0])}
+                        </FieldDescription>
+                      ) : null}
                     </Field>
                   )}
                 </form.Field>
@@ -499,11 +571,17 @@ export function SignupFormFields({
                       </FieldLabel>
                       <Input
                         id={`${formId}-building`}
+                        onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
                         placeholder="4A"
                         required
                         value={field.state.value}
                       />
+                      {field.state.meta.isTouched && !field.state.meta.isValid ? (
+                        <FieldDescription className="text-destructive">
+                          {String(field.state.meta.errors[0])}
+                        </FieldDescription>
+                      ) : null}
                     </Field>
                   )}
                 </form.Field>
@@ -515,11 +593,17 @@ export function SignupFormFields({
                       <FieldLabel htmlFor={`${formId}-city`}>City</FieldLabel>
                       <Input
                         id={`${formId}-city`}
+                        onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
                         placeholder="New York"
                         required
                         value={field.state.value}
                       />
+                      {field.state.meta.isTouched && !field.state.meta.isValid ? (
+                        <FieldDescription className="text-destructive">
+                          {String(field.state.meta.errors[0])}
+                        </FieldDescription>
+                      ) : null}
                     </Field>
                   )}
                 </form.Field>
@@ -529,11 +613,17 @@ export function SignupFormFields({
                       <FieldLabel>State</FieldLabel>
                       <RegionCombobox
                         ariaLabel="State"
+                        onBlur={field.handleBlur}
                         onChange={field.handleChange}
                         options={US_STATE_OPTIONS}
                         placeholder="Search state"
                         value={field.state.value}
                       />
+                      {field.state.meta.isTouched && !field.state.meta.isValid ? (
+                        <FieldDescription className="text-destructive">
+                          {String(field.state.meta.errors[0])}
+                        </FieldDescription>
+                      ) : null}
                     </Field>
                   )}
                 </form.Field>
@@ -558,11 +648,17 @@ export function SignupFormFields({
                       </FieldLabel>
                       <Input
                         id={`${formId}-passport`}
+                        onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
                         placeholder="Required for international"
                         required
                         value={field.state.value}
                       />
+                      {field.state.meta.isTouched && !field.state.meta.isValid ? (
+                        <FieldDescription className="text-destructive">
+                          {String(field.state.meta.errors[0])}
+                        </FieldDescription>
+                      ) : null}
                     </Field>
                   )}
                 </form.Field>
@@ -572,11 +668,17 @@ export function SignupFormFields({
                       <FieldLabel>Passport Country</FieldLabel>
                       <RegionCombobox
                         ariaLabel="Passport country"
+                        onBlur={field.handleBlur}
                         onChange={field.handleChange}
                         options={countryOptions}
                         placeholder="Search country"
                         value={field.state.value}
                       />
+                      {field.state.meta.isTouched && !field.state.meta.isValid ? (
+                        <FieldDescription className="text-destructive">
+                          {String(field.state.meta.errors[0])}
+                        </FieldDescription>
+                      ) : null}
                     </Field>
                   )}
                 </form.Field>
@@ -589,10 +691,16 @@ export function SignupFormFields({
                     </FieldLabel>
                     <DatePickerField
                       id={`${formId}-passport-exp`}
+                      onBlur={field.handleBlur}
                       onChange={field.handleChange}
                       placeholder="Select date"
                       value={field.state.value}
                     />
+                    {field.state.meta.isTouched && !field.state.meta.isValid ? (
+                      <FieldDescription className="text-destructive">
+                        {String(field.state.meta.errors[0])}
+                      </FieldDescription>
+                    ) : null}
                   </Field>
                 )}
               </form.Field>
@@ -612,8 +720,7 @@ export function SignupFormFields({
               {step === 1 ? (
                 <Button
                   className="bg-gradient-to-r from-slate-950 to-slate-800 hover:opacity-90"
-                  onClick={() => setStep(2)}
-                  type="button"
+                  type="submit"
                 >
                   Continue
                 </Button>
@@ -622,7 +729,10 @@ export function SignupFormFields({
                   <div className="flex flex-col gap-3 sm:flex-row">
                     <Button
                       className="sm:w-auto"
-                      onClick={() => setStep(1)}
+                      onClick={() => {
+                        setError(null)
+                        setStep(1)
+                      }}
                       type="button"
                       variant="outline"
                     >
@@ -649,24 +759,24 @@ export function SignupFormFields({
               )}
               {footer ?? (
                 <div className="space-y-2 text-center text-sm text-muted-foreground">
-                  <p>
-                    Already have an account?{" "}
-                    <a
-                      className="font-medium text-foreground underline underline-offset-4"
-                      href="/login"
-                    >
-                      Sign in
-                    </a>
-                  </p>
-                  <p>
-                    Staff member?{" "}
-                    <a
-                      className="font-medium text-foreground underline underline-offset-4"
-                      href="/staff/register"
-                    >
-                      Create staff account
-                    </a>
-                  </p>
+                <p>
+                  Already have an account?{" "}
+                  <Link
+                    className="font-medium text-foreground underline underline-offset-4"
+                    to="/login"
+                  >
+                    Sign in
+                  </Link>
+                </p>
+                <p>
+                  Staff member?{" "}
+                  <Link
+                    className="font-medium text-foreground underline underline-offset-4"
+                    to="/staff/register"
+                  >
+                    Create staff account
+                  </Link>
+                </p>
                 </div>
               )}
             </Field>
@@ -689,7 +799,7 @@ export function SignupForm({
   className?: string
   heroImageUrl?: string
   onSuccess: () => void
-} & Omit<React.ComponentProps<"div">, "className" | "onSuccess">) {
+} & Omit<ComponentProps<"div">, "className" | "onSuccess">) {
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card className="overflow-hidden p-0">
@@ -708,8 +818,7 @@ export function SignupForm({
         </CardContent>
       </Card>
       <FieldDescription className="px-6 text-center">
-        By continuing, you agree to our <a href="#">Terms of Service</a> and{" "}
-        <a href="#">Privacy Policy</a>.
+        By continuing, you agree to our Terms of Service and Privacy Policy.
       </FieldDescription>
     </div>
   )
