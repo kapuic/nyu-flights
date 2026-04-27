@@ -1,7 +1,7 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { useSuspenseQuery, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useForm } from "@tanstack/react-form"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Plus } from "lucide-react"
 
@@ -22,8 +22,11 @@ import {
   AirportComboboxField,
 } from "@/components/combobox-fields"
 import { DateTimePickerField } from "@/components/date-time-picker"
+import { DialogGlobe } from "@/components/dialog-globe"
 import { ResponsiveModal } from "@/components/responsive-modal"
 import { staffDashboardQueryOptions } from "@/lib/staff-queries"
+import { getAirportOption } from "@/lib/airports"
+
 import { createFlightFn, listDbAirportsFn, updateFlightStatusFn } from "@/lib/queries"
 
 export const Route = createFileRoute("/staff/_dashboard/flights")({
@@ -38,6 +41,52 @@ function formatDateShort(iso: string) {
     hour: "numeric",
     minute: "2-digit",
   })
+}
+
+function FlightGlobe({
+  departureCode,
+  arrivalCode,
+}: {
+  arrivalCode: string
+  departureCode: string
+}) {
+  const depAirport = getAirportOption(departureCode)
+  const arrAirport = getAirportOption(arrivalCode)
+
+  const globeMarkers = useMemo(() => {
+    const m: Array<{ id: string; countryCode: string; label: string; location: [number, number] }> = []
+    if (depAirport)
+      m.push({
+        id: `dep-${depAirport.code.toLowerCase()}`,
+        countryCode: depAirport.countryCode,
+        label: `${depAirport.city} (${depAirport.code})`,
+        location: [depAirport.lat, depAirport.lng],
+      })
+    if (arrAirport)
+      m.push({
+        id: `arr-${arrAirport.code.toLowerCase()}`,
+        countryCode: arrAirport.countryCode,
+        label: `${arrAirport.city} (${arrAirport.code})`,
+        location: [arrAirport.lat, arrAirport.lng],
+      })
+    return m
+  }, [depAirport, arrAirport])
+
+  const globeArcs = useMemo(() => {
+    if (!depAirport || !arrAirport) return []
+    return [
+      {
+        from: [depAirport.lat, depAirport.lng] as [number, number],
+        to: [arrAirport.lat, arrAirport.lng] as [number, number],
+      },
+    ]
+  }, [depAirport, arrAirport])
+
+  return (
+    <div className="-mx-6 -mt-2">
+      <DialogGlobe markers={globeMarkers} arcs={globeArcs} />
+    </div>
+  )
 }
 
 function StaffFlightsPage() {
@@ -140,74 +189,101 @@ function StaffFlightsPage() {
         title="Create Flight"
         description="Add a new flight to the schedule."
       >
-        <form.Subscribe selector={(state) => state.isSubmitting}>
-          {(isSubmitting) => (
-            <form onSubmit={handleSubmit}>
-              <FieldGroup>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <form.Field name="flightNumber">
-                    {(field) => (
-                      <Field>
-                        <FieldLabel>Flight Number</FieldLabel>
-                        <Input
-                          placeholder="SK100"
-                          required
-                          value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                        />
-                      </Field>
-                    )}
-                  </form.Field>
-                  <form.Field name="departureAirportCode">
-                    {(field) => (
-                      <Field>
-                        <FieldLabel>Departure Airport</FieldLabel>
-                        <AirportComboboxField
-                          items={dbAirports}
-                          value={field.state.value}
-                          onChange={(value) => field.handleChange(value)}
-                          placeholder="Search departure airport"
-                        />
-                      </Field>
-                    )}
-                  </form.Field>
-                  <form.Field name="arrivalAirportCode">
-                    {(field) => (
-                      <Field>
-                        <FieldLabel>Arrival Airport</FieldLabel>
-                        <AirportComboboxField
-                          items={dbAirports}
-                          value={field.state.value}
-                          onChange={(value) => field.handleChange(value)}
-                          placeholder="Search arrival airport"
-                        />
-                      </Field>
-                    )}
-                  </form.Field>
-                  <form.Field name="departureDatetime">
-                    {(field) => (
-                      <Field>
-                        <FieldLabel>Departure Time</FieldLabel>
-                        <DateTimePickerField
-                          value={field.state.value}
-                          onChange={(value) => field.handleChange(value)}
-                          placeholder="Pick departure time"
-                        />
-                      </Field>
-                    )}
-                  </form.Field>
-                  <form.Field name="arrivalDatetime">
-                    {(field) => (
-                      <Field>
-                        <FieldLabel>Arrival Time</FieldLabel>
-                        <DateTimePickerField
-                          value={field.state.value}
-                          onChange={(value) => field.handleChange(value)}
-                          placeholder="Pick arrival time"
-                        />
-                      </Field>
-                    )}
-                  </form.Field>
+        <form.Subscribe
+          selector={(state) => ({
+            isSubmitting: state.isSubmitting,
+            departureCode: state.values.departureAirportCode,
+            arrivalCode: state.values.arrivalAirportCode,
+          })}
+        >
+          {({ isSubmitting, departureCode, arrivalCode }) => (
+            <>
+              <FlightGlobe
+                departureCode={departureCode}
+                arrivalCode={arrivalCode}
+              />
+              <form onSubmit={handleSubmit}>
+                <FieldGroup>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <form.Field name="flightNumber">
+                      {(field) => (
+                        <Field>
+                          <FieldLabel>Flight Number</FieldLabel>
+                          <Input
+                            placeholder="SK100"
+                            required
+                            value={field.state.value}
+                            onChange={(e) =>
+                              field.handleChange(e.target.value)
+                            }
+                          />
+                        </Field>
+                      )}
+                    </form.Field>
+                    <form.Field name="airplaneId">
+                      {(field) => (
+                        <Field>
+                          <FieldLabel>Airplane</FieldLabel>
+                          <AirplaneComboboxField
+                            items={data.airplanes}
+                            value={field.state.value}
+                            onChange={(value) => field.handleChange(value)}
+                            placeholder="Search airplanes"
+                          />
+                        </Field>
+                      )}
+                    </form.Field>
+                    <form.Field name="departureAirportCode">
+                      {(field) => (
+                        <Field>
+                          <FieldLabel>Departure Airport</FieldLabel>
+                          <AirportComboboxField
+                            items={dbAirports}
+                            value={field.state.value}
+                            onChange={(value) => field.handleChange(value)}
+                            placeholder="Search departure airport"
+                          />
+                        </Field>
+                      )}
+                    </form.Field>
+                    <form.Field name="arrivalAirportCode">
+                      {(field) => (
+                        <Field>
+                          <FieldLabel>Arrival Airport</FieldLabel>
+                          <AirportComboboxField
+                            items={dbAirports}
+                            value={field.state.value}
+                            onChange={(value) => field.handleChange(value)}
+                            placeholder="Search arrival airport"
+                          />
+                        </Field>
+                      )}
+                    </form.Field>
+                    <form.Field name="departureDatetime">
+                      {(field) => (
+                        <Field>
+                          <FieldLabel>Departure Time</FieldLabel>
+                          <DateTimePickerField
+                            value={field.state.value}
+                            onChange={(value) => field.handleChange(value)}
+                            placeholder="Pick departure time"
+                          />
+                        </Field>
+                      )}
+                    </form.Field>
+                    <form.Field name="arrivalDatetime">
+                      {(field) => (
+                        <Field>
+                          <FieldLabel>Arrival Time</FieldLabel>
+                          <DateTimePickerField
+                            value={field.state.value}
+                            onChange={(value) => field.handleChange(value)}
+                            placeholder="Pick arrival time"
+                          />
+                        </Field>
+                      )}
+                    </form.Field>
+                  </div>
                   <form.Field name="basePrice">
                     {(field) => (
                       <Field>
@@ -219,39 +295,28 @@ function StaffFlightsPage() {
                           required
                           placeholder="199.00"
                           value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
+                          onChange={(e) =>
+                            field.handleChange(e.target.value)
+                          }
                         />
                       </Field>
                     )}
                   </form.Field>
-                  <form.Field name="airplaneId">
-                    {(field) => (
-                      <Field>
-                        <FieldLabel>Airplane</FieldLabel>
-                        <AirplaneComboboxField
-                          items={data.airplanes}
-                          value={field.state.value}
-                          onChange={(value) => field.handleChange(value)}
-                          placeholder="Search airplanes"
-                        />
-                      </Field>
-                    )}
-                  </form.Field>
-                </div>
-                {error ? (
-                  <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                    {error}
-                  </div>
-                ) : null}
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full sm:w-auto"
-                >
-                  {isSubmitting ? "Creating…" : "Create Flight"}
-                </Button>
-              </FieldGroup>
-            </form>
+                  {error ? (
+                    <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                      {error}
+                    </div>
+                  ) : null}
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full sm:w-auto"
+                  >
+                    {isSubmitting ? "Creating…" : "Create Flight"}
+                  </Button>
+                </FieldGroup>
+              </form>
+            </>
           )}
         </form.Subscribe>
       </ResponsiveModal>

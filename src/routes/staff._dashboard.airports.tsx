@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Plus, Trash2 } from "lucide-react"
 
@@ -8,6 +8,7 @@ import {
   DeleteConfirmation,
   useDeleteConfirmation,
 } from "@/components/delete-confirmation"
+import { DialogGlobe } from "@/components/dialog-globe"
 import { ResponsiveModal } from "@/components/responsive-modal"
 import { Button } from "@/components/ui/button"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
@@ -48,6 +49,23 @@ function ManageAirportsPage() {
   const [error, setError] = useState<string | null>(null)
   const deleteConfirm = useDeleteConfirmation()
 
+  const selectedAirport = useMemo(
+    () => getAirportOption(selectedAirportCode),
+    [selectedAirportCode]
+  )
+
+  const globeMarkers = useMemo(() => {
+    if (!selectedAirport) return []
+    return [
+      {
+        id: selectedAirport.code.toLowerCase(),
+        countryCode: selectedAirport.countryCode,
+        label: `${selectedAirport.city} (${selectedAirport.code})`,
+        location: [selectedAirport.lat, selectedAirport.lng] as [number, number],
+      },
+    ]
+  }, [selectedAirport])
+
   async function load() {
     try {
       const data = await listAllAirportsFn()
@@ -67,7 +85,6 @@ function ManageAirportsPage() {
     e.preventDefault()
     setError(null)
     try {
-      const selectedAirport = getAirportOption(selectedAirportCode)
       if (!selectedAirport) {
         setError("Choose a real airport from the list.")
         return
@@ -122,6 +139,9 @@ function ManageAirportsPage() {
         title="Create Airport"
         description="Add a real-world airport to the system."
       >
+        <div className="-mx-6 -mt-2">
+          <DialogGlobe markers={globeMarkers} />
+        </div>
         <form onSubmit={handleCreate}>
           <FieldGroup>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
