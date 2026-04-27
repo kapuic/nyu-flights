@@ -36,6 +36,7 @@ import {
   listAllAirportsInternal,
   listAllCustomersInternal,
   listAllStaffInternal,
+  listDbAirportsInternal,
   listGlobeRoutesInternal,
   listReferenceData,
   purchaseTicketInternal,
@@ -133,6 +134,9 @@ export type GlobeRoute = {
 
 export const listGlobeRoutesFn = createServerFn({ method: "GET" }).handler(
   async () => listGlobeRoutesInternal()
+)
+export const listDbAirportsFn = createServerFn({ method: "GET" }).handler(
+  async () => listDbAirportsInternal()
 )
 
 export const searchAirportsFn = createServerFn({ method: "POST" })

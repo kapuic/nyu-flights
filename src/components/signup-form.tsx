@@ -13,6 +13,7 @@ import { IMaskInput } from "react-imask"
 import { type ComponentProps, type FormEvent, type ReactNode, useId, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { CountryFlag } from "@/components/country-flag"
 import { Calendar } from "@/components/ui/calendar"
 import {
   Combobox,
@@ -45,7 +46,6 @@ import { cn, getErrorMessage } from "@/lib/utils"
 type RegionOption = {
   code: string
   label: string
-  flag?: string
 }
 
 const maskedInputClassName =
@@ -115,11 +115,7 @@ function formatDateValue(date: Date | undefined) {
   return format(date, "yyyy-MM-dd")
 }
 
-function getFlagEmoji(code: string) {
-  return code
-    .toUpperCase()
-    .replace(/./g, (char) => String.fromCodePoint(127397 + char.charCodeAt(0)))
-}
+
 
 function DatePickerField({
   id,
@@ -211,7 +207,7 @@ function RegionCombobox({
           {(option) => (
             <ComboboxItem key={option.code} value={option}>
               <span className="flex min-w-0 items-center gap-2">
-                {option.flag ? <span aria-hidden>{option.flag}</span> : null}
+                {option.code ? <CountryFlag countryCode={option.code} size={16} /> : null}
                 <span className="truncate">{option.label}</span>
                 <span className="text-xs text-muted-foreground">
                   {option.code}
@@ -274,7 +270,6 @@ export function SignupFormFields({
     () =>
       getCountries().map((country) => ({
         code: country.code,
-        flag: getFlagEmoji(country.code),
         label: country.name,
       })),
     []

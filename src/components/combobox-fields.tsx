@@ -10,10 +10,10 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox"
+import { CountryFlag } from "@/components/country-flag"
 import {
   getAirportDisplayValue,
   getAirportSearchValue,
-  getFlagEmoji,
 } from "@/lib/airports"
 import type { AirportOption } from "@/lib/airports"
 import { cn } from "@/lib/utils"
@@ -44,6 +44,7 @@ export function AirportComboboxField({
     <Combobox
       items={items}
       value={selectedAirport}
+      itemToStringLabel={getAirportDisplayValue}
       itemToStringValue={getAirportSearchValue}
       onValueChange={(airport) => {
         onChange(airport?.code ?? "", airport ?? null)
@@ -60,9 +61,7 @@ export function AirportComboboxField({
         <ComboboxList>
           {(airport) => (
             <ComboboxItem key={airport.code} value={airport}>
-              <span aria-hidden className="shrink-0 text-base leading-none">
-                {getFlagEmoji(airport.countryCode)}
-              </span>
+              <CountryFlag countryCode={airport.countryCode} size={16} />
               <span className="flex min-w-0 flex-col gap-0.5">
                 <span className="truncate font-medium">
                   {getAirportDisplayValue(airport)}
@@ -143,14 +142,12 @@ export function AirplaneComboboxField({
 type CountryOption = {
   code: string
   label: string
-  flag: string
 }
 
 const COUNTRY_OPTIONS: Array<CountryOption> = getCountries()
   .map((country) => ({
     code: country.code,
     label: country.name,
-    flag: getFlagEmoji(country.code),
   }))
   .sort((left, right) => left.label.localeCompare(right.label))
 
@@ -188,9 +185,7 @@ export function CountryComboboxField({
         <ComboboxList>
           {(country) => (
             <ComboboxItem key={country.code} value={country}>
-              <span aria-hidden className="shrink-0 text-base leading-none">
-                {country.flag}
-              </span>
+              <CountryFlag countryCode={country.code} size={16} />
               <span className="truncate">{country.label}</span>
               <span className="text-xs text-muted-foreground">
                 {country.code}

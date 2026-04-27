@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { MapPin } from "lucide-react"
 
-import { getAirportDisplayValue, getFlagEmoji } from "@/lib/airports"
+import { CountryFlag } from "@/components/country-flag"
+import { getAirportDisplayValue } from "@/lib/airports"
 import type { AirportOption } from "@/lib/airports"
 import { cn } from "@/lib/utils"
 
@@ -149,7 +150,7 @@ export function AirportCombobox({
       {open && suggestions.length > 0 && (
         <div
           ref={listRef}
-          className="absolute top-full left-0 z-50 mt-2 w-64 overflow-hidden rounded-lg border border-white/10 bg-black/80 shadow-2xl backdrop-blur-2xl backdrop-saturate-150"
+          className="absolute top-full left-0 z-50 mt-2 max-h-72 w-64 overflow-y-auto overflow-x-hidden overscroll-contain rounded-lg border border-white/10 bg-black/80 shadow-2xl backdrop-blur-2xl backdrop-saturate-150"
         >
           {suggestions.map((airport, i) => (
             <button
@@ -165,9 +166,7 @@ export function AirportCombobox({
                   : "text-white/70 hover:bg-white/5"
               )}
             >
-              <span aria-hidden className="shrink-0 text-base leading-none">
-                {getFlagEmoji(airport.countryCode)}
-              </span>
+              <CountryFlag countryCode={airport.countryCode} size={16} />
               <div className="min-w-0">
                 <div className="truncate font-medium text-white/90">
                   {getAirportDisplayValue(airport)}

@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query"
+import { useSuspenseQuery, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useForm } from "@tanstack/react-form"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -24,8 +24,7 @@ import {
 import { DateTimePickerField } from "@/components/date-time-picker"
 import { ResponsiveModal } from "@/components/responsive-modal"
 import { staffDashboardQueryOptions } from "@/lib/staff-queries"
-import { REAL_AIRPORT_OPTIONS } from "@/lib/airports"
-import { createFlightFn, updateFlightStatusFn } from "@/lib/queries"
+import { createFlightFn, listDbAirportsFn, updateFlightStatusFn } from "@/lib/queries"
 
 export const Route = createFileRoute("/staff/_dashboard/flights")({
   component: StaffFlightsPage,
@@ -47,6 +46,12 @@ function StaffFlightsPage() {
   const router = useRouter()
   const [createOpen, setCreateOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const dbAirportsQuery = useQuery({
+    queryKey: ["db-airports"],
+    queryFn: () => listDbAirportsFn(),
+    staleTime: 5 * 60 * 1000,
+  })
+  const dbAirports = dbAirportsQuery.data ?? []
 
   const form = useForm({
     defaultValues: {
@@ -158,7 +163,7 @@ function StaffFlightsPage() {
                       <Field>
                         <FieldLabel>Departure Airport</FieldLabel>
                         <AirportComboboxField
-                          items={REAL_AIRPORT_OPTIONS}
+                          items={dbAirports}
                           value={field.state.value}
                           onChange={(value) => field.handleChange(value)}
                           placeholder="Search departure airport"
@@ -171,7 +176,7 @@ function StaffFlightsPage() {
                       <Field>
                         <FieldLabel>Arrival Airport</FieldLabel>
                         <AirportComboboxField
-                          items={REAL_AIRPORT_OPTIONS}
+                          items={dbAirports}
                           value={field.state.value}
                           onChange={(value) => field.handleChange(value)}
                           placeholder="Search arrival airport"

@@ -10,8 +10,8 @@ import {
   Search,
 } from "lucide-react"
 
-import { REAL_AIRPORT_OPTIONS } from "@/lib/airports"
-import { searchFlightsFn } from "@/lib/queries"
+
+import { listDbAirportsFn, searchFlightsFn } from "@/lib/queries"
 import type { FlightOption, FlightSearchResponse } from "@/lib/queries"
 import { useBookingStore } from "@/lib/booking-store"
 import type { AirportSelection } from "@/lib/booking-store"
@@ -60,6 +60,13 @@ function formatTime(datetime: string) {
 function PublicHomePage() {
   const navigate = useNavigate()
   const { currentUser } = Route.useRouteContext()
+  // DB airports for combobox
+  const dbAirportsQuery = useQuery({
+    queryKey: ["db-airports"],
+    queryFn: () => listDbAirportsFn(),
+    staleTime: 5 * 60 * 1000,
+  })
+  const dbAirports = dbAirportsQuery.data ?? []
 
   // Booking store
   const searchFrom = useBookingStore((s) => s.searchFrom)
@@ -308,7 +315,7 @@ function PublicHomePage() {
               <form.Field name="source">
                 {(field) => (
                   <AirportCombobox
-                    items={REAL_AIRPORT_OPTIONS}
+                    items={dbAirports}
                     value={field.state.value}
                     onValueChange={(v) => {
                       field.handleChange(v)
@@ -343,7 +350,7 @@ function PublicHomePage() {
               <form.Field name="destination">
                 {(field) => (
                   <AirportCombobox
-                    items={REAL_AIRPORT_OPTIONS}
+                    items={dbAirports}
                     value={field.state.value}
                     onValueChange={(v) => {
                       field.handleChange(v)

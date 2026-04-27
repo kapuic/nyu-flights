@@ -78,7 +78,7 @@ function ManageAirportsPage() {
           code: selectedAirport.code,
           city: selectedAirport.city,
           country: selectedAirport.country,
-          airportType,
+          airportType: airportType.toLowerCase(),
         },
       })
       toast.success(result.message)
@@ -131,7 +131,7 @@ function ManageAirportsPage() {
                   items={REAL_AIRPORT_OPTIONS}
                   value={selectedAirportCode}
                   onChange={(value) => setSelectedAirportCode(value)}
-                  placeholder="Search real-world airports"
+                  placeholder="Search airports"
                 />
               </Field>
               <Field>
@@ -144,9 +144,9 @@ function ManageAirportsPage() {
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="domestic">Domestic</SelectItem>
-                    <SelectItem value="international">International</SelectItem>
-                    <SelectItem value="both">Both</SelectItem>
+                    <SelectItem value="Domestic">Domestic</SelectItem>
+                    <SelectItem value="International">International</SelectItem>
+                    <SelectItem value="Both">Both</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>

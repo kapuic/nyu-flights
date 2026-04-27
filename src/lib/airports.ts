@@ -33,13 +33,7 @@ export function getAirportOption(code: string) {
   )
 }
 
-export function getFlagEmoji(countryCode: string) {
-  if (!/^[A-Z]{2}$/i.test(countryCode)) return ""
 
-  return countryCode
-    .toUpperCase()
-    .replace(/./g, (char) => String.fromCodePoint(127397 + char.charCodeAt(0)))
-}
 
 export function getAirportSearchValue(airport: AirportOption) {
   return `${airport.code} ${airport.city} ${airport.name} ${airport.country}`

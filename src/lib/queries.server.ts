@@ -9,6 +9,8 @@ import type {
 import { db } from "@/lib/db"
 import { requireUser } from "@/lib/auth.server"
 import { isSuperadmin } from "@/lib/staff-permissions"
+import { getAirportOption } from "@/lib/airports"
+import type { AirportOption } from "@/lib/airports"
 
 const DEFAULT_STAFF_FLIGHT_WINDOW_DAYS = 30
 
@@ -41,6 +43,8 @@ export async function listGlobeRoutesInternal() {
   >`
     select distinct departure_airport_code, arrival_airport_code
     from flight
+    order by random()
+    limit 10
   `
   return routes.map((r) => ({
     arrivalCode: r.arrival_airport_code.trim(),
@@ -71,6 +75,24 @@ export async function searchAirportsInternal(input: { query: string }) {
       airport.code asc
     limit 8
   `
+}
+export async function listDbAirportsInternal(): Promise<Array<AirportOption>> {
+  const rows = await db<
+    Array<{ city: string; code: string; country: string }>
+  >`select code, city, country from airport order by code asc`
+
+  return rows.map((row) => {
+    const coord = getAirportOption(row.code.trim())
+    return {
+      code: row.code.trim(),
+      city: row.city,
+      country: row.country,
+      countryCode: coord?.countryCode ?? "",
+      lat: coord?.lat ?? 0,
+      lng: coord?.lng ?? 0,
+      name: coord?.name ?? row.city,
+    }
+  })
 }
 
 export async function listReferenceData() {
