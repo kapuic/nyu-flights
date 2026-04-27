@@ -106,6 +106,9 @@ export function AirplaneComboboxField({
     <Combobox
       items={items}
       value={selectedAirplane}
+      itemToStringLabel={(airplane) =>
+        `${airplane.airplaneId}${airplane.manufacturingCompany ? ` — ${airplane.manufacturingCompany}` : ""} (${airplane.numberOfSeats} seats)`
+      }
       itemToStringValue={(airplane) =>
         `${airplane.airplaneId} ${airplane.manufacturingCompany ?? ""} ${airplane.numberOfSeats} seats`
       }
@@ -173,6 +176,7 @@ export function CountryComboboxField({
     <Combobox
       items={COUNTRY_OPTIONS}
       value={selectedCountry}
+      itemToStringLabel={(country) => country.label}
       itemToStringValue={(country) => `${country.label} ${country.code}`}
       onValueChange={(country) => {
         onChange(country?.label ?? "", country ?? null)

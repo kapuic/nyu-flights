@@ -189,6 +189,7 @@ function RegionCombobox({
   return (
     <Combobox
       items={options}
+      itemToStringLabel={(option) => option.label}
       itemToStringValue={(option) => `${option.label} ${option.code}`}
       value={selectedOption}
       onValueChange={(option) => {
