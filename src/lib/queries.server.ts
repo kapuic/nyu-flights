@@ -41,8 +41,8 @@ export async function listGlobeRoutesInternal() {
       departure_airport_code: string
     }>
   >`
-    select distinct departure_airport_code, arrival_airport_code
-    from flight
+    select departure_airport_code, arrival_airport_code
+    from (select distinct departure_airport_code, arrival_airport_code from flight) as routes
     order by random()
     limit 10
   `
