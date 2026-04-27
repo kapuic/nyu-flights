@@ -12,6 +12,7 @@ import type { GlobeMethods } from "react-globe.gl"
 
 import airportCoordinates from "@/data/airport-coordinates.json"
 import type { GlobeRoute } from "@/lib/queries"
+import { listGlobeRoutesFn } from "@/lib/queries"
 
 type ArcDatum = {
   endLat: number
@@ -50,9 +51,19 @@ const coords = airportCoordinates as Record<
   { lat: number; lng: number; name: string; city: string }
 >
 
-const AMBIENT_ARC_COUNT = 5
-const ARC_FLIGHT_TIME = 3000
-const ARC_FADE_TIME = 800
+const MAX_VISIBLE_ARCS = 5
+const ARC_FLIGHT_TIME = 4000
+const ARC_FADE_TIME = 1000
+const ARC_SPAWN_INTERVAL = 1200
+const QUEUE_REFILL_THRESHOLD = 5
+function shuffle<T>(array: Array<T>): Array<T> {
+  const copy = [...array]
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+  return copy
+}
 
 function getCoords(code: string) {
   return coords[code.trim().toUpperCase()] ?? null
@@ -250,11 +261,71 @@ export function GlobeBackground({
     }
   }, [camera.type, idleGlobeOffsetY])
 
-  const validRoutes = useMemo(() => {
-    return routes.filter(
-      (route) => getCoords(route.departureCode) && getCoords(route.arrivalCode)
-    )
+  // --- Ambient arc queue system ---
+  // Shuffle-playlist: dequeue from a shuffled copy, refetch when running low
+  const routeQueue = useRef<Array<GlobeRoute>>([])
+  const usedRoutes = useRef<Array<GlobeRoute>>([])
+  const fetchingRoutes = useRef(false)
+
+  // Seed the queue from initial loader routes
+  useEffect(() => {
+    if (routes.length > 0 && routeQueue.current.length === 0) {
+      routeQueue.current = shuffle(
+        routes.filter((r) => getCoords(r.departureCode) && getCoords(r.arrivalCode))
+      )
+    }
   }, [routes])
+
+  const refillQueue = useCallback(() => {
+    if (fetchingRoutes.current) return
+    fetchingRoutes.current = true
+    listGlobeRoutesFn()
+      .then((batch) => {
+        const valid = batch.filter(
+          (r) => getCoords(r.departureCode) && getCoords(r.arrivalCode)
+        )
+        if (valid.length > 0) {
+          routeQueue.current.push(...shuffle(valid))
+          usedRoutes.current = []
+        } else if (usedRoutes.current.length > 0) {
+          // Recycle used routes if server returned nothing useful
+          routeQueue.current.push(...shuffle(usedRoutes.current))
+          usedRoutes.current = []
+        }
+      })
+      .catch(() => {
+        // On fetch failure, recycle used routes
+        if (usedRoutes.current.length > 0) {
+          routeQueue.current.push(...shuffle(usedRoutes.current))
+          usedRoutes.current = []
+        }
+      })
+      .finally(() => {
+        fetchingRoutes.current = false
+      })
+  }, [])
+
+  const dequeueRoute = useCallback((): GlobeRoute | null => {
+    // Trigger prefetch when queue is getting low
+    if (routeQueue.current.length <= QUEUE_REFILL_THRESHOLD) {
+      refillQueue()
+    }
+
+    const route = routeQueue.current.shift()
+    if (route) {
+      usedRoutes.current.push(route)
+      return route
+    }
+
+    // Queue empty — recycle used routes immediately
+    if (usedRoutes.current.length > 0) {
+      routeQueue.current = shuffle(usedRoutes.current)
+      usedRoutes.current = []
+      return routeQueue.current.shift() ?? null
+    }
+
+    return null
+  }, [refillQueue])
 
   const stopAmbientCycle = useCallback(() => {
     ambientRunning.current = false
@@ -262,30 +333,35 @@ export function GlobeBackground({
     ambientTimers.current.clear()
   }, [])
 
-  const registerAmbientTimer = useCallback((callback: () => void, delay: number) => {
-    const timer = setTimeout(() => {
-      ambientTimers.current.delete(timer)
-      callback()
-    }, delay)
-    ambientTimers.current.add(timer)
-  }, [])
-
   const startAmbientCycle = useCallback(() => {
-    if (validRoutes.length === 0) return
     if (ambientRunning.current) return
-
     ambientRunning.current = true
-    ambientTimers.current.forEach(clearTimeout)
-    ambientTimers.current.clear()
-
-    const pickRandom = () => validRoutes[Math.floor(Math.random() * validRoutes.length)]
 
     const spawnArc = () => {
       if (!ambientRunning.current) return
-      const route = pickRandom()
+
+      const route = dequeueRoute()
+      if (!route) {
+        // Queue temporarily empty (refill in flight) — retry shortly
+        const retryTimer = setTimeout(() => {
+          ambientTimers.current.delete(retryTimer)
+          spawnArc()
+        }, 500)
+        ambientTimers.current.add(retryTimer)
+        return
+      }
+
       const dep = getCoords(route.departureCode)
       const arr = getCoords(route.arrivalCode)
-      if (!dep || !arr) return
+      if (!dep || !arr) {
+        // Skip invalid, try next immediately
+        const skipTimer = setTimeout(() => {
+          ambientTimers.current.delete(skipTimer)
+          spawnArc()
+        }, 50)
+        ambientTimers.current.add(skipTimer)
+        return
+      }
 
       const arc: ArcDatum = {
         startLat: dep.lat,
@@ -297,26 +373,39 @@ export function GlobeBackground({
 
       setAmbientArcs((prev) => {
         const next = [...prev, arc]
-        return next.length > AMBIENT_ARC_COUNT
-          ? next.slice(next.length - AMBIENT_ARC_COUNT)
+        return next.length > MAX_VISIBLE_ARCS
+          ? next.slice(next.length - MAX_VISIBLE_ARCS)
           : next
       })
 
-      registerAmbientTimer(() => {
-        setAmbientArcs((prev) => prev.filter((currentArc) => currentArc !== arc))
+      // Remove arc after it completes its full animation
+      const removeTimer = setTimeout(() => {
+        ambientTimers.current.delete(removeTimer)
+        setAmbientArcs((prev) => prev.filter((a) => a !== arc))
       }, ARC_FLIGHT_TIME + ARC_FADE_TIME)
+      ambientTimers.current.add(removeTimer)
 
-      registerAmbientTimer(spawnArc, ARC_FLIGHT_TIME / AMBIENT_ARC_COUNT)
+      // Schedule next arc spawn
+      const nextTimer = setTimeout(() => {
+        ambientTimers.current.delete(nextTimer)
+        spawnArc()
+      }, ARC_SPAWN_INTERVAL)
+      ambientTimers.current.add(nextTimer)
     }
 
-    for (let i = 0; i < Math.min(AMBIENT_ARC_COUNT, validRoutes.length); i++) {
-      const delay = (ARC_FLIGHT_TIME / AMBIENT_ARC_COUNT) * i
-      registerAmbientTimer(spawnArc, delay)
+    // Stagger initial arcs — reuse spawnArc which has retry/null handling
+    for (let i = 0; i < MAX_VISIBLE_ARCS; i++) {
+      const timer = setTimeout(() => {
+        ambientTimers.current.delete(timer)
+        if (!ambientRunning.current) return
+        spawnArc()
+      }, ARC_SPAWN_INTERVAL * i)
+      ambientTimers.current.add(timer)
     }
-  }, [registerAmbientTimer, validRoutes])
+  }, [dequeueRoute])
 
   useEffect(() => {
-    if (!globeReady || camera.type !== "idle" || validRoutes.length === 0) {
+    if (!globeReady || camera.type !== "idle" || routes.length === 0) {
       stopAmbientCycle()
       setAmbientArcs([])
       return
@@ -325,7 +414,7 @@ export function GlobeBackground({
     stopAmbientCycle()
     setAmbientArcs([])
     startAmbientCycle()
-  }, [globeReady, camera.type, startAmbientCycle, stopAmbientCycle, validRoutes.length])
+  }, [globeReady, camera.type, startAmbientCycle, stopAmbientCycle, routes.length])
 
   useEffect(() => {
     const globe = globeRef.current
