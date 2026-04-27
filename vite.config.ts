@@ -14,7 +14,20 @@ const config = defineConfig({
       projects: ["./tsconfig.json"],
     }),
     tailwindcss(),
-    tanstackStart(),
+    tanstackStart({
+      router: {
+        codeSplittingOptions: {
+          // Prevent code splitting for layout routes — Nitro proxy
+          // doesn't reliably forward ?tsr-split query params
+          splitBehavior: ({ routeId }) => {
+            // Keep layout routes unsplit (loader + component together)
+            if (routeId === '/_globe') return [['loader', 'component']]
+            // Default behavior for all other routes
+            return undefined
+          },
+        },
+      },
+    }),
     viteReact(),
   ],
 })

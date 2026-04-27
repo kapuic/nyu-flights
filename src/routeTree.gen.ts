@@ -13,11 +13,13 @@ import { Route as StaffRouteImport } from './routes/staff'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CustomerRouteImport } from './routes/customer'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as GlobeRouteImport } from './routes/_globe'
 import { Route as StaffIndexRouteImport } from './routes/staff.index'
+import { Route as GlobeIndexRouteImport } from './routes/_globe.index'
 import { Route as StaffRegisterRouteImport } from './routes/staff.register'
 import { Route as StaffLoginRouteImport } from './routes/staff.login'
 import { Route as StaffAppRouteImport } from './routes/staff.app'
+import { Route as GlobeCheckoutRouteImport } from './routes/_globe.checkout'
 
 const StaffRoute = StaffRouteImport.update({
   id: '/staff',
@@ -39,15 +41,19 @@ const CustomerRoute = CustomerRouteImport.update({
   path: '/customer',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const GlobeRoute = GlobeRouteImport.update({
+  id: '/_globe',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StaffIndexRoute = StaffIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => StaffRoute,
+} as any)
+const GlobeIndexRoute = GlobeIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => GlobeRoute,
 } as any)
 const StaffRegisterRoute = StaffRegisterRouteImport.update({
   id: '/register',
@@ -64,38 +70,47 @@ const StaffAppRoute = StaffAppRouteImport.update({
   path: '/app',
   getParentRoute: () => StaffRoute,
 } as any)
+const GlobeCheckoutRoute = GlobeCheckoutRouteImport.update({
+  id: '/checkout',
+  path: '/checkout',
+  getParentRoute: () => GlobeRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof GlobeIndexRoute
   '/customer': typeof CustomerRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/staff': typeof StaffRouteWithChildren
+  '/checkout': typeof GlobeCheckoutRoute
   '/staff/app': typeof StaffAppRoute
   '/staff/login': typeof StaffLoginRoute
   '/staff/register': typeof StaffRegisterRoute
   '/staff/': typeof StaffIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/customer': typeof CustomerRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/checkout': typeof GlobeCheckoutRoute
   '/staff/app': typeof StaffAppRoute
   '/staff/login': typeof StaffLoginRoute
   '/staff/register': typeof StaffRegisterRoute
+  '/': typeof GlobeIndexRoute
   '/staff': typeof StaffIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_globe': typeof GlobeRouteWithChildren
   '/customer': typeof CustomerRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/staff': typeof StaffRouteWithChildren
+  '/_globe/checkout': typeof GlobeCheckoutRoute
   '/staff/app': typeof StaffAppRoute
   '/staff/login': typeof StaffLoginRoute
   '/staff/register': typeof StaffRegisterRoute
+  '/_globe/': typeof GlobeIndexRoute
   '/staff/': typeof StaffIndexRoute
 }
 export interface FileRouteTypes {
@@ -106,35 +121,39 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/staff'
+    | '/checkout'
     | '/staff/app'
     | '/staff/login'
     | '/staff/register'
     | '/staff/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/customer'
     | '/login'
     | '/register'
+    | '/checkout'
     | '/staff/app'
     | '/staff/login'
     | '/staff/register'
+    | '/'
     | '/staff'
   id:
     | '__root__'
-    | '/'
+    | '/_globe'
     | '/customer'
     | '/login'
     | '/register'
     | '/staff'
+    | '/_globe/checkout'
     | '/staff/app'
     | '/staff/login'
     | '/staff/register'
+    | '/_globe/'
     | '/staff/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  GlobeRoute: typeof GlobeRouteWithChildren
   CustomerRoute: typeof CustomerRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
@@ -171,11 +190,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CustomerRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
+    '/_globe': {
+      id: '/_globe'
+      path: ''
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof GlobeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/staff/': {
@@ -184,6 +203,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/staff/'
       preLoaderRoute: typeof StaffIndexRouteImport
       parentRoute: typeof StaffRoute
+    }
+    '/_globe/': {
+      id: '/_globe/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof GlobeIndexRouteImport
+      parentRoute: typeof GlobeRoute
     }
     '/staff/register': {
       id: '/staff/register'
@@ -206,8 +232,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StaffAppRouteImport
       parentRoute: typeof StaffRoute
     }
+    '/_globe/checkout': {
+      id: '/_globe/checkout'
+      path: '/checkout'
+      fullPath: '/checkout'
+      preLoaderRoute: typeof GlobeCheckoutRouteImport
+      parentRoute: typeof GlobeRoute
+    }
   }
 }
+
+interface GlobeRouteChildren {
+  GlobeCheckoutRoute: typeof GlobeCheckoutRoute
+  GlobeIndexRoute: typeof GlobeIndexRoute
+}
+
+const GlobeRouteChildren: GlobeRouteChildren = {
+  GlobeCheckoutRoute: GlobeCheckoutRoute,
+  GlobeIndexRoute: GlobeIndexRoute,
+}
+
+const GlobeRouteWithChildren = GlobeRoute._addFileChildren(GlobeRouteChildren)
 
 interface StaffRouteChildren {
   StaffAppRoute: typeof StaffAppRoute
@@ -226,7 +271,7 @@ const StaffRouteChildren: StaffRouteChildren = {
 const StaffRouteWithChildren = StaffRoute._addFileChildren(StaffRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  GlobeRoute: GlobeRouteWithChildren,
   CustomerRoute: CustomerRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,

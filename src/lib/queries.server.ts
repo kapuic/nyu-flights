@@ -163,7 +163,6 @@ export async function searchFlightsInternal(input: {
   let returnOptions = outbound.slice(0, 0)
   if (
     input.tripType === "round-trip" &&
-    returnDate &&
     sourceQuery &&
     destinationQuery
   ) {
@@ -209,7 +208,7 @@ export async function searchFlightsInternal(input: {
       left join ticket on ticket.airline_name = f.airline_name and ticket.flight_number = f.flight_number and ticket.departure_datetime = f.departure_datetime
       left join review on review.airline_name = f.airline_name and review.flight_number = f.flight_number and review.departure_datetime = f.departure_datetime
       where f.departure_datetime >= now()
-        and f.departure_datetime::date = ${returnDate}::date
+        and (${returnDate}::text is null or f.departure_datetime::date = ${returnDate}::date)
         and (lower(departure_airport.city) like ${destinationQuery} or lower(departure_airport.code) like ${destinationQuery})
         and (lower(arrival_airport.city) like ${sourceQuery} or lower(arrival_airport.code) like ${sourceQuery})
       group by
@@ -683,6 +682,7 @@ export async function purchaseTicketInternal(data: {
   return {
     message: `Ticket #${result.nextTicketId} confirmed for ${data.flightNumber}.`,
     price: result.price,
+    ticketId: result.nextTicketId,
   }
 }
 

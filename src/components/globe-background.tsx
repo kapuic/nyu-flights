@@ -26,7 +26,7 @@ type RingDatum = {
   lng: number
 }
 
-type CameraState =
+export type CameraState =
   | { type: "idle" }
   | { type: "origin-focus"; lat: number; lng: number }
   | {
