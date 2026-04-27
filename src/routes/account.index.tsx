@@ -4,7 +4,7 @@ import { useState } from "react"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { format } from "date-fns"
 import { getData as getCountries, getCode } from "country-list"
-import { Pencil } from "lucide-react"
+import { Pencil, X } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { InlineField } from "@/components/ui/inline-field"
@@ -71,12 +71,47 @@ function InlineFieldWrapper({ children, error, label }: { children: React.ReactN
 function InlineDateField({ label, value, onSave, readOnly = false }: { label: string; onSave?: (v: string) => Promise<void>; readOnly?: boolean; value: string }) {
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState("")
-  if (readOnly || !onSave) return <InlineFieldWrapper label={label}><div className="flex min-h-8 items-center rounded-md px-2.5 py-1 text-sm"><span>{formatDisplayDate(value) || "Not set"}</span></div></InlineFieldWrapper>
-  if (editing) return (
-    <InlineFieldWrapper label={label} error={error}>
-      <DatePickerField value={value} onChange={async (v) => { if (v === value) { setEditing(false); return } setError(""); try { await onSave(v); setEditing(false) } catch (e) { setError(e instanceof Error ? e.message : "Failed to save.") } }} onBlur={() => setEditing(false)} />
-    </InlineFieldWrapper>
-  )
+  const [saving, setSaving] = useState(false)
+
+  if (readOnly || !onSave) {
+    return (
+      <InlineFieldWrapper label={label}>
+        <div className="flex min-h-8 items-center rounded-md px-2.5 py-1 text-sm">
+          <span>{formatDisplayDate(value) || "Not set"}</span>
+        </div>
+      </InlineFieldWrapper>
+    )
+  }
+
+  async function handleDateSelect(newValue: string) {
+    if (newValue === value || !onSave) { setEditing(false); return }
+    setSaving(true)
+    setError("")
+    try {
+      await onSave(newValue)
+      setEditing(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (editing) {
+    return (
+      <InlineFieldWrapper label={label} error={error}>
+        <div className="flex items-center gap-1.5">
+          <div className="flex-1">
+            <DatePickerField value={value} onChange={handleDateSelect} />
+          </div>
+          <button type="button" onClick={() => { setEditing(false); setError("") }} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+            <X className="size-3.5" />
+          </button>
+        </div>
+      </InlineFieldWrapper>
+    )
+  }
+
   return (
     <InlineFieldWrapper label={label}>
       <div role="button" tabIndex={0} onClick={() => { setError(""); setEditing(true) }} onKeyDown={(e) => { if (e.key === "Enter") setEditing(true) }} className="flex min-h-8 items-center justify-between rounded-md px-2.5 py-1 text-sm cursor-pointer transition-colors hover:bg-muted/50">
@@ -90,16 +125,43 @@ function InlineDateField({ label, value, onSave, readOnly = false }: { label: st
 function InlineCountryField({ label, value, onSave }: { label: string; onSave: (v: string) => Promise<void>; value: string }) {
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState("")
+  const [saving, setSaving] = useState(false)
   const code = countryToCode(value)
   const selected = COUNTRY_OPTIONS.find((c) => c.label === value || c.code === value || c.label.toLowerCase() === value.toLowerCase()) ?? null
-  if (editing) return (
-    <InlineFieldWrapper label={label} error={error}>
-      <Combobox items={COUNTRY_OPTIONS} value={selected} itemToStringValue={(c) => `${c.label} ${c.code}`} onValueChange={async (c) => { const v = c?.label ?? ""; if (v === value || !v) { setEditing(false); return } setError(""); try { await onSave(v); setEditing(false) } catch (e) { setError(e instanceof Error ? e.message : "Failed to save.") } }}>
-        <ComboboxInput placeholder="Search countries" showClear className="w-full" autoFocus />
-        <ComboboxContent><ComboboxEmpty>No countries found.</ComboboxEmpty><ComboboxList>{(c) => <ComboboxItem key={c.code} value={c}><CountryFlag countryCode={c.code} size={16} /><span className="truncate">{c.label}</span><span className="text-xs text-muted-foreground">{c.code}</span></ComboboxItem>}</ComboboxList></ComboboxContent>
-      </Combobox>
-    </InlineFieldWrapper>
-  )
+
+  async function handleSelect(country: CountryOption | null) {
+    const newValue = country?.label ?? ""
+    if (!newValue || newValue === value) { setEditing(false); return }
+    setSaving(true)
+    setError("")
+    try {
+      await onSave(newValue)
+      setEditing(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (editing) {
+    return (
+      <InlineFieldWrapper label={label} error={error}>
+        <div className="flex items-center gap-1.5">
+          <div className="flex-1">
+            <Combobox items={COUNTRY_OPTIONS} value={selected} defaultOpen itemToStringValue={(c) => `${c.label} ${c.code}`} onValueChange={handleSelect}>
+              <ComboboxInput placeholder="Search countries" showClear className="w-full h-8 bg-transparent" autoFocus />
+              <ComboboxContent><ComboboxEmpty>No countries found.</ComboboxEmpty><ComboboxList>{(c) => <ComboboxItem key={c.code} value={c}><CountryFlag countryCode={c.code} size={16} /><span className="truncate">{c.label}</span><span className="text-xs text-muted-foreground">{c.code}</span></ComboboxItem>}</ComboboxList></ComboboxContent>
+            </Combobox>
+          </div>
+          <button type="button" onClick={() => { setEditing(false); setError("") }} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+            <X className="size-3.5" />
+          </button>
+        </div>
+      </InlineFieldWrapper>
+    )
+  }
+
   return (
     <InlineFieldWrapper label={label}>
       <div role="button" tabIndex={0} onClick={() => { setError(""); setEditing(true) }} onKeyDown={(e) => { if (e.key === "Enter") setEditing(true) }} className="flex min-h-8 items-center justify-between rounded-md px-2.5 py-1 text-sm cursor-pointer transition-colors hover:bg-muted/50">
@@ -113,15 +175,42 @@ function InlineCountryField({ label, value, onSave }: { label: string; onSave: (
 function InlineStateField({ label, value, onSave }: { label: string; onSave: (v: string) => Promise<void>; value: string }) {
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState("")
+  const [saving, setSaving] = useState(false)
   const selected = STATE_OPTIONS.find((s) => s.label.toLowerCase() === value.toLowerCase()) ?? null
-  if (editing) return (
-    <InlineFieldWrapper label={label} error={error}>
-      <Combobox items={STATE_OPTIONS} value={selected} itemToStringValue={(s) => s.label} onValueChange={async (s) => { const v = s?.label ?? ""; if (v === value || !v) { setEditing(false); return } setError(""); try { await onSave(v); setEditing(false) } catch (e) { setError(e instanceof Error ? e.message : "Failed to save.") } }}>
-        <ComboboxInput placeholder="Search states" showClear className="w-full" autoFocus />
-        <ComboboxContent><ComboboxEmpty>No states found.</ComboboxEmpty><ComboboxList>{(s) => <ComboboxItem key={s.label} value={s}><span className="truncate">{s.label}</span></ComboboxItem>}</ComboboxList></ComboboxContent>
-      </Combobox>
-    </InlineFieldWrapper>
-  )
+
+  async function handleSelect(state: StateOption | null) {
+    const newValue = state?.label ?? ""
+    if (!newValue || newValue === value) { setEditing(false); return }
+    setSaving(true)
+    setError("")
+    try {
+      await onSave(newValue)
+      setEditing(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (editing) {
+    return (
+      <InlineFieldWrapper label={label} error={error}>
+        <div className="flex items-center gap-1.5">
+          <div className="flex-1">
+            <Combobox items={STATE_OPTIONS} value={selected} defaultOpen itemToStringValue={(s) => s.label} onValueChange={handleSelect}>
+              <ComboboxInput placeholder="Search states" showClear className="w-full h-8 bg-transparent" autoFocus />
+              <ComboboxContent><ComboboxEmpty>No states found.</ComboboxEmpty><ComboboxList>{(s) => <ComboboxItem key={s.label} value={s}><span className="truncate">{s.label}</span></ComboboxItem>}</ComboboxList></ComboboxContent>
+            </Combobox>
+          </div>
+          <button type="button" onClick={() => { setEditing(false); setError("") }} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+            <X className="size-3.5" />
+          </button>
+        </div>
+      </InlineFieldWrapper>
+    )
+  }
+
   return (
     <InlineFieldWrapper label={label}>
       <div role="button" tabIndex={0} onClick={() => { setError(""); setEditing(true) }} onKeyDown={(e) => { if (e.key === "Enter") setEditing(true) }} className="flex min-h-8 items-center justify-between rounded-md px-2.5 py-1 text-sm cursor-pointer transition-colors hover:bg-muted/50">
