@@ -1,8 +1,8 @@
 import { useForm } from "@tanstack/react-form"
-import { createFileRoute, useRouter } from "@tanstack/react-router"
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { Building2 } from "lucide-react"
 import { IMaskInput } from "react-imask"
-import { useState } from "react"
+import { type FormEvent, useState } from "react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -14,27 +14,27 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { getCurrentUserFn, registerStaffFn } from "@/lib/auth"
+import { registerStaffFn } from "@/lib/auth"
 import { APP_NAME } from "@/lib/app-config"
+import { getErrorMessage } from "@/lib/utils"
 
 const maskedInputClassName =
   "h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-2.5 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
 
 export const Route = createFileRoute("/staff/register")({
-  loader: async () => ({ currentUser: await getCurrentUserFn() }),
   component: StaffRegisterPage,
 })
 
 function StaffRegisterPage() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
     try {
       await form.handleSubmit()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed.")
+      setError(getErrorMessage(err, "Registration failed."))
     }
   }
 
@@ -52,9 +52,9 @@ function StaffRegisterPage() {
     onSubmit: async ({ value }) => {
       const result = await registerStaffFn({ data: value })
       if (result.error) throw new Error(result.error)
-      toast.success("Staff account created.")
       await router.invalidate()
       await router.navigate({ to: result.redirectTo ?? "/staff/app" })
+      toast.success("Staff account created.")
     },
   })
 
@@ -277,12 +277,12 @@ function StaffRegisterPage() {
                                                     </Button>
                                                     <FieldDescription className="text-center">
                                                       Already have one?{" "}
-                                                      <a
+                                                      <Link
                                                         className="font-medium text-foreground underline underline-offset-4"
-                                                        href="/staff/login"
+                                                        to="/staff/login"
                                                       >
                                                         Sign in
-                                                      </a>
+                                                      </Link>
                                                     </FieldDescription>
                                                   </FieldGroup>
                                                 </form>

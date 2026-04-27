@@ -26,6 +26,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field"
@@ -39,7 +40,7 @@ import { APP_NAME } from "@/lib/app-config"
 import { registerCustomerFn } from "@/lib/auth"
 import { TRAVELER_AUTH_IMAGE_URLS } from "@/lib/auth-images"
 import { customerRegistrationSchema } from "@/lib/schemas"
-import { cn } from "@/lib/utils"
+import { cn, getErrorMessage } from "@/lib/utils"
 
 type RegionOption = {
   code: string
@@ -140,6 +141,7 @@ function DatePickerField({
       <PopoverTrigger
         render={
           <Button
+            type="button"
             id={id}
             variant="outline"
             data-empty={!selectedDate}
@@ -315,7 +317,7 @@ export function SignupFormFields({
     try {
       await form.handleSubmit()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed.")
+      setError(getErrorMessage(err, "Registration failed."))
     }
   }
 
@@ -387,9 +389,7 @@ export function SignupFormFields({
                     value={field.state.value}
                   />
                   {field.state.meta.isTouched && !field.state.meta.isValid ? (
-                    <FieldDescription className="text-destructive">
-                      {String(field.state.meta.errors[0])}
-                    </FieldDescription>
+                    <FieldError errors={field.state.meta.errors} />
                   ) : null}
                 </Field>
               )}
@@ -413,9 +413,7 @@ export function SignupFormFields({
                     value={field.state.value}
                   />
                   {field.state.meta.isTouched && !field.state.meta.isValid ? (
-                    <FieldDescription className="text-destructive">
-                      {String(field.state.meta.errors[0])}
-                    </FieldDescription>
+                    <FieldError errors={field.state.meta.errors} />
                   ) : (
                     <FieldDescription>
                       We&apos;ll use this to send booking confirmations.
@@ -460,9 +458,7 @@ export function SignupFormFields({
                     </Button>
                   </div>
                   {field.state.meta.isTouched && !field.state.meta.isValid ? (
-                    <FieldDescription className="text-destructive">
-                      {String(field.state.meta.errors[0])}
-                    </FieldDescription>
+                    <FieldError errors={field.state.meta.errors} />
                   ) : (
                     <FieldDescription>
                       Must be at least 8 characters long.
@@ -500,9 +496,7 @@ export function SignupFormFields({
                         value={field.state.value}
                       />
                       {field.state.meta.isTouched && !field.state.meta.isValid ? (
-                        <FieldDescription className="text-destructive">
-                          {String(field.state.meta.errors[0])}
-                        </FieldDescription>
+                        <FieldError errors={field.state.meta.errors} />
                       ) : null}
                     </Field>
                   )}
@@ -521,9 +515,7 @@ export function SignupFormFields({
                         value={field.state.value}
                       />
                       {field.state.meta.isTouched && !field.state.meta.isValid ? (
-                        <FieldDescription className="text-destructive">
-                          {String(field.state.meta.errors[0])}
-                        </FieldDescription>
+                        <FieldError errors={field.state.meta.errors} />
                       ) : null}
                     </Field>
                   )}
@@ -556,9 +548,7 @@ export function SignupFormFields({
                         value={field.state.value}
                       />
                       {field.state.meta.isTouched && !field.state.meta.isValid ? (
-                        <FieldDescription className="text-destructive">
-                          {String(field.state.meta.errors[0])}
-                        </FieldDescription>
+                        <FieldError errors={field.state.meta.errors} />
                       ) : null}
                     </Field>
                   )}
@@ -578,9 +568,7 @@ export function SignupFormFields({
                         value={field.state.value}
                       />
                       {field.state.meta.isTouched && !field.state.meta.isValid ? (
-                        <FieldDescription className="text-destructive">
-                          {String(field.state.meta.errors[0])}
-                        </FieldDescription>
+                        <FieldError errors={field.state.meta.errors} />
                       ) : null}
                     </Field>
                   )}
@@ -600,9 +588,7 @@ export function SignupFormFields({
                         value={field.state.value}
                       />
                       {field.state.meta.isTouched && !field.state.meta.isValid ? (
-                        <FieldDescription className="text-destructive">
-                          {String(field.state.meta.errors[0])}
-                        </FieldDescription>
+                        <FieldError errors={field.state.meta.errors} />
                       ) : null}
                     </Field>
                   )}
@@ -620,9 +606,7 @@ export function SignupFormFields({
                         value={field.state.value}
                       />
                       {field.state.meta.isTouched && !field.state.meta.isValid ? (
-                        <FieldDescription className="text-destructive">
-                          {String(field.state.meta.errors[0])}
-                        </FieldDescription>
+                        <FieldError errors={field.state.meta.errors} />
                       ) : null}
                     </Field>
                   )}
@@ -655,9 +639,7 @@ export function SignupFormFields({
                         value={field.state.value}
                       />
                       {field.state.meta.isTouched && !field.state.meta.isValid ? (
-                        <FieldDescription className="text-destructive">
-                          {String(field.state.meta.errors[0])}
-                        </FieldDescription>
+                        <FieldError errors={field.state.meta.errors} />
                       ) : null}
                     </Field>
                   )}
@@ -675,9 +657,7 @@ export function SignupFormFields({
                         value={field.state.value}
                       />
                       {field.state.meta.isTouched && !field.state.meta.isValid ? (
-                        <FieldDescription className="text-destructive">
-                          {String(field.state.meta.errors[0])}
-                        </FieldDescription>
+                        <FieldError errors={field.state.meta.errors} />
                       ) : null}
                     </Field>
                   )}
@@ -697,9 +677,7 @@ export function SignupFormFields({
                       value={field.state.value}
                     />
                     {field.state.meta.isTouched && !field.state.meta.isValid ? (
-                      <FieldDescription className="text-destructive">
-                        {String(field.state.meta.errors[0])}
-                      </FieldDescription>
+                        <FieldError errors={field.state.meta.errors} />
                     ) : null}
                   </Field>
                 )}

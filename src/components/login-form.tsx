@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldSeparator,
@@ -17,7 +18,7 @@ import { APP_NAME } from "@/lib/app-config"
 import { loginFn } from "@/lib/auth"
 import { TRAVELER_AUTH_IMAGE_URLS } from "@/lib/auth-images"
 import { loginSchema } from "@/lib/schemas"
-import { cn } from "@/lib/utils"
+import { cn, getErrorMessage } from "@/lib/utils"
 
 const customerLoginSchema = loginSchema.pick({ password: true }).extend({
   email: loginSchema.shape.username.email("Use a valid email address."),
@@ -71,25 +72,7 @@ export function LoginFormFields({
     try {
       await form.handleSubmit()
     } catch (err) {
-      if (err instanceof Error) {
-        try {
-          const parsed = JSON.parse(err.message)
-          if (Array.isArray(parsed)) {
-            setError(
-              parsed
-                .map((entry: { message?: string }) => entry.message)
-                .filter(Boolean)
-                .join(" ")
-            )
-            return
-          }
-        } catch {
-          // not JSON
-        }
-        setError(err.message)
-      } else {
-        setError("Login failed.")
-      }
+      setError(getErrorMessage(err, "Login failed."))
     }
   }
 
@@ -106,87 +89,91 @@ export function LoginFormFields({
           </p>
         </div>
 
-        <form.Field name="email">
-          {(field) => {
-            const isInvalid =
-              field.state.meta.isTouched && !field.state.meta.isValid
+        <form.Subscribe selector={(s) => s.submissionAttempts}>
+          {(submissionAttempts) => (
+            <>
+              <form.Field name="email">
+                {(field) => {
+                  const isInvalid =
+                    (field.state.meta.isTouched || submissionAttempts > 0) &&
+                    !field.state.meta.isValid
 
-            return (
-              <Field data-invalid={isInvalid}>
-                <FieldLabel htmlFor={`${formId}-email`}>Email</FieldLabel>
-                <Input
-                  aria-invalid={isInvalid}
-                  autoComplete="email"
-                  id={`${formId}-email`}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder="name@example.com"
-                  required
-                  type="email"
-                  value={field.state.value}
-                />
-                {isInvalid ? (
-                  <FieldDescription className="text-destructive">
-                    {String(field.state.meta.errors[0])}
-                  </FieldDescription>
-                ) : null}
-              </Field>
-            )
-          }}
-        </form.Field>
+                  return (
+                    <Field data-invalid={isInvalid}>
+                      <FieldLabel htmlFor={`${formId}-email`}>Email</FieldLabel>
+                      <Input
+                        aria-invalid={isInvalid}
+                        autoComplete="email"
+                        id={`${formId}-email`}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        placeholder="name@example.com"
+                        required
+                        type="email"
+                        value={field.state.value}
+                      />
+                      {isInvalid ? (
+                        <FieldError errors={field.state.meta.errors} />
+                      ) : null}
+                    </Field>
+                  )
+                }}
+              </form.Field>
 
-        <form.Field name="password">
-          {(field) => {
-            const isInvalid =
-              field.state.meta.isTouched && !field.state.meta.isValid
+              <form.Field name="password">
+                {(field) => {
+                  const isInvalid =
+                    (field.state.meta.isTouched || submissionAttempts > 0) &&
+                    !field.state.meta.isValid
 
-            return (
-              <Field data-invalid={isInvalid}>
-                <div className="flex items-center">
-                  <FieldLabel htmlFor={`${formId}-password`}>
-                    Password
-                  </FieldLabel>
-                  <a
-                    className="ms-auto text-sm underline-offset-4 hover:underline"
-                    href="#"
-                  >
-                    Forgot your password?
-                  </a>
-                </div>
-                <div className="relative">
-                  <Input
-                    aria-invalid={isInvalid}
-                    autoComplete="current-password"
-                    className="pr-10"
-                    id={`${formId}-password`}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    type={showPassword ? "text" : "password"}
-                    value={field.state.value}
-                  />
-                  <Button
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                    aria-pressed={showPassword}
-                    className="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    size="icon-sm"
-                    type="button"
-                    variant="ghost"
-                  >
-                    <Eye className="size-4" />
-                  </Button>
-                </div>
-                {isInvalid ? (
-                  <FieldDescription className="text-destructive">
-                    {String(field.state.meta.errors[0])}
-                  </FieldDescription>
-                ) : null}
-              </Field>
-            )
-          }}
-        </form.Field>
+                  return (
+                    <Field data-invalid={isInvalid}>
+                      <div className="flex items-center">
+                        <FieldLabel htmlFor={`${formId}-password`}>
+                          Password
+                        </FieldLabel>
+                        <a
+                          className="ms-auto text-sm underline-offset-4 hover:underline"
+                          href="#"
+                        >
+                          Forgot your password?
+                        </a>
+                      </div>
+                      <div className="relative">
+                        <Input
+                          aria-invalid={isInvalid}
+                          autoComplete="current-password"
+                          className="pr-10"
+                          id={`${formId}-password`}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          placeholder="••••••••"
+                          required
+                          type={showPassword ? "text" : "password"}
+                          value={field.state.value}
+                        />
+                        <Button
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                          aria-pressed={showPassword}
+                          className="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          size="icon-sm"
+                          type="button"
+                          variant="ghost"
+                        >
+                          <Eye className="size-4" />
+                        </Button>
+                      </div>
+                      {isInvalid ? (
+                        <FieldError errors={field.state.meta.errors} />
+                      ) : null}
+                    </Field>
+                  )
+                }}
+              </form.Field>
+            </>
+          )}
+        </form.Subscribe>
 
         {error ? (
           <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">

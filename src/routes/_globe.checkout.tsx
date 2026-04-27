@@ -16,7 +16,8 @@ import { useBookingStore } from "@/lib/booking-store"
 import { purchaseTicketFn } from "@/lib/queries"
 import type { FlightOption } from "@/lib/queries"
 import { formatCurrency } from "@/lib/format"
-import { cn } from "@/lib/utils"
+import { FieldError } from "@/components/ui/field"
+import { cn, getErrorMessage } from "@/lib/utils"
 
 const paymentSchema = z.object({
   cardType: z.enum(["credit", "debit"]),
@@ -186,21 +187,7 @@ function CheckoutForm({
     try {
       await form.handleSubmit()
     } catch (err) {
-      // Format server errors nicely
-      if (err instanceof Error) {
-        try {
-          const parsed = JSON.parse(err.message)
-          if (Array.isArray(parsed)) {
-            setError(parsed.map((e: { message?: string }) => e.message).filter(Boolean).join(" "))
-            return
-          }
-        } catch {
-          // not JSON, use as-is
-        }
-        setError(err.message)
-      } else {
-        setError("Booking failed.")
-      }
+      setError(getErrorMessage(err, "Booking failed."))
     }
   }
 
@@ -241,7 +228,7 @@ function CheckoutForm({
               </h2>
             </div>
 
-            <form ref={formRef} onSubmit={handleSubmit}>
+            <form noValidate ref={formRef} onSubmit={handleSubmit}>
               {/* Card type toggle */}
               <div className="mb-5">
                 <label className="mb-2 block text-[10px] font-medium tracking-widest text-white/40 uppercase">
@@ -297,9 +284,7 @@ function CheckoutForm({
                           )}
                         />
                         {isInvalid && field.state.meta.errors.length > 0 && (
-                          <p className="mt-1 text-xs text-red-400">
-                            {String(field.state.meta.errors[0])}
-                          </p>
+                          <FieldError className="mt-1 text-xs text-red-400" errors={field.state.meta.errors} />
                         )}
                       </>
                     )
@@ -336,9 +321,7 @@ function CheckoutForm({
                             )}
                           />
                           {isInvalid && field.state.meta.errors.length > 0 && (
-                            <p className="mt-1 text-xs text-red-400">
-                              {String(field.state.meta.errors[0])}
-                            </p>
+                            <FieldError className="mt-1 text-xs text-red-400" errors={field.state.meta.errors} />
                           )}
                         </>
                       )
@@ -371,9 +354,7 @@ function CheckoutForm({
                             )}
                           />
                           {isInvalid && field.state.meta.errors.length > 0 && (
-                            <p className="mt-1 text-xs text-red-400">
-                              {String(field.state.meta.errors[0])}
-                            </p>
+                            <FieldError className="mt-1 text-xs text-red-400" errors={field.state.meta.errors} />
                           )}
                         </>
                       )
