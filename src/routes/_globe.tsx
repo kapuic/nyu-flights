@@ -1,15 +1,14 @@
 import { useCallback, useMemo } from "react"
-import { Link, Outlet, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router"
-import { User } from "lucide-react"
+import { Outlet, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router"
 import { toast } from "sonner"
 
 import { GlobeBackground } from "@/components/globe-background"
 import type { CameraState } from "@/components/globe-background"
+import { AppNavbar } from "@/components/app-navbar"
 import { AuthModal } from "@/components/auth-modal"
 import { useBookingStore } from "@/lib/booking-store"
 import { getCurrentUserFn } from "@/lib/auth"
 import { listGlobeRoutesFn } from "@/lib/queries"
-import { APP_NAME } from "@/lib/app-config"
 import airportCoordinates from "@/data/airport-coordinates.json"
 
 const coords = airportCoordinates as Record<
@@ -75,47 +74,9 @@ function GlobeLayout() {
         resultRoutes={resultRoutes.length > 0 ? resultRoutes : undefined}
       />
 
-      {/* Navbar */}
-      <nav className="relative z-20 flex items-center justify-between px-6 py-4">
-        <Link
-          to="/"
-          className="text-lg font-semibold tracking-tight text-white"
-        >
-          {APP_NAME}
-        </Link>
-
-        <div className="flex items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.04] p-1 backdrop-blur-md">
-          <Link
-            to="/"
-            className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white"
-          >
-            Search
-          </Link>
-          {currentUser ? (
-            <Link
-              to="/customer"
-              className="rounded-full px-4 py-1.5 text-sm text-white/50 transition-colors hover:text-white/80"
-            >
-              Trips
-            </Link>
-          ) : null}
-        </div>
-
-        <div>
-          {currentUser ? (
-            <div className="flex size-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.06]">
-              <User className="size-4 text-white/60" />
-            </div>
-          ) : (
-            <Link
-              to="/login"
-              className="rounded-full border border-white/10 bg-white/[0.06] px-4 py-1.5 text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-            >
-              Sign in
-            </Link>
-          )}
-        </div>
-      </nav>
+      <div className="relative z-20">
+        <AppNavbar activeTab="search" currentUser={currentUser} />
+      </div>
 
       <Outlet />
 

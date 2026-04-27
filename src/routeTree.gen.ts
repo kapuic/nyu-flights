@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TripsRouteImport } from './routes/trips'
 import { Route as StaffRouteImport } from './routes/staff'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
@@ -29,6 +30,11 @@ import { Route as StaffDashboardFleetRouteImport } from './routes/staff._dashboa
 import { Route as StaffDashboardAirportsRouteImport } from './routes/staff._dashboard.airports'
 import { Route as StaffDashboardAirlinesRouteImport } from './routes/staff._dashboard.airlines'
 
+const TripsRoute = TripsRouteImport.update({
+  id: '/trips',
+  path: '/trips',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StaffRoute = StaffRouteImport.update({
   id: '/staff',
   path: '/staff',
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/staff': typeof StaffDashboardRouteWithChildren
+  '/trips': typeof TripsRoute
   '/checkout': typeof GlobeCheckoutRoute
   '/staff/login': typeof StaffLoginRoute
   '/staff/register': typeof StaffRegisterRoute
@@ -150,6 +157,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/staff': typeof StaffDashboardIndexRoute
+  '/trips': typeof TripsRoute
   '/checkout': typeof GlobeCheckoutRoute
   '/staff/login': typeof StaffLoginRoute
   '/staff/register': typeof StaffRegisterRoute
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/staff': typeof StaffRouteWithChildren
+  '/trips': typeof TripsRoute
   '/_globe/checkout': typeof GlobeCheckoutRoute
   '/staff/_dashboard': typeof StaffDashboardRouteWithChildren
   '/staff/login': typeof StaffLoginRoute
@@ -193,6 +202,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/staff'
+    | '/trips'
     | '/checkout'
     | '/staff/login'
     | '/staff/register'
@@ -211,6 +221,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/staff'
+    | '/trips'
     | '/checkout'
     | '/staff/login'
     | '/staff/register'
@@ -230,6 +241,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/staff'
+    | '/trips'
     | '/_globe/checkout'
     | '/staff/_dashboard'
     | '/staff/login'
@@ -252,10 +264,18 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   StaffRoute: typeof StaffRouteWithChildren
+  TripsRoute: typeof TripsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/trips': {
+      id: '/trips'
+      path: '/trips'
+      fullPath: '/trips'
+      preLoaderRoute: typeof TripsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/staff': {
       id: '/staff'
       path: '/staff'
@@ -452,6 +472,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   StaffRoute: StaffRouteWithChildren,
+  TripsRoute: TripsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
