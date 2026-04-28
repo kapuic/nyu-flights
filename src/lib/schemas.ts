@@ -518,7 +518,17 @@ export const deleteCustomerSchema = z.object({
 });
 export const updateManagedCustomerFieldSchema = z.object({
   email: z.email(),
-  field: z.enum(["city", "name", "phoneNumber"]),
+  field: z.enum([
+    "buildingNumber",
+    "city",
+    "name",
+    "passportCountry",
+    "passportExpiration",
+    "passportNumber",
+    "phoneNumber",
+    "state",
+    "street",
+  ]),
   value: z.string().min(1),
 });
 

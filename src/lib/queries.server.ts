@@ -1488,13 +1488,23 @@ export async function listAllCustomersInternal() {
   await requireSuperadmin();
   return db<
     Array<{
+      building_number: string;
       city: string;
+      date_of_birth: string;
       email: string;
       name: string;
+      passport_country: string;
+      passport_expiration: string;
+      passport_number: string;
       phone_number: string;
+      state: string;
+      street: string;
     }>
   >`
-    select email, name, city, phone_number
+    select email, name, phone_number, date_of_birth::text as date_of_birth,
+           building_number, street, city, state,
+           passport_number, passport_expiration::text as passport_expiration,
+           passport_country
     from customer
     order by name asc
   `;
@@ -1520,6 +1530,14 @@ export async function deleteCustomerInternal(data: { email: string }) {
   return { message: `Customer "${data.email}" deleted.` };
 }
 const MANAGED_CUSTOMER_FIELD_UPDATES = {
+  buildingNumber: {
+    column: "building_number",
+    validate: (value: string) => {
+      const result = customerFieldValidators.buildingNumber.safeParse(value);
+      if (!result.success) throw new Error(result.error.issues[0].message);
+      return result.data;
+    },
+  },
   city: {
     column: "city",
     validate: (value: string) => {
@@ -1536,10 +1554,50 @@ const MANAGED_CUSTOMER_FIELD_UPDATES = {
       return result.data;
     },
   },
+  passportCountry: {
+    column: "passport_country",
+    validate: (value: string) => {
+      const result = customerFieldValidators.passportCountry.safeParse(value);
+      if (!result.success) throw new Error(result.error.issues[0].message);
+      return result.data;
+    },
+  },
+  passportExpiration: {
+    column: "passport_expiration",
+    validate: (value: string) => {
+      const result = customerFieldValidators.passportExpiration.safeParse(value);
+      if (!result.success) throw new Error(result.error.issues[0].message);
+      return result.data;
+    },
+  },
+  passportNumber: {
+    column: "passport_number",
+    validate: (value: string) => {
+      const result = customerFieldValidators.passportNumber.safeParse(value);
+      if (!result.success) throw new Error(result.error.issues[0].message);
+      return result.data;
+    },
+  },
   phoneNumber: {
     column: "phone_number",
     validate: (value: string) => {
       const result = customerFieldValidators.phoneNumber.safeParse(value);
+      if (!result.success) throw new Error(result.error.issues[0].message);
+      return result.data;
+    },
+  },
+  state: {
+    column: "state",
+    validate: (value: string) => {
+      const result = customerFieldValidators.state.safeParse(value);
+      if (!result.success) throw new Error(result.error.issues[0].message);
+      return result.data;
+    },
+  },
+  street: {
+    column: "street",
+    validate: (value: string) => {
+      const result = customerFieldValidators.street.safeParse(value);
       if (!result.success) throw new Error(result.error.issues[0].message);
       return result.data;
     },

@@ -1,29 +1,98 @@
+import { formatIncompletePhoneNumber, parsePhoneNumberFromString } from "libphonenumber-js/max";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
+import type { HTMLInputTypeAttribute } from "react";
 
 import type { DashboardDataTableFilterOption } from "@/components/dashboard-data-table";
 import {
   DashboardDataTable,
   DashboardDataTableColumnHeader,
+  DashboardDataTableInlineTextCell,
 } from "@/components/dashboard-data-table";
 import { DeleteConfirmation, useDeleteConfirmation } from "@/components/delete-confirmation";
-import { InlineField, InlinePhoneField } from "@/components/ui/inline-field";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { InlineField, InlinePhoneField, InlineStateField } from "@/components/ui/inline-field";
 import { deleteCustomerFn, updateManagedCustomerFieldFn } from "@/lib/queries";
 import { staffCustomersQueryOptions } from "@/lib/staff-queries";
 
 type CustomerRow = {
+  building_number: string;
   city: string;
+  date_of_birth: string;
   email: string;
   name: string;
+  passport_country: string;
+  passport_expiration: string;
+  passport_number: string;
   phone_number: string;
+  state: string;
+  street: string;
 };
-type EditableCustomerField = "city" | "name" | "phoneNumber";
+type EditableCustomerField =
+  | "buildingNumber"
+  | "city"
+  | "name"
+  | "passportCountry"
+  | "passportExpiration"
+  | "passportNumber"
+  | "phoneNumber"
+  | "state"
+  | "street";
 
 function getCustomerRowId(customer: CustomerRow) {
   return customer.email;
+}
+function formatDisplayDate(value: string) {
+  if (!value) return "";
+  const date = new Date(value.includes("T") ? value : `${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
+}
+
+function getEditablePhoneNumber(value: string) {
+  if (!value) return "";
+  const parsed = parsePhoneNumberFromString(value, "US");
+  return parsed?.isValid() ? parsed.number : value;
+}
+
+function formatDisplayPhoneNumber(value: string) {
+  const editableValue = getEditablePhoneNumber(value);
+  if (!editableValue) return "";
+  return formatIncompletePhoneNumber(editableValue, "US");
+}
+
+function renderEditableTextCell({
+  ariaLabel,
+  className = "min-w-36",
+  onSave,
+  type,
+  value,
+}: {
+  ariaLabel: string;
+  className?: string;
+  onSave: (value: string) => Promise<void>;
+  type?: HTMLInputTypeAttribute;
+  value: string;
+}) {
+  return (
+    <DashboardDataTableInlineTextCell
+      ariaLabel={ariaLabel}
+      className={className}
+      onSave={onSave}
+      type={type}
+      value={value}
+    />
+  );
 }
 
 export const Route = createFileRoute("/staff/_dashboard/customers")({
@@ -44,6 +113,52 @@ function getUniqueOptions(
   }
   return Array.from(options, ([value, label]) => ({ label, value })).sort((a, b) =>
     a.label.localeCompare(b.label),
+  );
+}
+
+function PassportDialog({
+  customer,
+  onSave,
+}: {
+  customer: CustomerRow;
+  onSave: (customer: CustomerRow, field: EditableCustomerField, value: string) => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={<Button variant="outline" size="sm" />}>Show Passport</DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Passport</DialogTitle>
+          <DialogDescription>{customer.name}</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <InlineField
+            ariaLabel={`Update ${customer.email} passport number`}
+            label="Passport #"
+            onSave={(value) => onSave(customer, "passportNumber", value)}
+            value={customer.passport_number}
+            variant="filled"
+          />
+          <InlineField
+            ariaLabel={`Update ${customer.email} passport expiration`}
+            label="Expiration"
+            onSave={(value) => onSave(customer, "passportExpiration", value)}
+            type="date"
+            value={customer.passport_expiration}
+            variant="filled"
+          />
+          <InlineField
+            ariaLabel={`Update ${customer.email} passport country`}
+            label="Country"
+            onSave={(value) => onSave(customer, "passportCountry", value)}
+            value={customer.passport_country}
+            variant="filled"
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -107,49 +222,106 @@ function ManageCustomersPage() {
       {
         accessorKey: "name",
         header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Name" />,
-        cell: ({ row }) => (
-          <InlineField
-            ariaLabel={`Update ${row.original.email} name`}
-            label="Name"
-            onSave={(value) => saveCustomerField(row.original, "name", value)}
-            value={row.original.name}
-            variant="outline"
-          />
-        ),
+        cell: ({ row }) =>
+          renderEditableTextCell({
+            ariaLabel: `Update ${row.original.email} name`,
+            onSave: (value) => saveCustomerField(row.original, "name", value),
+            className: "min-w-44",
+            value: row.original.name,
+          }),
       },
       {
         accessorKey: "email",
         header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Email" />,
         cell: ({ row }) => (
-          <span className="text-sm text-muted-foreground">{row.original.email}</span>
-        ),
-      },
-      {
-        accessorKey: "city",
-        filterFn: "arrIncludesSome",
-        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="City" />,
-        cell: ({ row }) => (
-          <InlineField
-            ariaLabel={`Update ${row.original.email} city`}
-            label="City"
-            onSave={(value) => saveCustomerField(row.original, "city", value)}
-            value={row.original.city}
-            variant="outline"
-          />
+          <span className="block min-w-56 text-sm text-muted-foreground">{row.original.email}</span>
         ),
       },
       {
         accessorKey: "phone_number",
         header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Phone" />,
         cell: ({ row }) => (
-          <InlinePhoneField
+          <div className="min-w-64">
+            <InlinePhoneField
+              controls="external"
+              displayValue={formatDisplayPhoneNumber(row.original.phone_number)}
+              label="Phone"
+              onSave={(value) => saveCustomerField(row.original, "phoneNumber", value)}
+              showLabel={false}
+              value={getEditablePhoneNumber(row.original.phone_number)}
+              variant="outline"
+            />
+          </div>
+        ),
+      },
+      {
+        accessorKey: "date_of_birth",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="Date of Birth" />
+        ),
+        cell: ({ row }) => (
+          <span className="block min-w-28 text-sm">
+            {formatDisplayDate(row.original.date_of_birth)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "street",
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Street" />,
+        cell: ({ row }) =>
+          renderEditableTextCell({
+            ariaLabel: `Update ${row.original.email} street`,
+            onSave: (value) => saveCustomerField(row.original, "street", value),
+            className: "min-w-32",
+            value: row.original.street,
+          }),
+      },
+      {
+        accessorKey: "building_number",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="Building #" />
+        ),
+        cell: ({ row }) =>
+          renderEditableTextCell({
+            ariaLabel: `Update ${row.original.email} building number`,
+            onSave: (value) => saveCustomerField(row.original, "buildingNumber", value),
+            className: "min-w-24",
+            value: row.original.building_number,
+          }),
+      },
+      {
+        accessorKey: "city",
+        filterFn: "arrIncludesSome",
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="City" />,
+        cell: ({ row }) =>
+          renderEditableTextCell({
+            ariaLabel: `Update ${row.original.email} city`,
+            onSave: (value) => saveCustomerField(row.original, "city", value),
+            className: "min-w-32",
+            value: row.original.city,
+          }),
+      },
+      {
+        accessorKey: "state",
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="State" />,
+        cell: ({ row }) => (
+          <InlineStateField
             controls="external"
-            label="Phone"
-            onSave={(value) => saveCustomerField(row.original, "phoneNumber", value)}
-            value={row.original.phone_number}
+            className="min-w-56"
+            label="State"
+            mode="strict"
+            onSave={(value) => saveCustomerField(row.original, "state", value)}
+            showLabel={false}
+            value={row.original.state}
             variant="outline"
           />
         ),
+      },
+      {
+        accessorKey: "passport_number",
+        enableGlobalFilter: true,
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Passport" />,
+        cell: ({ row }) => <PassportDialog customer={row.original} onSave={saveCustomerField} />,
       },
     ],
     [saveCustomerField],

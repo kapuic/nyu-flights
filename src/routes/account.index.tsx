@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   InlineField,
   InlinePhoneField,
+  InlineStateField,
+  type InlineComboboxMode,
   type InlineControls,
   type InlineFieldVariant,
 } from "@/components/ui/inline-field";
@@ -24,7 +26,6 @@ import {
 import { CountryFlag } from "@/components/country-flag";
 import { DatePickerField } from "@/components/date-time-picker";
 import { getCustomerProfileFn, updateCustomerFieldFn } from "@/lib/queries";
-import { US_STATES } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/account/")({
@@ -36,9 +37,6 @@ type CountryOption = { code: string; label: string };
 const COUNTRY_OPTIONS: Array<CountryOption> = getCountries()
   .map((c) => ({ code: c.code, label: c.name }))
   .sort((a, b) => a.label.localeCompare(b.label));
-
-type StateOption = { label: string };
-const STATE_OPTIONS: Array<StateOption> = US_STATES.map((s) => ({ label: s }));
 
 async function saveField(field: string, value: string) {
   await updateCustomerFieldFn({ data: { field, value } });
@@ -57,8 +55,6 @@ function countryToCode(name: string): string {
     ""
   );
 }
-
-type InlineComboboxMode = "freeform" | "strict";
 
 function InlineFieldWrapper({
   children,
@@ -384,195 +380,6 @@ function InlineCountryField({
           {code && <CountryFlag countryCode={code} size={16} />}
           {value || "Not set"}
         </span>
-        <Pencil className="size-3.5 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground" />
-      </div>
-    </InlineFieldWrapper>
-  );
-}
-
-function InlineStateField({
-  controls,
-  label,
-  mode,
-  onSave,
-  value,
-  variant,
-}: {
-  controls: InlineControls;
-  label: string;
-  mode: InlineComboboxMode;
-  onSave: (v: string) => Promise<void>;
-  value: string;
-  variant: InlineFieldVariant;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [inputText, setInputText] = useState("");
-  const [highlightedItem, setHighlightedItem] = useState<StateOption | undefined>(undefined);
-  const selectingRef = useRef(false);
-  const selected = STATE_OPTIONS.find((s) => s.label.toLowerCase() === value.toLowerCase()) ?? null;
-
-  const ghost = useMemo(() => {
-    if (mode !== "strict" || !inputText || !highlightedItem) return "";
-    const label = highlightedItem.label;
-    if (!label.toLowerCase().startsWith(inputText.toLowerCase())) return "";
-    return label.slice(inputText.length);
-  }, [mode, inputText, highlightedItem]);
-  const filteredStates = useMemo(() => {
-    if (!inputText) return STATE_OPTIONS;
-    const lower = inputText.toLowerCase();
-    const starts: StateOption[] = [];
-    const contains: StateOption[] = [];
-    for (const s of STATE_OPTIONS) {
-      if (s.label.toLowerCase().startsWith(lower)) {
-        starts.push(s);
-      } else if (s.label.toLowerCase().includes(lower)) {
-        contains.push(s);
-      }
-    }
-    return [...starts, ...contains];
-  }, [inputText]);
-
-  function cancel() {
-    setEditing(false);
-    setError("");
-  }
-
-  async function handleSelect(state: StateOption | null) {
-    if (!state) return; // input cleared, not a selection
-    selectingRef.current = true;
-    if (state.label === value) {
-      cancel();
-      return;
-    }
-    setSaving(true);
-    setError("");
-    try {
-      await onSave(state.label);
-      setEditing(false);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function saveFreeform() {
-    const trimmed = inputText.trim();
-    if (!trimmed || trimmed === value) {
-      cancel();
-      return;
-    }
-    setSaving(true);
-    setError("");
-    try {
-      await onSave(trimmed);
-      setEditing(false);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  if (editing) {
-    return (
-      <InlineFieldWrapper label={label} error={error}>
-        <div className="flex items-center gap-1.5">
-          <div className="flex-1">
-            <Combobox
-              items={filteredStates}
-              value={selected}
-              defaultOpen
-              autoHighlight={mode === "strict"}
-              itemToStringValue={(s) => s.label}
-              onValueChange={handleSelect}
-              onInputValueChange={(text) => setInputText(text)}
-              onItemHighlighted={(item) => setHighlightedItem(item)}
-              onOpenChange={(isOpen) => {
-                if (!isOpen) {
-                  setTimeout(() => {
-                    if (!selectingRef.current) {
-                      if (mode === "freeform") {
-                        void saveFreeform();
-                      } else {
-                        cancel();
-                      }
-                    }
-                    selectingRef.current = false;
-                  }, 0);
-                }
-              }}
-            >
-              <ComboboxInput
-                placeholder="Search states"
-                showClear={controls === "internal"}
-                showTrigger={controls === "internal"}
-                className={cn(
-                  "w-full h-8",
-                  variant === "outline" && "dark:!bg-transparent !shadow-none",
-                )}
-                autoFocus
-              >
-                {mode === "strict" && <GhostOverlay input={inputText} suffix={ghost} />}
-              </ComboboxInput>
-              <ComboboxContent>
-                <ComboboxEmpty>No states found.</ComboboxEmpty>
-                <ComboboxList>
-                  {(s) => (
-                    <ComboboxItem key={s.label} value={s}>
-                      <span className="truncate">{s.label}</span>
-                    </ComboboxItem>
-                  )}
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
-          </div>
-          {controls === "external" && (
-            <>
-              {mode === "freeform" && (
-                <button
-                  type="button"
-                  data-inline-action="save"
-                  onClick={() => void saveFreeform()}
-                  disabled={saving}
-                  className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  <Check className="size-3.5" />
-                </button>
-              )}
-              <button
-                type="button"
-                data-inline-action="cancel"
-                onClick={cancel}
-                disabled={saving}
-                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                <X className="size-3.5" />
-              </button>
-            </>
-          )}
-        </div>
-      </InlineFieldWrapper>
-    );
-  }
-
-  return (
-    <InlineFieldWrapper label={label}>
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => {
-          setError("");
-          setEditing(true);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") setEditing(true);
-        }}
-        className="flex min-h-8 items-center justify-between rounded-md px-2.5 py-1 text-sm cursor-pointer transition-colors hover:bg-muted/50"
-      >
-        <span className={value ? "" : "italic text-muted-foreground"}>{value || "Not set"}</span>
         <Pencil className="size-3.5 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground" />
       </div>
     </InlineFieldWrapper>
