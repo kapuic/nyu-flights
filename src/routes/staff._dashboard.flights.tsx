@@ -775,7 +775,7 @@ function StaffFlightsPage() {
                       {showAirlineColumn ? (
                         <form.Field name="airlineName">
                           {(field) => (
-                            <Field>
+                            <Field className="sm:col-span-2">
                               <FieldLabel>Airline</FieldLabel>
                               <AirlineComboboxField
                                 items={airlineOptions}

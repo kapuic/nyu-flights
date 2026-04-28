@@ -396,6 +396,7 @@ function StaffFleetPage() {
                       <form.Field name="airlineName">
                         {(field) => (
                           <Field
+                            className="sm:col-span-2"
                             data-invalid={shouldShowFieldError(
                               field.state.meta,
                               submissionAttempts,
