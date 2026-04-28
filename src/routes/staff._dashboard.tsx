@@ -123,9 +123,9 @@ function getPrivilegedBannerStorageKey(username: string) {
 
 function getPrivilegedBannerCopy(permission: StaffPermission) {
   if (permission === "superadmin")
-    return "Signed in as a privileged Superadmin. You can view and edit airlines, airports, staff, customers, flights, fleet, passengers, and reports."
+    return "Signed in as Superadmin. You can administer airlines, airports, staff accounts, and customer accounts, and manage all flight operations."
   if (permission === "admin")
-    return "Signed in as a privileged Admin. You can view and edit cross-airline operations including flights, fleet, passengers, and reports."
+    return "Signed in as Admin. You can manage cross-airline flights, fleet, passenger manifests, and reports."
   return null
 }
 
