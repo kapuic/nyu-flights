@@ -113,7 +113,7 @@ export type StaffDashboardData = {
     code: string
     country: string
   }>
-  flights: Array<FlightOption & { ticketCount: number }>
+  flights: Array<FlightOption & { airplaneId: string; ticketCount: number }>
   monthlySales: Array<{ month: string; ticketsSold: number }>
   ratings: Array<{
     averageRating: number | null

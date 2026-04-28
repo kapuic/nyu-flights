@@ -415,6 +415,7 @@ export async function getStaffDashboardInternal(filters: {
   const flights = await db<
     Array<{
       airline_name: string
+      airplane_id: string
       arrival_airport_code: string
       arrival_airport_name: string
       arrival_city: string
@@ -434,6 +435,7 @@ export async function getStaffDashboardInternal(filters: {
   >`
     select
       f.airline_name,
+      f.airplane_id,
       f.flight_number,
       f.departure_datetime,
       f.arrival_datetime,
@@ -465,6 +467,7 @@ export async function getStaffDashboardInternal(filters: {
       and (${destinationQuery}::text is null or lower(arrival_airport.city) like ${destinationQuery} or lower(arrival_airport.code) like ${destinationQuery})
     group by
       f.airline_name,
+      f.airplane_id,
       f.flight_number,
       f.departure_datetime,
       f.arrival_datetime,
@@ -598,6 +601,7 @@ export async function getStaffDashboardInternal(filters: {
     airports,
     flights: flights.map((row) => ({
       airlineName: row.airline_name,
+      airplaneId: row.airplane_id,
       arrivalAirportCode: row.arrival_airport_code,
       arrivalAirportName: row.arrival_airport_name,
       arrivalCity: row.arrival_city,

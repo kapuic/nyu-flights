@@ -1,15 +1,14 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router"
+import {
+  createFileRoute,
+  getRouteApi,
+  useRouter,
+} from "@tanstack/react-router"
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
 import { useForm } from "@tanstack/react-form"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
-import {
-  AlertTriangleIcon,
-  CircleCheckIcon,
-  Plus,
-} from "lucide-react"
-
+import { AlertTriangleIcon, CircleCheckIcon, Plus } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -29,25 +28,40 @@ import {
 import { DateTimePickerField } from "@/components/date-time-picker"
 import { DialogGlobe } from "@/components/dialog-globe"
 import { ResponsiveModal } from "@/components/responsive-modal"
+import { isAdminOrAbove } from "@/lib/staff-permissions"
 import { staffDashboardQueryOptions } from "@/lib/staff-queries"
 import { getAirportOption } from "@/lib/airports"
-
-import { createFlightFn, listDbAirportsFn, updateFlightStatusFn } from "@/lib/queries"
+import {
+  createFlightFn,
+  listDbAirportsFn,
+  updateFlightStatusFn,
+} from "@/lib/queries"
 
 type FlightRow = {
   airlineName: string
+  airplaneId: string
   arrivalAirportCode: string
+  arrivalAirportName: string
+  arrivalCity: string
   arrivalDatetime: string
+  averageRating: number | null
+  availableSeats: number
   basePrice: number
   departureAirportCode: string
+  departureAirportName: string
+  departureCity: string
   departureDatetime: string
   flightNumber: string
+  reviewCount: number
   status: "on_time" | "delayed"
+  ticketCount: number
 }
 
 export const Route = createFileRoute("/staff/_dashboard/flights")({
   component: StaffFlightsPage,
 })
+
+const staffDashboardRoute = getRouteApi("/staff/_dashboard")
 
 function formatDateShort(iso: string) {
   const d = new Date(iso)
@@ -57,6 +71,18 @@ function formatDateShort(iso: string) {
     hour: "numeric",
     minute: "2-digit",
   })
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    currency: "USD",
+    style: "currency",
+  }).format(value)
+}
+
+function formatRating(value: number | null) {
+  if (value === null) return "—"
+  return value.toFixed(1)
 }
 
 function getUniqueOptions(
@@ -110,7 +136,6 @@ function FlightStatusBadge({ status }: { status: FlightRow["status"] }) {
   )
 }
 
-
 function FlightGlobe({
   departureCode,
   arrivalCode,
@@ -159,8 +184,10 @@ function FlightGlobe({
 
 function StaffFlightsPage() {
   const { data } = useSuspenseQuery(staffDashboardQueryOptions())
+  const { currentUser } = staffDashboardRoute.useLoaderData()
   const queryClient = useQueryClient()
   const router = useRouter()
+  const showAirlineColumn = isAdminOrAbove(currentUser.staffPermission ?? "staff")
   const [createOpen, setCreateOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const dbAirportsQuery = useQuery({
@@ -235,6 +262,7 @@ function StaffFlightsPage() {
       toast.error("Failed to update flight status.")
     }
   }
+
   async function handleBulkStatusUpdate(
     rows: Array<FlightRow>,
     status: FlightRow["status"]
@@ -274,83 +302,169 @@ function StaffFlightsPage() {
     }
   }
 
+  const columns = useMemo<Array<ColumnDef<FlightRow>>>(() => {
+    const airlineColumn: ColumnDef<FlightRow> = {
+      accessorKey: "airlineName",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="Airline" />
+      ),
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">
+          {row.original.airlineName}
+        </span>
+      ),
+    }
 
-  const columns: Array<ColumnDef<FlightRow>> = [
-    {
-      accessorKey: "flightNumber",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Flight" />
-      ),
-      cell: ({ row }) => (
-        <span className="font-mono text-sm font-medium tracking-tight">
-          {row.original.flightNumber}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "departureAirportCode",
-      filterFn: "arrIncludesSome",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="From" />
-      ),
-      cell: ({ row }) => <AirportCell code={row.original.departureAirportCode} />,
-    },
-    {
-      accessorKey: "arrivalAirportCode",
-      filterFn: "arrIncludesSome",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="To" />
-      ),
-      cell: ({ row }) => <AirportCell code={row.original.arrivalAirportCode} />,
-    },
-    {
-      accessorKey: "departureDatetime",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Departure" />
-      ),
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {formatDateShort(row.original.departureDatetime)}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "arrivalDatetime",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Arrival" />
-      ),
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {formatDateShort(row.original.arrivalDatetime)}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "status",
-      filterFn: "arrIncludesSome",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Status" />
-      ),
-      cell: ({ row }) => <FlightStatusBadge status={row.original.status} />,
-    },
-    {
-      id: "actions",
-      enableHiding: false,
-      enableSorting: false,
-      header: () => <span className="sr-only">Action</span>,
-      cell: ({ row }) => (
-        <div className="text-right">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleStatusToggle(row.original)}
-          >
-            {row.original.status === "on_time" ? "Mark Delayed" : "Mark On Time"}
-          </Button>
-        </div>
-      ),
-    },
-  ]
+    return [
+      ...(showAirlineColumn ? [airlineColumn] : []),
+      {
+        accessorKey: "flightNumber",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="Flight" />
+        ),
+        cell: ({ row }) => (
+          <span className="font-mono text-sm font-medium tracking-tight">
+            {row.original.flightNumber}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "departureAirportCode",
+        filterFn: "arrIncludesSome",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="From" />
+        ),
+        cell: ({ row }) => (
+          <AirportCell code={row.original.departureAirportCode} />
+        ),
+      },
+      {
+        accessorKey: "arrivalAirportCode",
+        filterFn: "arrIncludesSome",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="To" />
+        ),
+        cell: ({ row }) => (
+          <AirportCell code={row.original.arrivalAirportCode} />
+        ),
+      },
+      {
+        accessorKey: "departureDatetime",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="Departure" />
+        ),
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {formatDateShort(row.original.departureDatetime)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "arrivalDatetime",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="Arrival" />
+        ),
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {formatDateShort(row.original.arrivalDatetime)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "status",
+        filterFn: "arrIncludesSome",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="Status" />
+        ),
+        cell: ({ row }) => <FlightStatusBadge status={row.original.status} />,
+      },
+      {
+        accessorKey: "airplaneId",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="Aircraft" />
+        ),
+        cell: ({ row }) => (
+          <span className="font-mono text-sm text-muted-foreground">
+            {row.original.airplaneId}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "basePrice",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="Price" />
+        ),
+        cell: ({ row }) => (
+          <div className="text-right text-sm tabular-nums">
+            {formatCurrency(row.original.basePrice)}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "availableSeats",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="Seats" />
+        ),
+        cell: ({ row }) => (
+          <div className="text-right text-sm tabular-nums">
+            {row.original.availableSeats}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "ticketCount",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="Tickets" />
+        ),
+        cell: ({ row }) => (
+          <div className="text-right text-sm tabular-nums">
+            {row.original.ticketCount}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "averageRating",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="Rating" />
+        ),
+        cell: ({ row }) => (
+          <div className="text-right text-sm tabular-nums">
+            {formatRating(row.original.averageRating)}
+          </div>
+        ),
+      },
+      {
+        accessorKey: "reviewCount",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="Reviews" />
+        ),
+        cell: ({ row }) => (
+          <div className="text-right text-sm tabular-nums">
+            {row.original.reviewCount}
+          </div>
+        ),
+      },
+      {
+        id: "actions",
+        enableHiding: false,
+        enableSorting: false,
+        header: () => <span className="sr-only">Action</span>,
+        cell: ({ row }) => (
+          <div className="text-right">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleStatusToggle(row.original)}
+            >
+              {row.original.status === "on_time"
+                ? "Mark Delayed"
+                : "Mark On Time"}
+            </Button>
+          </div>
+        ),
+      },
+    ]
+  }, [showAirlineColumn])
 
   const filterOptions = [
     {
@@ -371,7 +485,7 @@ function StaffFlightsPage() {
   ]
 
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-6">
+    <div className="flex min-w-0 flex-col gap-6 overflow-hidden p-4 md:p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold">Flights</h1>
