@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
-import type { ColumnDef } from "@tanstack/react-table"
 import { parseAsString, useQueryStates } from "nuqs"
+import { useMemo } from "react"
+import type { ColumnDef } from "@tanstack/react-table"
 
 import {
   DashboardDataTable,
@@ -65,7 +66,8 @@ function StaffPassengersPage() {
   })
 
   const passengers = passengersQuery.data ?? []
-  const columns: Array<ColumnDef<PassengerRow>> = [
+  const columns = useMemo<Array<ColumnDef<PassengerRow>>>(
+    () => [
     {
       accessorKey: "ticketId",
       header: ({ column }) => (
@@ -114,7 +116,9 @@ function StaffPassengersPage() {
         </span>
       ),
     },
-  ]
+  ],
+    []
+  )
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -170,6 +174,7 @@ function StaffPassengersPage() {
             columns={columns}
             data={passengers}
             emptyMessage="No passengers on this flight."
+            enableVirtualization
             searchPlaceholder="Search passengers..."
             queryPrefix="passengers"
           />
