@@ -9,7 +9,7 @@ import type {
   StaffDashboardData,
 } from "@/lib/queries";
 import type { AirportOption } from "@/lib/airports";
-import { NANOID_LENGTH, db, ensureTicketIdColumn } from "@/lib/db";
+import { NANOID_LENGTH, db } from "@/lib/db";
 import { requireUser } from "@/lib/auth.server";
 import {
   canManageOperationalAirline,
@@ -669,8 +669,6 @@ export async function purchaseTicketInternal(data: {
   nameOnCard: string;
 }) {
   const user = await requireUser("customer");
-
-  await ensureTicketIdColumn();
 
   const result = await db.begin(async (transaction) => {
     const flightRows = await transaction<

@@ -5,17 +5,11 @@ import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import type { DashboardDataTableFilterOption } from "@/components/dashboard-data-table";
-import {
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
-} from "@/components/ui/combobox";
+
 import {
   DashboardDataTable,
   DashboardDataTableColumnHeader,
+  DashboardDataTableInlineComboboxCell,
   DashboardDataTableInlineTextCell,
 } from "@/components/dashboard-data-table";
 import { Badge } from "@/components/ui/badge";
@@ -63,51 +57,6 @@ function getRoleLabel(role: string) {
   if (role === "admin") return "Admin";
   return "Staff";
 }
-function StaffAirlineComboboxCell({
-  airlines,
-  ariaLabel,
-  onSave,
-  value,
-}: {
-  airlines: Array<string>;
-  ariaLabel: string;
-  onSave: (value: string) => Promise<void>;
-  value: string;
-}) {
-  const airlineItems = useMemo(() => airlines.map((name) => ({ name })), [airlines]);
-  const selectedAirline = airlineItems.find((airline) => airline.name === value) ?? null;
-
-  return (
-    <Combobox
-      items={airlineItems}
-      value={selectedAirline}
-      itemToStringLabel={(airline) => airline.name}
-      itemToStringValue={(airline) => airline.name}
-      onValueChange={(airline) => {
-        if (!airline || airline.name === value) return;
-        void onSave(airline.name);
-      }}
-    >
-      <ComboboxInput
-        aria-label={ariaLabel}
-        placeholder="Search airlines"
-        showClear
-        className="h-8 min-w-36"
-      />
-      <ComboboxContent>
-        <ComboboxEmpty>No airlines found.</ComboboxEmpty>
-        <ComboboxList>
-          {(airline) => (
-            <ComboboxItem key={airline.name} value={airline}>
-              <span className="truncate">{airline.name}</span>
-            </ComboboxItem>
-          )}
-        </ComboboxList>
-      </ComboboxContent>
-    </Combobox>
-  );
-}
-
 function ManageStaffPage() {
   const { data: staff } = useSuspenseQuery(staffMembersQueryOptions());
   const { data: airlines } = useSuspenseQuery({
@@ -200,11 +149,17 @@ function ManageStaffPage() {
         filterFn: "arrIncludesSome",
         header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Airline" />,
         cell: ({ row }) => (
-          <StaffAirlineComboboxCell
+          <DashboardDataTableInlineComboboxCell
             ariaLabel={`Update ${row.original.username} airline`}
-            airlines={airlines.map((airline) => airline.name)}
+            className="min-w-40"
+            getItemKey={(airline) => airline.name}
+            itemToStringLabel={(airline) => airline.name}
+            itemToStringValue={(airline) => airline.name}
+            items={airlines}
             onSave={(value) => saveStaffField(row.original, "airlineName", value)}
+            placeholder="Search airlines"
             value={row.original.airline_name}
+            valueFromItem={(airline) => airline.name}
           />
         ),
       },
