@@ -31,13 +31,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { AirplaneComboboxField, AirportComboboxField } from "@/components/combobox-fields";
 import { DateTimePickerField } from "@/components/date-time-picker";
 import { DeleteConfirmation, useDeleteConfirmation } from "@/components/delete-confirmation";
 import { DialogGlobe } from "@/components/dialog-globe";
 import { ResponsiveModal } from "@/components/responsive-modal";
 import { isAdminOrAbove } from "@/lib/staff-permissions";
+import { createFlightSchema } from "@/lib/schemas";
 import { staffDashboardQueryOptions } from "@/lib/staff-queries";
 import { getAirportOption } from "@/lib/airports";
 import {
@@ -76,6 +77,13 @@ type FlightRow = {
   status: "on_time" | "delayed";
   ticketCount: number;
 };
+
+function shouldShowFieldError(
+  meta: { isTouched: boolean; isValid: boolean },
+  submissionAttempts: number,
+) {
+  return (meta.isTouched || submissionAttempts > 0) && !meta.isValid;
+}
 
 export const Route = createFileRoute("/staff/_dashboard/flights")({
   component: StaffFlightsPage,
@@ -273,6 +281,9 @@ function StaffFlightsPage() {
       arrivalDatetime: "",
       basePrice: "",
       airplaneId: "",
+    },
+    validators: {
+      onSubmit: ({ value }) => createFlightSchema.safeParse(value).error?.issues,
     },
     onSubmit: async ({ value }) => {
       const result = await createFlightFn({
@@ -655,12 +666,13 @@ function StaffFlightsPage() {
         <form.Subscribe
           selector={(state) => ({
             isSubmitting: state.isSubmitting,
+            submissionAttempts: state.submissionAttempts,
             departureCode: state.values.departureAirportCode,
             arrivalCode: state.values.arrivalAirportCode,
             airlineName: state.values.airlineName,
           })}
         >
-          {({ isSubmitting, departureCode, arrivalCode, airlineName }) => {
+          {({ isSubmitting, submissionAttempts, departureCode, arrivalCode, airlineName }) => {
             const createAirplaneOptions = showAirlineColumn
               ? data.airplanes.filter((airplane) => airplane.airlineName === airlineName)
               : data.airplanes;
@@ -703,24 +715,43 @@ function StaffFlightsPage() {
                       ) : null}
                       <form.Field name="flightNumber">
                         {(field) => (
-                          <Field>
+                          <Field
+                            data-invalid={shouldShowFieldError(
+                              field.state.meta,
+                              submissionAttempts,
+                            )}
+                          >
                             <FieldLabel>Flight Number</FieldLabel>
                             <Input
+                              aria-invalid={shouldShowFieldError(
+                                field.state.meta,
+                                submissionAttempts,
+                              )}
                               placeholder="SK100"
                               required
                               value={field.state.value}
+                              onBlur={field.handleBlur}
                               onChange={(e) => field.handleChange(e.target.value)}
                             />
+                            {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
+                              <FieldError errors={field.state.meta.errors} />
+                            ) : null}
                           </Field>
                         )}
                       </form.Field>
                       <form.Field name="airplaneId">
                         {(field) => (
-                          <Field>
+                          <Field
+                            data-invalid={shouldShowFieldError(
+                              field.state.meta,
+                              submissionAttempts,
+                            )}
+                          >
                             <FieldLabel>Airplane</FieldLabel>
                             <AirplaneComboboxField
                               items={createAirplaneOptions}
                               value={field.state.value}
+                              onBlur={field.handleBlur}
                               onChange={(value) => field.handleChange(value)}
                               placeholder={
                                 showAirlineColumn && !airlineName
@@ -728,63 +759,104 @@ function StaffFlightsPage() {
                                   : "Search airplanes"
                               }
                             />
+                            {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
+                              <FieldError errors={field.state.meta.errors} />
+                            ) : null}
                           </Field>
                         )}
                       </form.Field>
                       <form.Field name="departureAirportCode">
                         {(field) => (
-                          <Field>
+                          <Field
+                            data-invalid={shouldShowFieldError(
+                              field.state.meta,
+                              submissionAttempts,
+                            )}
+                          >
                             <FieldLabel>Departure Airport</FieldLabel>
                             <AirportComboboxField
                               items={dbAirports}
                               value={field.state.value}
+                              onBlur={field.handleBlur}
                               onChange={(value) => field.handleChange(value)}
                               placeholder="Search departure airport"
                             />
+                            {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
+                              <FieldError errors={field.state.meta.errors} />
+                            ) : null}
                           </Field>
                         )}
                       </form.Field>
                       <form.Field name="arrivalAirportCode">
                         {(field) => (
-                          <Field>
+                          <Field
+                            data-invalid={shouldShowFieldError(
+                              field.state.meta,
+                              submissionAttempts,
+                            )}
+                          >
                             <FieldLabel>Arrival Airport</FieldLabel>
                             <AirportComboboxField
                               items={dbAirports}
                               value={field.state.value}
+                              onBlur={field.handleBlur}
                               onChange={(value) => field.handleChange(value)}
                               placeholder="Search arrival airport"
                             />
+                            {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
+                              <FieldError errors={field.state.meta.errors} />
+                            ) : null}
                           </Field>
                         )}
                       </form.Field>
                       <form.Field name="departureDatetime">
                         {(field) => (
-                          <Field>
+                          <Field
+                            data-invalid={shouldShowFieldError(
+                              field.state.meta,
+                              submissionAttempts,
+                            )}
+                          >
                             <FieldLabel>Departure Time</FieldLabel>
                             <DateTimePickerField
                               value={field.state.value}
+                              onBlur={field.handleBlur}
                               onChange={(value) => field.handleChange(value)}
                               placeholder="Pick departure time"
                             />
+                            {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
+                              <FieldError errors={field.state.meta.errors} />
+                            ) : null}
                           </Field>
                         )}
                       </form.Field>
                       <form.Field name="arrivalDatetime">
                         {(field) => (
-                          <Field>
+                          <Field
+                            data-invalid={shouldShowFieldError(
+                              field.state.meta,
+                              submissionAttempts,
+                            )}
+                          >
                             <FieldLabel>Arrival Time</FieldLabel>
                             <DateTimePickerField
                               value={field.state.value}
+                              onBlur={field.handleBlur}
                               onChange={(value) => field.handleChange(value)}
                               placeholder="Pick arrival time"
                             />
+                            {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
+                              <FieldError errors={field.state.meta.errors} />
+                            ) : null}
                           </Field>
                         )}
                       </form.Field>
                     </div>
                     <form.Field name="basePrice">
                       {(field) => (
-                        <Field>
+                        <Field
+                          data-invalid={shouldShowFieldError(field.state.meta, submissionAttempts)}
+                        >
                           <FieldLabel>Base Price ($)</FieldLabel>
                           <Input
                             type="number"
@@ -792,9 +864,17 @@ function StaffFlightsPage() {
                             step="0.01"
                             required
                             placeholder="199.00"
+                            aria-invalid={shouldShowFieldError(
+                              field.state.meta,
+                              submissionAttempts,
+                            )}
                             value={field.state.value}
+                            onBlur={field.handleBlur}
                             onChange={(e) => field.handleChange(e.target.value)}
                           />
+                          {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
+                            <FieldError errors={field.state.meta.errors} />
+                          ) : null}
                         </Field>
                       )}
                     </form.Field>
@@ -804,7 +884,7 @@ function StaffFlightsPage() {
                       </div>
                     ) : null}
                     <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
-                      {isSubmitting ? "Creating…" : "Create Flight"}
+                      {isSubmitting ? "Creating..." : "Create Flight"}
                     </Button>
                   </FieldGroup>
                 </form>

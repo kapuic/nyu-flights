@@ -1,4 +1,4 @@
-import { isValidPhoneNumber } from "libphonenumber-js/min";
+import { parsePhoneNumberFromString } from "libphonenumber-js/max";
 import { getNames as getCountryNames } from "country-list";
 import { z } from "zod";
 
@@ -74,6 +74,52 @@ function parseDate(value: string): Date | undefined {
   const d = new Date(value.includes("T") ? value : `${value}T00:00:00`);
   return Number.isNaN(d.getTime()) ? undefined : d;
 }
+export function normalizePhoneNumber(value: string): string | null {
+  const parsed = parsePhoneNumberFromString(value.trim(), {
+    defaultCountry: "US",
+    extract: false,
+  });
+  if (!parsed?.isValid()) return null;
+  return parsed.number;
+}
+
+function phoneNumberSchema(requiredMessage: string) {
+  return z
+    .string()
+    .trim()
+    .min(1, requiredMessage)
+    .transform((value, context) => {
+      const normalized = normalizePhoneNumber(value);
+      if (normalized) return normalized;
+
+      context.addIssue({
+        code: "custom",
+        message: "Enter a valid phone number.",
+      });
+      return z.NEVER;
+    });
+}
+
+function normalizeCommaSeparatedPhoneNumbers(
+  value: string,
+  context: z.core.$RefinementCtx<string>,
+) {
+  const normalizedPhoneNumbers = value
+    .split(",")
+    .map((phoneNumber) => phoneNumber.trim())
+    .filter(Boolean)
+    .map((phoneNumber) => normalizePhoneNumber(phoneNumber));
+
+  if (normalizedPhoneNumbers.some((phoneNumber) => phoneNumber === null)) {
+    context.addIssue({
+      code: "custom",
+      message: "Enter valid phone numbers.",
+    });
+    return z.NEVER;
+  }
+
+  return normalizedPhoneNumbers.join(",");
+}
 
 export const customerFieldValidators = {
   buildingNumber: z.string().trim().min(1, "Building # is required."),
@@ -100,10 +146,7 @@ export const customerFieldValidators = {
       return d ? d > new Date() : false;
     }, "Passport must not be expired."),
   passportNumber: z.string().trim().min(1, "Passport # is required."),
-  phoneNumber: z
-    .string()
-    .min(1, "Phone number is required.")
-    .refine((v) => isValidPhoneNumber(v, "US"), "Enter a valid phone number."),
+  phoneNumber: phoneNumberSchema("Phone number is required."),
   state: z
     .string()
     .min(1, "State is required.")
@@ -282,7 +325,7 @@ export const staffRegistrationSchema = accountCredentialSchema.extend({
   dateOfBirth: customerFieldValidators.dateOfBirth,
   firstName: z.string().min(1, "First name is required."),
   lastName: z.string().min(1, "Last name is required."),
-  phoneNumbers: z.string().default(""),
+  phoneNumbers: z.string().default("").transform(normalizeCommaSeparatedPhoneNumbers),
   username: z.string().min(3, "Username is required."),
 });
 
@@ -484,3 +527,11 @@ export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required."),
   newPassword: z.string().min(8, "New password must be at least 8 characters."),
 });
+export const changePasswordFormSchema = changePasswordSchema
+  .extend({
+    confirmPassword: changePasswordSchema.shape.newPassword,
+  })
+  .refine((value) => value.newPassword === value.confirmPassword, {
+    message: "New passwords do not match.",
+    path: ["confirmPassword"],
+  });

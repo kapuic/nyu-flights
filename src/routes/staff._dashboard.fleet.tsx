@@ -16,7 +16,7 @@ import {
   DashboardDataTableInlineTextCell,
 } from "@/components/dashboard-data-table";
 import { Button } from "@/components/ui/button";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -33,6 +33,7 @@ import {
   listReferenceDataFn,
   updateAirplaneFieldFn,
 } from "@/lib/queries";
+import { addAirplaneSchema } from "@/lib/schemas";
 import { staffDashboardQueryOptions } from "@/lib/staff-queries";
 import { isAdminOrAbove } from "@/lib/staff-permissions";
 
@@ -44,6 +45,13 @@ type AirplaneRow = {
   numberOfSeats: number;
 };
 type EditableAirplaneField = "manufacturingCompany" | "manufacturingDate" | "numberOfSeats";
+
+function shouldShowFieldError(
+  meta: { isTouched: boolean; isValid: boolean },
+  submissionAttempts: number,
+) {
+  return (meta.isTouched || submissionAttempts > 0) && !meta.isValid;
+}
 
 function getAirplaneRowId(airplane: AirplaneRow) {
   return `${airplane.airlineName}:${airplane.airplaneId}`;
@@ -157,6 +165,9 @@ function StaffFleetPage() {
       numberOfSeats: "",
       manufacturingCompany: "",
       manufacturingDate: "",
+    },
+    validators: {
+      onSubmit: ({ value }) => addAirplaneSchema.safeParse(value).error?.issues,
     },
     onSubmit: async ({ value }) => {
       const result = await addAirplaneFn({
@@ -324,8 +335,13 @@ function StaffFleetPage() {
         title="Add Airplane"
         description="Register a new aircraft in the fleet."
       >
-        <form.Subscribe selector={(state) => state.isSubmitting}>
-          {(isSubmitting) => (
+        <form.Subscribe
+          selector={(state) => ({
+            isSubmitting: state.isSubmitting,
+            submissionAttempts: state.submissionAttempts,
+          })}
+        >
+          {({ isSubmitting, submissionAttempts }) => (
             <form onSubmit={handleSubmit}>
               <FieldGroup>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -360,54 +376,81 @@ function StaffFleetPage() {
                   ) : null}
                   <form.Field name="airplaneId">
                     {(field) => (
-                      <Field>
+                      <Field
+                        data-invalid={shouldShowFieldError(field.state.meta, submissionAttempts)}
+                      >
                         <FieldLabel>Airplane ID</FieldLabel>
                         <Input
+                          aria-invalid={shouldShowFieldError(field.state.meta, submissionAttempts)}
                           placeholder="B737-001"
                           required
                           value={field.state.value}
+                          onBlur={field.handleBlur}
                           onChange={(e) => field.handleChange(e.target.value)}
                         />
+                        {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
+                          <FieldError errors={field.state.meta.errors} />
+                        ) : null}
                       </Field>
                     )}
                   </form.Field>
                   <form.Field name="numberOfSeats">
                     {(field) => (
-                      <Field>
+                      <Field
+                        data-invalid={shouldShowFieldError(field.state.meta, submissionAttempts)}
+                      >
                         <FieldLabel>Number of Seats</FieldLabel>
                         <Input
                           type="number"
                           min="1"
                           required
                           placeholder="180"
+                          aria-invalid={shouldShowFieldError(field.state.meta, submissionAttempts)}
                           value={field.state.value}
+                          onBlur={field.handleBlur}
                           onChange={(e) => field.handleChange(e.target.value)}
                         />
+                        {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
+                          <FieldError errors={field.state.meta.errors} />
+                        ) : null}
                       </Field>
                     )}
                   </form.Field>
                   <form.Field name="manufacturingCompany">
                     {(field) => (
-                      <Field>
+                      <Field
+                        data-invalid={shouldShowFieldError(field.state.meta, submissionAttempts)}
+                      >
                         <FieldLabel>Manufacturer</FieldLabel>
                         <Input
                           placeholder="Boeing"
                           required
+                          aria-invalid={shouldShowFieldError(field.state.meta, submissionAttempts)}
                           value={field.state.value}
+                          onBlur={field.handleBlur}
                           onChange={(e) => field.handleChange(e.target.value)}
                         />
+                        {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
+                          <FieldError errors={field.state.meta.errors} />
+                        ) : null}
                       </Field>
                     )}
                   </form.Field>
                   <form.Field name="manufacturingDate">
                     {(field) => (
-                      <Field>
+                      <Field
+                        data-invalid={shouldShowFieldError(field.state.meta, submissionAttempts)}
+                      >
                         <FieldLabel>Manufacturing Date</FieldLabel>
                         <DatePickerField
                           value={field.state.value}
+                          onBlur={field.handleBlur}
                           onChange={(value) => field.handleChange(value)}
                           placeholder="Pick manufacturing date"
                         />
+                        {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
+                          <FieldError errors={field.state.meta.errors} />
+                        ) : null}
                       </Field>
                     )}
                   </form.Field>
@@ -418,7 +461,7 @@ function StaffFleetPage() {
                   </div>
                 ) : null}
                 <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
-                  {isSubmitting ? "Adding…" : "Add Airplane"}
+                  {isSubmitting ? "Adding..." : "Add Airplane"}
                 </Button>
               </FieldGroup>
             </form>
