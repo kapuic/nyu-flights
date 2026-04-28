@@ -339,7 +339,10 @@ export function CreditCardVisual({
   const displayCvv = cvv ? cvv.replace(/./g, "•") : "•••"
 
   return (
-    <div className={cn("cc-root", className)} style={{ perspective: "1200px" }}>
+    <div
+      className={cn("cc-root @container/credit-card", className)}
+      style={{ perspective: "1200px" }}
+    >
       <div
         className="cc-inner relative aspect-[1.586/1] h-auto w-full"
         style={{
@@ -365,15 +368,18 @@ export function CreditCardVisual({
             }}
           />
 
-          <div className="relative z-10 flex h-full flex-col justify-between p-6">
+          <div className="relative z-10 flex h-full flex-col justify-between p-[6.7cqw] @[360px]/credit-card:p-6">
             <div className="flex items-start justify-between">
-              <ChipSvg className="h-9 w-12" />
-              <CardBrandLogo brand={brand} className="h-10 w-16" />
+              <ChipSvg className="h-[13cqw] w-[17cqw] max-w-12" />
+              <CardBrandLogo
+                brand={brand}
+                className="h-[14cqw] max-h-10 w-[22cqw] max-w-16"
+              />
             </div>
 
             <div
               className={cn(
-                "font-mono text-[clamp(0.78rem,4.6vw,1.25rem)] tracking-[0.08em] whitespace-nowrap sm:tracking-[0.16em]",
+                "font-mono text-[clamp(0.875rem,6.25cqw,1.25rem)] tracking-[clamp(0.025em,0.45cqw,0.12em)] whitespace-nowrap",
                 theme.textColor
               )}
               style={{ textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}
@@ -383,22 +389,22 @@ export function CreditCardVisual({
 
             <div className="flex items-end justify-between">
               <div className="min-w-0 flex-1">
-                <div className="mb-0.5 text-[9px] tracking-widest text-white/40 uppercase">
+                <div className="mb-0.5 text-[2.7cqw] tracking-widest text-white/40 uppercase @[360px]/credit-card:text-[9px]">
                   Card Holder
                 </div>
                 <div
-                  className="truncate text-sm font-medium tracking-wider text-white/90 uppercase"
+                  className="truncate text-[4.1cqw] font-medium tracking-wider text-white/90 uppercase @[360px]/credit-card:text-sm"
                   style={{ textShadow: "0 1px 2px rgba(0,0,0,0.2)" }}
                 >
                   {displayName}
                 </div>
               </div>
               <div className="ml-4 text-right">
-                <div className="mb-0.5 text-[9px] tracking-widest text-white/40 uppercase">
+                <div className="mb-0.5 text-[2.7cqw] tracking-widest text-white/40 uppercase @[360px]/credit-card:text-[9px]">
                   Expires
                 </div>
                 <div
-                  className="font-mono text-sm tracking-wider text-white/90"
+                  className="font-mono text-[4.1cqw] tracking-wider text-white/90 @[360px]/credit-card:text-sm"
                   style={{ textShadow: "0 1px 2px rgba(0,0,0,0.2)" }}
                 >
                   {displayExp}
