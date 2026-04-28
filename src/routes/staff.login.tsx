@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form"
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
+import { createFileRoute, Link, redirect, useRouter } from "@tanstack/react-router"
 import { Building2 } from "lucide-react"
 import { type FormEvent, useState } from "react"
 import { toast } from "sonner"
@@ -15,7 +15,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { loginFn } from "@/lib/auth"
+import { getCurrentUserFn, loginFn } from "@/lib/auth"
 import { getErrorMessage } from "@/lib/utils"
 function normalizeUsername(value: string) {
   return value.trim()
@@ -32,6 +32,10 @@ const staffLoginSchema = z.object({
 })
 
 export const Route = createFileRoute("/staff/login")({
+  loader: async () => {
+    const currentUser = await getCurrentUserFn()
+    if (currentUser) throw redirect({ to: currentUser.role === "staff" ? "/staff" : "/trips" })
+  },
   component: StaffLoginPage,
 })
 

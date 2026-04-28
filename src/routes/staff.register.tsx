@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form"
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
+import { createFileRoute, Link, redirect, useRouter } from "@tanstack/react-router"
 import { Building2 } from "lucide-react"
 import { IMaskInput } from "react-imask"
 import { type FormEvent, useState } from "react"
@@ -16,7 +16,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { registerStaffFn } from "@/lib/auth"
+import { getCurrentUserFn, registerStaffFn } from "@/lib/auth"
 import { APP_NAME } from "@/lib/app-config"
 import { getErrorMessage } from "@/lib/utils"
 
@@ -24,6 +24,10 @@ const maskedInputClassName =
   "h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-2.5 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
 
 export const Route = createFileRoute("/staff/register")({
+  loader: async () => {
+    const currentUser = await getCurrentUserFn()
+    if (currentUser) throw redirect({ to: currentUser.role === "staff" ? "/staff" : "/trips" })
+  },
   component: StaffRegisterPage,
 })
 
