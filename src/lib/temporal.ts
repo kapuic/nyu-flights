@@ -128,7 +128,7 @@ export function formatShortDate(value: string): string {
 // Serialization helpers (server/SQL boundaries)
 // ---------------------------------------------------------------------------
 
-/** Serialize a DB Date or string to YYYY-MM-DDTHH:mm (minute precision). */
+/** Serialize a DB Date or string to YYYY-MM-DDTHH:mm:ss (second precision). */
 export function serializeTimestamp(value: Date | string): string {
   if (value instanceof Date) {
     const pd = Temporal.PlainDateTime.from({
@@ -136,12 +136,12 @@ export function serializeTimestamp(value: Date | string): string {
       month: value.getMonth() + 1,
       day: value.getDate(),
       hour: value.getHours(),
-      minute: value.getMinutes(),
+      second: value.getSeconds(),
     })
-    return pd.toString({ smallestUnit: "minute" })
+    return pd.toString({ smallestUnit: "second" })
   }
   const pdt = toPlainDateTime(value)
-  return pdt ? pdt.toString({ smallestUnit: "minute" }) : value
+  return pdt ? pdt.toString({ smallestUnit: "second" }) : value
 }
 
 /** Serialize a DB Date or string to YYYY-MM-DD (date only). */
@@ -156,10 +156,9 @@ export function serializeDateOnly(value: Date | string): string {
   return value.split(/[ T]/)[0]
 }
 
-/** Normalize a UI datetime string to SQL-safe format (YYYY-MM-DD HH:mm:00). */
+/** Normalize a UI datetime string to SQL-safe format (YYYY-MM-DD HH:mm:ss). */
 export function normalizeTimestampForSql(value: string): string {
-  const serialized = serializeTimestamp(value)
-  return serialized.replace("T", " ") + ":00"
+  return serializeTimestamp(value).replace("T", " ")
 }
 
 // ---------------------------------------------------------------------------

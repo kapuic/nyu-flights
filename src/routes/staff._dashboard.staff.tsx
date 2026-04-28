@@ -3,6 +3,7 @@ import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
+import { formatPhoneNumberIntl } from "react-phone-number-input";
 
 import type { DashboardDataTableFilterOption } from "@/components/dashboard-data-table";
 import { Button } from "@/components/ui/button";
@@ -68,11 +69,11 @@ function getRoleLabel(role: string) {
 function getPhoneSummary(phoneNumbers: Array<string>) {
   const firstPhoneNumber = phoneNumbers[0];
   if (!firstPhoneNumber) return "Not set";
-  if (phoneNumbers.length === 1) return firstPhoneNumber;
+  const formatted = formatPhoneNumberIntl(firstPhoneNumber) || firstPhoneNumber;
+  if (phoneNumbers.length === 1) return formatted;
   return (
     <>
-      {firstPhoneNumber}{" "}
-      <span className="text-muted-foreground">+{phoneNumbers.length - 1} more</span>
+      {formatted} <span className="text-muted-foreground">+{phoneNumbers.length - 1} more</span>
     </>
   );
 }

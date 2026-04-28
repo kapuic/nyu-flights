@@ -14,6 +14,7 @@ import {
   Building2,
   ChevronUp,
   Globe,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   Plane,
@@ -21,6 +22,7 @@ import {
   SearchIcon,
   Shield,
   UserCog,
+  User,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -398,6 +400,14 @@ function StaffDashboardLayout() {
                   <ChevronUp className="ml-auto size-4" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="top" className="w-[--radix-dropdown-menu-trigger-width]">
+                  <DropdownMenuItem render={<Link to="/staff/profile" />}>
+                    <User className="mr-2 size-4" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem render={<Link to="/staff/security" />}>
+                    <KeyRound className="mr-2 size-4" />
+                    Security
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 size-4" />
                     Sign out

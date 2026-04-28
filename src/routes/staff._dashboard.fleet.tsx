@@ -28,6 +28,7 @@ import {
   updateAirplaneFieldFn,
 } from "@/lib/queries";
 import { addAirplaneSchema } from "@/lib/schemas";
+import { addAirplaneSchema } from "@/lib/schemas";
 import { staffDashboardQueryOptions } from "@/lib/staff-queries";
 import { isAdminOrAbove } from "@/lib/staff-permissions";
 import { formatPlainDate } from "@/lib/temporal";
@@ -40,6 +41,13 @@ type AirplaneRow = {
   numberOfSeats: number;
 };
 type EditableAirplaneField = "manufacturingCompany" | "manufacturingDate" | "numberOfSeats";
+
+function shouldShowFieldError(
+  meta: { isTouched: boolean; isValid: boolean },
+  submissionAttempts: number,
+) {
+  return (meta.isTouched || submissionAttempts > 0) && !meta.isValid;
+}
 
 function shouldShowFieldError(
   meta: { isTouched: boolean; isValid: boolean },
@@ -381,157 +389,127 @@ function StaffFleetPage() {
       >
         <form.Subscribe
           selector={(state) => ({
-            errorMap: state.errorMap,
             isSubmitting: state.isSubmitting,
             submissionAttempts: state.submissionAttempts,
           })}
         >
-          {({ errorMap, isSubmitting, submissionAttempts }) => {
-            const formError = getFormErrorMessage(errorMap.onSubmit) ?? error;
-
-            return (
-              <form onSubmit={handleSubmit}>
-                <FieldGroup>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    {showAirlineField ? (
-                      <form.Field name="airlineName">
-                        {(field) => (
-                          <Field
-                            className="sm:col-span-2"
-                            data-invalid={shouldShowFieldError(
-                              field.state.meta,
-                              submissionAttempts,
-                            )}
+          {({ isSubmitting, submissionAttempts }) => (
+            <form onSubmit={handleSubmit}>
+              <FieldGroup>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {showAirlineField ? (
+                    <form.Field name="airlineName">
+                      {(field) => (
+                        <Field>
+                          <FieldLabel>Airline</FieldLabel>
+                          <Select
+                            value={field.state.value}
+                            onValueChange={(value) => {
+                              if (value === null) return;
+                              field.handleChange(value);
+                            }}
                           >
-                            <FieldLabel>Airline</FieldLabel>
-                            <AirlineComboboxField
-                              items={airlineOptions}
-                              value={field.state.value}
-                              onBlur={field.handleBlur}
-                              onChange={(value) => field.handleChange(value)}
-                              placeholder="Search airlines"
-                            />
-                            {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
-                              <FieldError
-                                errors={[
-                                  { message: getFieldErrorMessage(field.state.meta.errors) },
-                                ]}
-                              />
-                            ) : null}
-                          </Field>
-                        )}
-                      </form.Field>
-                    ) : null}
-                    <form.Field name="airplaneId">
-                      {(field) => (
-                        <Field
-                          data-invalid={shouldShowFieldError(field.state.meta, submissionAttempts)}
-                        >
-                          <FieldLabel>Airplane ID</FieldLabel>
-                          <Input
-                            aria-invalid={shouldShowFieldError(
-                              field.state.meta,
-                              submissionAttempts,
-                            )}
-                            placeholder="B737-001"
-                            required
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                          />
-                          {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
-                            <FieldError
-                              errors={[{ message: getFieldErrorMessage(field.state.meta.errors) }]}
-                            />
-                          ) : null}
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Choose airline" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                {airlineOptions.map((airline) => (
+                                  <SelectItem key={airline} value={airline}>
+                                    {airline}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
                         </Field>
                       )}
                     </form.Field>
-                    <form.Field name="numberOfSeats">
-                      {(field) => (
-                        <Field
-                          data-invalid={shouldShowFieldError(field.state.meta, submissionAttempts)}
-                        >
-                          <FieldLabel>Number of Seats</FieldLabel>
-                          <Input
-                            type="number"
-                            min="1"
-                            required
-                            placeholder="180"
-                            aria-invalid={shouldShowFieldError(
-                              field.state.meta,
-                              submissionAttempts,
-                            )}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                          />
-                          {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
-                            <FieldError
-                              errors={[{ message: getFieldErrorMessage(field.state.meta.errors) }]}
-                            />
-                          ) : null}
-                        </Field>
-                      )}
-                    </form.Field>
-                    <form.Field name="manufacturingCompany">
-                      {(field) => (
-                        <Field
-                          data-invalid={shouldShowFieldError(field.state.meta, submissionAttempts)}
-                        >
-                          <FieldLabel>Manufacturer</FieldLabel>
-                          <Input
-                            placeholder="Boeing"
-                            required
-                            aria-invalid={shouldShowFieldError(
-                              field.state.meta,
-                              submissionAttempts,
-                            )}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(e) => field.handleChange(e.target.value)}
-                          />
-                          {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
-                            <FieldError
-                              errors={[{ message: getFieldErrorMessage(field.state.meta.errors) }]}
-                            />
-                          ) : null}
-                        </Field>
-                      )}
-                    </form.Field>
-                    <form.Field name="manufacturingDate">
-                      {(field) => (
-                        <Field
-                          data-invalid={shouldShowFieldError(field.state.meta, submissionAttempts)}
-                        >
-                          <FieldLabel>Manufacturing Date</FieldLabel>
-                          <DatePickerField
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(value) => field.handleChange(value)}
-                            placeholder="Pick manufacturing date"
-                          />
-                          {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
-                            <FieldError
-                              errors={[{ message: getFieldErrorMessage(field.state.meta.errors) }]}
-                            />
-                          ) : null}
-                        </Field>
-                      )}
-                    </form.Field>
-                  </div>
-                  {formError ? (
-                    <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                      {formError}
-                    </div>
                   ) : null}
-                  <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
-                    {isSubmitting ? "Adding..." : "Add Airplane"}
-                  </Button>
-                </FieldGroup>
-              </form>
-            );
-          }}
+                  <form.Field name="airplaneId">
+                    {(field) => (
+                      <Field data-invalid={shouldShowFieldError(field.state.meta, submissionAttempts)}>
+                        <FieldLabel>Airplane ID</FieldLabel>
+                        <Input
+                          aria-invalid={shouldShowFieldError(field.state.meta, submissionAttempts)}
+                          placeholder="B737-001"
+                          required
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                        />
+                        {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
+                          <FieldError errors={field.state.meta.errors} />
+                        ) : null}
+                      </Field>
+                    )}
+                  </form.Field>
+                  <form.Field name="numberOfSeats">
+                    {(field) => (
+                      <Field data-invalid={shouldShowFieldError(field.state.meta, submissionAttempts)}>
+                        <FieldLabel>Number of Seats</FieldLabel>
+                        <Input
+                          type="number"
+                          min="1"
+                          required
+                          placeholder="180"
+                          aria-invalid={shouldShowFieldError(field.state.meta, submissionAttempts)}
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                        />
+                        {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
+                          <FieldError errors={field.state.meta.errors} />
+                        ) : null}
+                      </Field>
+                    )}
+                  </form.Field>
+                  <form.Field name="manufacturingCompany">
+                    {(field) => (
+                      <Field data-invalid={shouldShowFieldError(field.state.meta, submissionAttempts)}>
+                        <FieldLabel>Manufacturer</FieldLabel>
+                        <Input
+                          placeholder="Boeing"
+                          required
+                          aria-invalid={shouldShowFieldError(field.state.meta, submissionAttempts)}
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                        />
+                        {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
+                          <FieldError errors={field.state.meta.errors} />
+                        ) : null}
+                      </Field>
+                    )}
+                  </form.Field>
+                  <form.Field name="manufacturingDate">
+                    {(field) => (
+                      <Field data-invalid={shouldShowFieldError(field.state.meta, submissionAttempts)}>
+                        <FieldLabel>Manufacturing Date</FieldLabel>
+                        <DatePickerField
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(value) => field.handleChange(value)}
+                          placeholder="Pick manufacturing date"
+                        />
+                        {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
+                          <FieldError errors={field.state.meta.errors} />
+                        ) : null}
+                      </Field>
+                    )}
+                  </form.Field>
+                </div>
+                {error ? (
+                  <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                    {error}
+                  </div>
+                ) : null}
+                <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+                  {isSubmitting ? "Adding..." : "Add Airplane"}
+                </Button>
+              </FieldGroup>
+            </form>
+          )}
         </form.Subscribe>
       </ResponsiveModal>
 

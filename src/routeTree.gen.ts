@@ -25,7 +25,9 @@ import { Route as AccountPaymentsRouteImport } from './routes/account.payments'
 import { Route as GlobeCheckoutRouteImport } from './routes/_globe.checkout'
 import { Route as StaffDashboardIndexRouteImport } from './routes/staff._dashboard.index'
 import { Route as StaffDashboardStaffRouteImport } from './routes/staff._dashboard.staff'
+import { Route as StaffDashboardSecurityRouteImport } from './routes/staff._dashboard.security'
 import { Route as StaffDashboardReportsRouteImport } from './routes/staff._dashboard.reports'
+import { Route as StaffDashboardProfileRouteImport } from './routes/staff._dashboard.profile'
 import { Route as StaffDashboardPassengersRouteImport } from './routes/staff._dashboard.passengers'
 import { Route as StaffDashboardFlightsRouteImport } from './routes/staff._dashboard.flights'
 import { Route as StaffDashboardFleetRouteImport } from './routes/staff._dashboard.fleet'
@@ -111,9 +113,19 @@ const StaffDashboardStaffRoute = StaffDashboardStaffRouteImport.update({
   path: '/staff',
   getParentRoute: () => StaffDashboardRoute,
 } as any)
+const StaffDashboardSecurityRoute = StaffDashboardSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => StaffDashboardRoute,
+} as any)
 const StaffDashboardReportsRoute = StaffDashboardReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => StaffDashboardRoute,
+} as any)
+const StaffDashboardProfileRoute = StaffDashboardProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => StaffDashboardRoute,
 } as any)
 const StaffDashboardPassengersRoute =
@@ -167,7 +179,9 @@ export interface FileRoutesByFullPath {
   '/staff/fleet': typeof StaffDashboardFleetRoute
   '/staff/flights': typeof StaffDashboardFlightsRoute
   '/staff/passengers': typeof StaffDashboardPassengersRoute
+  '/staff/profile': typeof StaffDashboardProfileRoute
   '/staff/reports': typeof StaffDashboardReportsRoute
+  '/staff/security': typeof StaffDashboardSecurityRoute
   '/staff/staff': typeof StaffDashboardStaffRoute
   '/staff/': typeof StaffDashboardIndexRoute
 }
@@ -189,7 +203,9 @@ export interface FileRoutesByTo {
   '/staff/fleet': typeof StaffDashboardFleetRoute
   '/staff/flights': typeof StaffDashboardFlightsRoute
   '/staff/passengers': typeof StaffDashboardPassengersRoute
+  '/staff/profile': typeof StaffDashboardProfileRoute
   '/staff/reports': typeof StaffDashboardReportsRoute
+  '/staff/security': typeof StaffDashboardSecurityRoute
   '/staff/staff': typeof StaffDashboardStaffRoute
 }
 export interface FileRoutesById {
@@ -214,7 +230,9 @@ export interface FileRoutesById {
   '/staff/_dashboard/fleet': typeof StaffDashboardFleetRoute
   '/staff/_dashboard/flights': typeof StaffDashboardFlightsRoute
   '/staff/_dashboard/passengers': typeof StaffDashboardPassengersRoute
+  '/staff/_dashboard/profile': typeof StaffDashboardProfileRoute
   '/staff/_dashboard/reports': typeof StaffDashboardReportsRoute
+  '/staff/_dashboard/security': typeof StaffDashboardSecurityRoute
   '/staff/_dashboard/staff': typeof StaffDashboardStaffRoute
   '/staff/_dashboard/': typeof StaffDashboardIndexRoute
 }
@@ -239,7 +257,9 @@ export interface FileRouteTypes {
     | '/staff/fleet'
     | '/staff/flights'
     | '/staff/passengers'
+    | '/staff/profile'
     | '/staff/reports'
+    | '/staff/security'
     | '/staff/staff'
     | '/staff/'
   fileRoutesByTo: FileRoutesByTo
@@ -261,7 +281,9 @@ export interface FileRouteTypes {
     | '/staff/fleet'
     | '/staff/flights'
     | '/staff/passengers'
+    | '/staff/profile'
     | '/staff/reports'
+    | '/staff/security'
     | '/staff/staff'
   id:
     | '__root__'
@@ -285,7 +307,9 @@ export interface FileRouteTypes {
     | '/staff/_dashboard/fleet'
     | '/staff/_dashboard/flights'
     | '/staff/_dashboard/passengers'
+    | '/staff/_dashboard/profile'
     | '/staff/_dashboard/reports'
+    | '/staff/_dashboard/security'
     | '/staff/_dashboard/staff'
     | '/staff/_dashboard/'
   fileRoutesById: FileRoutesById
@@ -413,11 +437,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StaffDashboardStaffRouteImport
       parentRoute: typeof StaffDashboardRoute
     }
+    '/staff/_dashboard/security': {
+      id: '/staff/_dashboard/security'
+      path: '/security'
+      fullPath: '/staff/security'
+      preLoaderRoute: typeof StaffDashboardSecurityRouteImport
+      parentRoute: typeof StaffDashboardRoute
+    }
     '/staff/_dashboard/reports': {
       id: '/staff/_dashboard/reports'
       path: '/reports'
       fullPath: '/staff/reports'
       preLoaderRoute: typeof StaffDashboardReportsRouteImport
+      parentRoute: typeof StaffDashboardRoute
+    }
+    '/staff/_dashboard/profile': {
+      id: '/staff/_dashboard/profile'
+      path: '/profile'
+      fullPath: '/staff/profile'
+      preLoaderRoute: typeof StaffDashboardProfileRouteImport
       parentRoute: typeof StaffDashboardRoute
     }
     '/staff/_dashboard/passengers': {
@@ -499,7 +537,9 @@ interface StaffDashboardRouteChildren {
   StaffDashboardFleetRoute: typeof StaffDashboardFleetRoute
   StaffDashboardFlightsRoute: typeof StaffDashboardFlightsRoute
   StaffDashboardPassengersRoute: typeof StaffDashboardPassengersRoute
+  StaffDashboardProfileRoute: typeof StaffDashboardProfileRoute
   StaffDashboardReportsRoute: typeof StaffDashboardReportsRoute
+  StaffDashboardSecurityRoute: typeof StaffDashboardSecurityRoute
   StaffDashboardStaffRoute: typeof StaffDashboardStaffRoute
   StaffDashboardIndexRoute: typeof StaffDashboardIndexRoute
 }
@@ -511,7 +551,9 @@ const StaffDashboardRouteChildren: StaffDashboardRouteChildren = {
   StaffDashboardFleetRoute: StaffDashboardFleetRoute,
   StaffDashboardFlightsRoute: StaffDashboardFlightsRoute,
   StaffDashboardPassengersRoute: StaffDashboardPassengersRoute,
+  StaffDashboardProfileRoute: StaffDashboardProfileRoute,
   StaffDashboardReportsRoute: StaffDashboardReportsRoute,
+  StaffDashboardSecurityRoute: StaffDashboardSecurityRoute,
   StaffDashboardStaffRoute: StaffDashboardStaffRoute,
   StaffDashboardIndexRoute: StaffDashboardIndexRoute,
 }

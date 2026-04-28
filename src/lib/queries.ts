@@ -33,6 +33,7 @@ import {
 import {
   addAirplaneInternal,
   changePasswordInternal,
+  changeStaffPasswordInternal,
   createAirlineInternal,
   createAirportInternal,
   createFlightInternal,
@@ -48,6 +49,7 @@ import {
   getPaymentHistoryInternal,
   getStaffDashboardInternal,
   getStaffReportInternal,
+  getStaffProfileInternal,
   listAllAirlinesInternal,
   listAllAirportsInternal,
   listAllCustomersInternal,
@@ -57,6 +59,7 @@ import {
   listReferenceData,
   purchaseTicketInternal,
   replaceStaffPhoneNumbersInternal,
+  replaceOwnStaffPhoneNumbersInternal,
   searchAirportsInternal,
   searchFlightsInternal,
   submitReviewInternal,
@@ -68,6 +71,7 @@ import {
   updateFlightStatusInternal,
   updateManagedCustomerFieldInternal,
   updateStaffFieldInternal,
+  updateStaffProfileFieldInternal,
 } from "@/lib/queries.server";
 
 export type FlightOption = {
@@ -299,3 +303,23 @@ export const changePasswordFn = createServerFn({ method: "POST" })
 export const getPaymentHistoryFn = createServerFn({ method: "GET" }).handler(async () =>
   getPaymentHistoryInternal(),
 );
+
+// --- Staff account server functions ---
+
+export const getStaffProfileFn = createServerFn({ method: "GET" }).handler(async () =>
+  getStaffProfileInternal(),
+);
+
+export const updateStaffProfileFieldFn = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: unknown) => data as { field: "email" | "firstName" | "lastName"; value: string },
+  )
+  .handler(async ({ data }) => updateStaffProfileFieldInternal(data));
+
+export const replaceOwnStaffPhoneNumbersFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => data as { phoneNumbers: Array<string> })
+  .handler(async ({ data }) => replaceOwnStaffPhoneNumbersInternal(data));
+
+export const changeStaffPasswordFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => changePasswordSchema.parse(data))
+  .handler(async ({ data }) => changeStaffPasswordInternal(data));

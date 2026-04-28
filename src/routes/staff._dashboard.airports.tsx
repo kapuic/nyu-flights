@@ -33,7 +33,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { REAL_AIRPORT_OPTIONS, getAirportOption } from "@/lib/airports";
 import type { AirportOption } from "@/lib/airports";
+import type { AirportOption } from "@/lib/airports";
 import { createAirportFn, deleteAirportFn, updateAirportFieldFn } from "@/lib/queries";
+import { createAirportSchema } from "@/lib/schemas";
 import { createAirportSchema } from "@/lib/schemas";
 import { staffAirportsQueryOptions } from "@/lib/staff-queries";
 
@@ -44,6 +46,26 @@ type AirportRow = {
   country: string;
 };
 type EditableAirportField = "airportType" | "city" | "country";
+type AirportCreateFieldErrors = {
+  airport?: string;
+  type?: string;
+};
+
+function getAirportCreateFieldErrors(data: {
+  airportType: string;
+  selectedAirport: AirportOption | null;
+}): AirportCreateFieldErrors {
+  const errors: AirportCreateFieldErrors = {};
+  if (!data.selectedAirport) errors.airport = "Choose a real airport from the list.";
+
+  const parsedAirportType = createAirportSchema.shape.airportType.safeParse(
+    data.airportType.toLowerCase(),
+  );
+  if (!parsedAirportType.success)
+    errors.type = parsedAirportType.error.issues.at(0)?.message ?? "Choose an airport type.";
+
+  return errors;
+}
 type AirportCreateFieldErrors = {
   airport?: string;
   type?: string;
