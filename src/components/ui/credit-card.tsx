@@ -20,7 +20,10 @@ export type CardBrand =
 const BRAND_PATTERNS: Array<{ brand: CardBrand; pattern: RegExp }> = [
   { brand: "visa", pattern: /^4/ },
   // Mastercard: 51-55 and 2221-2720
-  { brand: "mastercard", pattern: /^(5[1-5]|222[1-9]|22[3-9]|2[3-6]|27[01]|2720)/ },
+  {
+    brand: "mastercard",
+    pattern: /^(5[1-5]|222[1-9]|22[3-9]|2[3-6]|27[01]|2720)/,
+  },
   { brand: "amex", pattern: /^3[47]/ },
   { brand: "discover", pattern: /^(6011|65|64[4-9])/ },
   { brand: "diners", pattern: /^(36|38|30[0-5])/ },
@@ -176,7 +179,13 @@ function AmexLogo({ className }: { className?: string }) {
   )
 }
 
-function GenericBrandLogo({ brand, className }: { brand: string; className?: string }) {
+function GenericBrandLogo({
+  brand,
+  className,
+}: {
+  brand: string
+  className?: string
+}) {
   return (
     <svg className={className} viewBox="0 0 60 40">
       <text
@@ -196,7 +205,13 @@ function GenericBrandLogo({ brand, className }: { brand: string; className?: str
   )
 }
 
-export function CardBrandLogo({ brand, className }: { brand: CardBrand; className?: string }) {
+export function CardBrandLogo({
+  brand,
+  className,
+}: {
+  brand: CardBrand
+  className?: string
+}) {
   switch (brand) {
     case "visa":
       return <VisaLogo className={className} />
@@ -207,7 +222,12 @@ export function CardBrandLogo({ brand, className }: { brand: CardBrand; classNam
     case "unknown":
       return null
     default:
-      return <GenericBrandLogo brand={BRAND_THEMES[brand].logo} className={className} />
+      return (
+        <GenericBrandLogo
+          brand={BRAND_THEMES[brand].logo}
+          className={className}
+        />
+      )
   }
 }
 
@@ -218,7 +238,16 @@ export function CardBrandLogo({ brand, className }: { brand: CardBrand; classNam
 function ChipSvg({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 50 40" fill="none">
-      <rect x="1" y="1" width="48" height="38" rx="5" fill="#d4af37" stroke="#b8960c" strokeWidth="1" />
+      <rect
+        x="1"
+        y="1"
+        width="48"
+        height="38"
+        rx="5"
+        fill="#d4af37"
+        stroke="#b8960c"
+        strokeWidth="1"
+      />
       <line x1="1" y1="14" x2="49" y2="14" stroke="#b8960c" strokeWidth="0.5" />
       <line x1="1" y1="26" x2="49" y2="26" stroke="#b8960c" strokeWidth="0.5" />
       <line x1="18" y1="1" x2="18" y2="40" stroke="#b8960c" strokeWidth="0.5" />
@@ -312,7 +341,7 @@ export function CreditCardVisual({
   return (
     <div className={cn("cc-root", className)} style={{ perspective: "1200px" }}>
       <div
-        className="cc-inner relative h-[220px] w-[360px]"
+        className="cc-inner relative aspect-[1.586/1] h-auto w-full"
         style={{
           transformStyle: "preserve-3d",
           transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
@@ -343,7 +372,10 @@ export function CreditCardVisual({
             </div>
 
             <div
-              className={cn("font-mono text-[20px] tracking-[0.18em]", theme.textColor)}
+              className={cn(
+                "font-mono text-[20px] tracking-[0.18em]",
+                theme.textColor
+              )}
               style={{ textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}
             >
               {displayNumber}
