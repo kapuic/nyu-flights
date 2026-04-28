@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu"
 import {
   flexRender,
@@ -22,6 +29,7 @@ import {
   SearchIcon,
   XIcon,
 } from "lucide-react"
+import type { ReactNode } from "react"
 import type { VirtualItem } from "@tanstack/react-virtual"
 import type {
   Column,
@@ -37,6 +45,14 @@ import type {
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -60,6 +76,11 @@ import { cn } from "@/lib/utils"
 export type DashboardDataTableFilterOption = {
   label: string
   value: string
+}
+
+export type DashboardDataTableInlineSelectOption<TValue extends string> = {
+  label: string
+  value: TValue
 }
 
 type DashboardDataTableBulkAction<TData> = {
@@ -298,7 +319,8 @@ export function DashboardDataTable<TData, TValue>({
             {enableRowSelection && selectedRows.length > 0 ? (
               <>
                 <span className="text-sm text-muted-foreground">
-                  {selectedRows.length} of {table.getFilteredRowModel().rows.length} selected
+                  {selectedRows.length} of{" "}
+                  {table.getFilteredRowModel().rows.length} selected
                 </span>
                 {bulkActions.map((action) => (
                   <Button
@@ -313,7 +335,11 @@ export function DashboardDataTable<TData, TValue>({
                     {action.label}
                   </Button>
                 ))}
-                <Button variant="ghost" size="sm" onClick={() => setRowSelection({})}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setRowSelection({})}
+                >
                   Clear selection
                 </Button>
               </>
@@ -325,7 +351,9 @@ export function DashboardDataTable<TData, TValue>({
               </Button>
             ) : null}
             <DropdownMenu>
-              <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
+              <DropdownMenuTrigger
+                render={<Button variant="outline" size="sm" />}
+              >
                 <Columns3Icon data-icon="inline-start" />
                 Columns
               </DropdownMenuTrigger>
@@ -365,7 +393,10 @@ export function DashboardDataTable<TData, TValue>({
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="hover:bg-transparent">
                   {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} style={{ width: header.getSize() }}>
+                    <TableHead
+                      key={header.id}
+                      style={{ width: header.getSize() }}
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -384,7 +415,9 @@ export function DashboardDataTable<TData, TValue>({
                     colSpan={visibleColumnCount}
                     className="h-24 text-center text-muted-foreground"
                   >
-                    {data.length === 0 ? emptyMessage : "No rows match this search."}
+                    {data.length === 0
+                      ? emptyMessage
+                      : "No rows match this search."}
                   </TableCell>
                 </TableRow>
               ) : enableVirtualization ? (
@@ -411,7 +444,8 @@ export function DashboardDataTable<TData, TValue>({
 
         <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <div>
-            Showing {rows.length} of {table.getFilteredRowModel().rows.length} rows
+            Showing {rows.length} of {table.getFilteredRowModel().rows.length}{" "}
+            rows
           </div>
           {!enableVirtualization ? (
             <div className="flex items-center gap-2">
@@ -424,7 +458,8 @@ export function DashboardDataTable<TData, TValue>({
                 Previous
               </Button>
               <span className="tabular-nums">
-                Page {table.getState().pagination.pageIndex + 1} of {Math.max(1, table.getPageCount())}
+                Page {table.getState().pagination.pageIndex + 1} of{" "}
+                {Math.max(1, table.getPageCount())}
               </span>
               <Button
                 variant="outline"
@@ -470,7 +505,7 @@ export function DashboardDataTableColumnHeader<TData, TValue>({
       {column.getCanSort() ? (
         <button
           type="button"
-          className="-ms-2 inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          className="-ms-2 inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm font-medium transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
           onClick={toggleSorting}
         >
           <span>{title}</span>
@@ -553,6 +588,84 @@ function DashboardDataTableRow<TData>({
         </ContextMenuPrimitive.Positioner>
       </ContextMenuPrimitive.Portal>
     </ContextMenuPrimitive.Root>
+  )
+}
+
+type DashboardDataTableInlineSelectCellProps<TValue extends string> = {
+  ariaLabel: string
+  className?: string
+  disabled?: boolean
+  onSave: (value: TValue) => Promise<void> | void
+  options: Array<DashboardDataTableInlineSelectOption<TValue>>
+  renderValue?: (value: TValue) => ReactNode
+  value: TValue
+}
+
+export function DashboardDataTableInlineSelectCell<TValue extends string>({
+  ariaLabel,
+  className,
+  disabled = false,
+  onSave,
+  options,
+  renderValue,
+  value,
+}: DashboardDataTableInlineSelectCellProps<TValue>) {
+  const [draft, setDraft] = useState<TValue>(value)
+  const [error, setError] = useState("")
+  const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!open) setDraft(value)
+  }, [open, value])
+
+  async function handleValueChange(nextValue: TValue | Array<TValue> | null) {
+    if (!nextValue || Array.isArray(nextValue)) return
+
+    setDraft(nextValue)
+    if (nextValue === value) return
+
+    setSaving(true)
+    setError("")
+    try {
+      await onSave(nextValue)
+      setOpen(false)
+    } catch (err) {
+      setDraft(value)
+      setError(err instanceof Error ? err.message : "Failed to save.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className={cn("flex min-w-32 flex-col items-start gap-1", className)}>
+      <Select
+        open={open}
+        value={draft}
+        onOpenChange={setOpen}
+        onValueChange={handleValueChange}
+      >
+        <SelectTrigger
+          aria-label={ariaLabel}
+          disabled={disabled || saving}
+          size="sm"
+          className="w-full min-w-32 justify-between border-transparent bg-transparent px-1.5 shadow-none hover:bg-muted/70 data-[popup-open]:border-input data-[popup-open]:bg-background"
+        >
+          <SelectValue>{renderValue ? renderValue(draft) : draft}</SelectValue>
+        </SelectTrigger>
+        <SelectContent align="start" className="min-w-36">
+          <SelectGroup>
+            {options.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {renderValue ? renderValue(option.value) : option.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
   )
 }
 
@@ -660,14 +773,16 @@ function DashboardDataTableFacetedFilter<TData, TValue>({
                   const next = new Set(selectedValues)
                   if (checked) next.add(option.value)
                   else next.delete(option.value)
-                  column.setFilterValue(next.size ? Array.from(next) : undefined)
+                  column.setFilterValue(
+                    next.size ? Array.from(next) : undefined
+                  )
                 }}
               >
                 <span className="flex min-w-0 flex-1 items-center gap-2">
                   {isSelected ? <CheckIcon data-icon="inline-start" /> : null}
                   <span className="truncate">{option.label}</span>
                 </span>
-                <span className="ms-auto text-xs tabular-nums text-muted-foreground">
+                <span className="ms-auto text-xs text-muted-foreground tabular-nums">
                   {count}
                 </span>
               </DropdownMenuCheckboxItem>
