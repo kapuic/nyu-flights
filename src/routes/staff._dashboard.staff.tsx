@@ -69,7 +69,12 @@ function getPhoneSummary(phoneNumbers: Array<string>) {
   const firstPhoneNumber = phoneNumbers[0];
   if (!firstPhoneNumber) return "Not set";
   if (phoneNumbers.length === 1) return firstPhoneNumber;
-  return `${firstPhoneNumber} +${phoneNumbers.length - 1} more`;
+  return (
+    <>
+      {firstPhoneNumber}{" "}
+      <span className="text-muted-foreground">+{phoneNumbers.length - 1} more</span>
+    </>
+  );
 }
 
 function getStaffExportValue(staff: StaffRow, columnId: string) {
