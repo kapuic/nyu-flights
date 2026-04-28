@@ -64,6 +64,7 @@ function combineDateAndTime(date: Date, timeValue: string) {
 
 type DatePickerFieldProps = {
   className?: string
+  defaultOpen?: boolean
   id?: string
   onBlur?: () => void
   onChange: (value: string) => void
@@ -73,6 +74,7 @@ type DatePickerFieldProps = {
 
 export function DatePickerField({
   className,
+  defaultOpen: initialOpen = false,
   id,
   onBlur,
   onChange,
@@ -80,7 +82,7 @@ export function DatePickerField({
   value,
 }: DatePickerFieldProps) {
   const selectedDate = parseDateValue(value)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(initialOpen)
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

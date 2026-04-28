@@ -3,6 +3,8 @@ import { Check, Pencil, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+export type InlineFieldVariant = "filled" | "outline"
+
 type InlineFieldProps = {
   error?: string
   label: string
@@ -10,6 +12,7 @@ type InlineFieldProps = {
   readOnly?: boolean
   type?: "text" | "date"
   value: string
+  variant: InlineFieldVariant
 }
 
 export function InlineField({
@@ -19,6 +22,7 @@ export function InlineField({
   readOnly = false,
   type = "text",
   value: currentValue,
+  variant,
 }: InlineFieldProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(currentValue)
@@ -95,9 +99,12 @@ export function InlineField({
             }}
             disabled={saving}
             className={cn(
-              "h-8 flex-1 rounded-md border border-input bg-transparent px-2.5 text-sm outline-none transition-colors",
+              "h-8 flex-1 rounded-md border border-input px-2.5 text-sm outline-none transition-colors",
               "focus:border-ring focus:ring-1 focus:ring-ring/50",
-              "disabled:opacity-50"
+              "disabled:opacity-50",
+              variant === "filled"
+                ? "dark:bg-input/30 shadow-xs"
+                : "bg-transparent"
             )}
           />
           <button

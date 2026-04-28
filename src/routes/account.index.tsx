@@ -1,13 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { format } from "date-fns"
 import { getData as getCountries, getCode } from "country-list"
 import { Pencil, X } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { InlineField } from "@/components/ui/inline-field"
+import { InlineField, type InlineFieldVariant } from "@/components/ui/inline-field"
 import {
   Combobox,
   ComboboxContent,
@@ -58,6 +58,8 @@ function countryToCode(name: string): string {
   return getCode(name) ?? COUNTRY_OPTIONS.find((c) => c.label.toLowerCase() === name.toLowerCase())?.code ?? ""
 }
 
+type InlineControls = "internal" | "external"
+
 function InlineFieldWrapper({ children, error, label }: { children: React.ReactNode; error?: string; label: string }) {
   return (
     <div className="group space-y-1">
@@ -68,7 +70,21 @@ function InlineFieldWrapper({ children, error, label }: { children: React.ReactN
   )
 }
 
-function InlineDateField({ label, value, onSave, readOnly = false }: { label: string; onSave?: (v: string) => Promise<void>; readOnly?: boolean; value: string }) {
+function InlineDateField({
+  controls,
+  label,
+  onSave,
+  readOnly = false,
+  value,
+  variant,
+}: {
+  controls: InlineControls
+  label: string
+  onSave?: (v: string) => Promise<void>
+  readOnly?: boolean
+  value: string
+  variant: InlineFieldVariant
+}) {
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState("")
   const [saving, setSaving] = useState(false)
@@ -77,7 +93,7 @@ function InlineDateField({ label, value, onSave, readOnly = false }: { label: st
     return (
       <InlineFieldWrapper label={label}>
         <div className="flex min-h-8 items-center rounded-md px-2.5 py-1 text-sm">
-          <span>{formatDisplayDate(value) || "Not set"}</span>
+          <span className={value ? "" : "italic text-muted-foreground"}>{formatDisplayDate(value) || "Not set"}</span>
         </div>
       </InlineFieldWrapper>
     )
@@ -102,11 +118,23 @@ function InlineDateField({ label, value, onSave, readOnly = false }: { label: st
       <InlineFieldWrapper label={label} error={error}>
         <div className="flex items-center gap-1.5">
           <div className="flex-1">
-            <DatePickerField value={value} onChange={handleDateSelect} />
+            <DatePickerField
+              value={value}
+              onChange={handleDateSelect}
+              defaultOpen
+              className={cn(
+                "h-8",
+                variant === "filled"
+                  ? "dark:bg-input/30"
+                  : "bg-transparent"
+              )}
+            />
           </div>
-          <button type="button" onClick={() => { setEditing(false); setError("") }} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-            <X className="size-3.5" />
-          </button>
+          {controls === "external" && (
+            <button type="button" onClick={() => { setEditing(false); setError("") }} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+              <X className="size-3.5" />
+            </button>
+          )}
         </div>
       </InlineFieldWrapper>
     )
@@ -122,16 +150,35 @@ function InlineDateField({ label, value, onSave, readOnly = false }: { label: st
   )
 }
 
-function InlineCountryField({ label, value, onSave }: { label: string; onSave: (v: string) => Promise<void>; value: string }) {
+function InlineCountryField({
+  controls,
+  label,
+  onSave,
+  value,
+  variant,
+}: {
+  controls: InlineControls
+  label: string
+  onSave: (v: string) => Promise<void>
+  value: string
+  variant: InlineFieldVariant
+}) {
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState("")
   const [saving, setSaving] = useState(false)
+  const selectingRef = useRef(false)
   const code = countryToCode(value)
   const selected = COUNTRY_OPTIONS.find((c) => c.label === value || c.code === value || c.label.toLowerCase() === value.toLowerCase()) ?? null
 
+  function cancel() {
+    setEditing(false)
+    setError("")
+  }
+
   async function handleSelect(country: CountryOption | null) {
     const newValue = country?.label ?? ""
-    if (!newValue || newValue === value) { setEditing(false); return }
+    selectingRef.current = true
+    if (!newValue || newValue === value) { cancel(); return }
     setSaving(true)
     setError("")
     try {
@@ -149,14 +196,51 @@ function InlineCountryField({ label, value, onSave }: { label: string; onSave: (
       <InlineFieldWrapper label={label} error={error}>
         <div className="flex items-center gap-1.5">
           <div className="flex-1">
-            <Combobox items={COUNTRY_OPTIONS} value={selected} defaultOpen itemToStringValue={(c) => `${c.label} ${c.code}`} onValueChange={handleSelect}>
-              <ComboboxInput placeholder="Search countries" showClear className="w-full h-8 bg-transparent" autoFocus />
-              <ComboboxContent><ComboboxEmpty>No countries found.</ComboboxEmpty><ComboboxList>{(c) => <ComboboxItem key={c.code} value={c}><CountryFlag countryCode={c.code} size={16} /><span className="truncate">{c.label}</span><span className="text-xs text-muted-foreground">{c.code}</span></ComboboxItem>}</ComboboxList></ComboboxContent>
+            <Combobox
+              items={COUNTRY_OPTIONS}
+              value={selected}
+              defaultOpen
+              itemToStringValue={(c) => `${c.label} ${c.code}`}
+              onValueChange={handleSelect}
+              onOpenChange={(isOpen) => {
+                if (!isOpen) {
+                  // Let onValueChange fire first (it sets selectingRef)
+                  setTimeout(() => {
+                    if (!selectingRef.current) cancel()
+                    selectingRef.current = false
+                  }, 0)
+                }
+              }}
+            >
+              <ComboboxInput
+                placeholder="Search countries"
+                showClear={controls === "internal"}
+                showTrigger={controls === "internal"}
+                className={cn(
+                  "w-full h-8",
+                  variant === "outline" && "dark:!bg-transparent !shadow-none",
+                )}
+                autoFocus
+              />
+              <ComboboxContent>
+                <ComboboxEmpty>No countries found.</ComboboxEmpty>
+                <ComboboxList>
+                  {(c) => (
+                    <ComboboxItem key={c.code} value={c}>
+                      <CountryFlag countryCode={c.code} size={16} />
+                      <span className="truncate">{c.label}</span>
+                      <span className="text-xs text-muted-foreground">{c.code}</span>
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
             </Combobox>
           </div>
-          <button type="button" onClick={() => { setEditing(false); setError("") }} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-            <X className="size-3.5" />
-          </button>
+          {controls === "external" && (
+            <button type="button" onClick={cancel} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+              <X className="size-3.5" />
+            </button>
+          )}
         </div>
       </InlineFieldWrapper>
     )
@@ -172,15 +256,34 @@ function InlineCountryField({ label, value, onSave }: { label: string; onSave: (
   )
 }
 
-function InlineStateField({ label, value, onSave }: { label: string; onSave: (v: string) => Promise<void>; value: string }) {
+function InlineStateField({
+  controls,
+  label,
+  onSave,
+  value,
+  variant,
+}: {
+  controls: InlineControls
+  label: string
+  onSave: (v: string) => Promise<void>
+  value: string
+  variant: InlineFieldVariant
+}) {
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState("")
   const [saving, setSaving] = useState(false)
+  const selectingRef = useRef(false)
   const selected = STATE_OPTIONS.find((s) => s.label.toLowerCase() === value.toLowerCase()) ?? null
+
+  function cancel() {
+    setEditing(false)
+    setError("")
+  }
 
   async function handleSelect(state: StateOption | null) {
     const newValue = state?.label ?? ""
-    if (!newValue || newValue === value) { setEditing(false); return }
+    selectingRef.current = true
+    if (!newValue || newValue === value) { cancel(); return }
     setSaving(true)
     setError("")
     try {
@@ -198,14 +301,48 @@ function InlineStateField({ label, value, onSave }: { label: string; onSave: (v:
       <InlineFieldWrapper label={label} error={error}>
         <div className="flex items-center gap-1.5">
           <div className="flex-1">
-            <Combobox items={STATE_OPTIONS} value={selected} defaultOpen itemToStringValue={(s) => s.label} onValueChange={handleSelect}>
-              <ComboboxInput placeholder="Search states" showClear className="w-full h-8 bg-transparent" autoFocus />
-              <ComboboxContent><ComboboxEmpty>No states found.</ComboboxEmpty><ComboboxList>{(s) => <ComboboxItem key={s.label} value={s}><span className="truncate">{s.label}</span></ComboboxItem>}</ComboboxList></ComboboxContent>
+            <Combobox
+              items={STATE_OPTIONS}
+              value={selected}
+              defaultOpen
+              itemToStringValue={(s) => s.label}
+              onValueChange={handleSelect}
+              onOpenChange={(isOpen) => {
+                if (!isOpen) {
+                  setTimeout(() => {
+                    if (!selectingRef.current) cancel()
+                    selectingRef.current = false
+                  }, 0)
+                }
+              }}
+            >
+              <ComboboxInput
+                placeholder="Search states"
+                showClear={controls === "internal"}
+                showTrigger={controls === "internal"}
+                className={cn(
+                  "w-full h-8",
+                  variant === "outline" && "dark:!bg-transparent !shadow-none",
+                )}
+                autoFocus
+              />
+              <ComboboxContent>
+                <ComboboxEmpty>No states found.</ComboboxEmpty>
+                <ComboboxList>
+                  {(s) => (
+                    <ComboboxItem key={s.label} value={s}>
+                      <span className="truncate">{s.label}</span>
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
             </Combobox>
           </div>
-          <button type="button" onClick={() => { setEditing(false); setError("") }} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-            <X className="size-3.5" />
-          </button>
+          {controls === "external" && (
+            <button type="button" onClick={cancel} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+              <X className="size-3.5" />
+            </button>
+          )}
         </div>
       </InlineFieldWrapper>
     )
@@ -226,6 +363,9 @@ function ProfilePage() {
   const router = useRouter()
   async function save(field: string, value: string) { await saveField(field, value); void router.invalidate() }
 
+  const V: InlineFieldVariant = "filled"
+  const C: InlineControls = "external"
+
   return (
     <div className="space-y-6">
       <div>
@@ -235,27 +375,27 @@ function ProfilePage() {
       <Card>
         <CardHeader><CardTitle>Personal Information</CardTitle></CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <InlineField label="Name" value={profile.name} onSave={(v) => save("name", v)} />
-          <InlineField label="Email" value={profile.email} readOnly />
-          <InlineField label="Phone" value={profile.phoneNumber} onSave={(v) => save("phoneNumber", v)} />
-          <InlineDateField label="Date of Birth" value={profile.dateOfBirth} readOnly />
+          <InlineField variant={V} label="Name" value={profile.name} onSave={(v) => save("name", v)} />
+          <InlineField variant={V} label="Email" value={profile.email} readOnly />
+          <InlineField variant={V} label="Phone" value={profile.phoneNumber} onSave={(v) => save("phoneNumber", v)} />
+          <InlineDateField variant={V} controls={C} label="Date of Birth" value={profile.dateOfBirth} readOnly />
         </CardContent>
       </Card>
       <Card>
         <CardHeader><CardTitle>Address</CardTitle></CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <InlineField label="Building Number" value={profile.buildingNumber} onSave={(v) => save("buildingNumber", v)} />
-          <InlineField label="Street" value={profile.street} onSave={(v) => save("street", v)} />
-          <InlineField label="City" value={profile.city} onSave={(v) => save("city", v)} />
-          <InlineStateField label="State" value={profile.state} onSave={(v) => save("state", v)} />
+          <InlineField variant={V} label="Building Number" value={profile.buildingNumber} onSave={(v) => save("buildingNumber", v)} />
+          <InlineField variant={V} label="Street" value={profile.street} onSave={(v) => save("street", v)} />
+          <InlineField variant={V} label="City" value={profile.city} onSave={(v) => save("city", v)} />
+          <InlineStateField variant={V} controls={C} label="State" value={profile.state} onSave={(v) => save("state", v)} />
         </CardContent>
       </Card>
       <Card>
         <CardHeader><CardTitle>Passport</CardTitle></CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <InlineField label="Passport Number" value={profile.passportNumber} onSave={(v) => save("passportNumber", v)} />
-          <InlineDateField label="Expiration" value={profile.passportExpiration} onSave={(v) => save("passportExpiration", v)} />
-          <InlineCountryField label="Country" value={profile.passportCountry} onSave={(v) => save("passportCountry", v)} />
+          <InlineField variant={V} label="Passport Number" value={profile.passportNumber} onSave={(v) => save("passportNumber", v)} />
+          <InlineDateField variant={V} controls={C} label="Expiration" value={profile.passportExpiration} onSave={(v) => save("passportExpiration", v)} />
+          <InlineCountryField variant={V} controls={C} label="Country" value={profile.passportCountry} onSave={(v) => save("passportCountry", v)} />
         </CardContent>
       </Card>
     </div>

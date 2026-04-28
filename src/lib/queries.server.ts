@@ -1091,11 +1091,11 @@ export async function getCustomerProfileInternal() {
   return {
     buildingNumber: row.building_number,
     city: row.city,
-    dateOfBirth: String(row.date_of_birth),
+    dateOfBirth: (row.date_of_birth as unknown) instanceof Date ? (row.date_of_birth as unknown as Date).toISOString().split("T")[0] : String(row.date_of_birth ?? ""),
     email: row.email,
     name: row.name,
     passportCountry: row.passport_country,
-    passportExpiration: String(row.passport_expiration),
+    passportExpiration: (row.passport_expiration as unknown) instanceof Date ? (row.passport_expiration as unknown as Date).toISOString().split("T")[0] : String(row.passport_expiration ?? ""),
     passportNumber: row.passport_number,
     phoneNumber: row.phone_number,
     state: row.state,
