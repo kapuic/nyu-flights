@@ -1,4 +1,4 @@
-import { isValidPhoneNumber } from "libphonenumber-js/min"
+import { parsePhoneNumberFromString } from "libphonenumber-js/max"
 import { getNames as getCountryNames } from "country-list"
 import { z } from "zod"
 
@@ -8,15 +8,57 @@ import { z } from "zod"
 
 /** Canonical US state list — used by both signup and profile pages. */
 export const US_STATES = [
-  "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
-  "Connecticut", "Delaware", "District of Columbia", "Florida", "Georgia",
-  "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky",
-  "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota",
-  "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire",
-  "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota",
-  "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island",
-  "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont",
-  "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming",
+  "Alabama",
+  "Alaska",
+  "Arizona",
+  "Arkansas",
+  "California",
+  "Colorado",
+  "Connecticut",
+  "Delaware",
+  "District of Columbia",
+  "Florida",
+  "Georgia",
+  "Hawaii",
+  "Idaho",
+  "Illinois",
+  "Indiana",
+  "Iowa",
+  "Kansas",
+  "Kentucky",
+  "Louisiana",
+  "Maine",
+  "Maryland",
+  "Massachusetts",
+  "Michigan",
+  "Minnesota",
+  "Mississippi",
+  "Missouri",
+  "Montana",
+  "Nebraska",
+  "Nevada",
+  "New Hampshire",
+  "New Jersey",
+  "New Mexico",
+  "New York",
+  "North Carolina",
+  "North Dakota",
+  "Ohio",
+  "Oklahoma",
+  "Oregon",
+  "Pennsylvania",
+  "Rhode Island",
+  "South Carolina",
+  "South Dakota",
+  "Tennessee",
+  "Texas",
+  "Utah",
+  "Vermont",
+  "Virginia",
+  "Washington",
+  "West Virginia",
+  "Wisconsin",
+  "Wyoming",
 ] as const
 
 const US_STATES_SET = new Set<string>(US_STATES)
@@ -32,38 +74,83 @@ function parseDate(value: string): Date | undefined {
   const d = new Date(value.includes("T") ? value : `${value}T00:00:00`)
   return Number.isNaN(d.getTime()) ? undefined : d
 }
+export function normalizePhoneNumber(value: string): string | null {
+  const parsed = parsePhoneNumberFromString(value.trim(), {
+    defaultCountry: "US",
+    extract: false,
+  })
+  if (!parsed?.isValid()) return null
+  return parsed.number
+}
+
+function phoneNumberSchema(requiredMessage: string) {
+  return z
+    .string()
+    .trim()
+    .min(1, requiredMessage)
+    .transform((value, context) => {
+      const normalized = normalizePhoneNumber(value)
+      if (normalized) return normalized
+
+      context.addIssue({
+        code: "custom",
+        message: "Enter a valid phone number.",
+      })
+      return z.NEVER
+    })
+}
+
+function normalizeCommaSeparatedPhoneNumbers(
+  value: string,
+  context: z.core.$RefinementCtx<string>
+) {
+  const normalizedPhoneNumbers = value
+    .split(",")
+    .map((phoneNumber) => phoneNumber.trim())
+    .filter(Boolean)
+    .map((phoneNumber) => normalizePhoneNumber(phoneNumber))
+
+  if (normalizedPhoneNumbers.some((phoneNumber) => phoneNumber === null)) {
+    context.addIssue({
+      code: "custom",
+      message: "Enter valid phone numbers.",
+    })
+    return z.NEVER
+  }
+
+  return normalizedPhoneNumbers.join(",")
+}
 
 export const customerFieldValidators = {
   buildingNumber: z.string().trim().min(1, "Building # is required."),
   city: z.string().trim().min(1, "City is required."),
-  dateOfBirth: z.string().min(1, "Date of birth is required.").refine(
-    (v) => parseDate(v) !== undefined,
-    "Invalid date format.",
-  ).refine(
-    (v) => { const d = parseDate(v); return d ? d < new Date() : false },
-    "Date of birth must be in the past.",
-  ),
+  dateOfBirth: z
+    .string()
+    .min(1, "Date of birth is required.")
+    .refine((v) => parseDate(v) !== undefined, "Invalid date format.")
+    .refine((v) => {
+      const d = parseDate(v)
+      return d ? d < new Date() : false
+    }, "Date of birth must be in the past."),
   name: z.string().trim().min(1, "Name is required."),
-  passportCountry: z.string().min(1, "Passport country is required.").refine(
-    (v) => COUNTRY_NAMES_SET.has(v),
-    "Choose a valid country.",
-  ),
-  passportExpiration: z.string().min(1, "Passport expiration is required.").refine(
-    (v) => parseDate(v) !== undefined,
-    "Invalid date format.",
-  ).refine(
-    (v) => { const d = parseDate(v); return d ? d > new Date() : false },
-    "Passport must not be expired.",
-  ),
+  passportCountry: z
+    .string()
+    .min(1, "Passport country is required.")
+    .refine((v) => COUNTRY_NAMES_SET.has(v), "Choose a valid country."),
+  passportExpiration: z
+    .string()
+    .min(1, "Passport expiration is required.")
+    .refine((v) => parseDate(v) !== undefined, "Invalid date format.")
+    .refine((v) => {
+      const d = parseDate(v)
+      return d ? d > new Date() : false
+    }, "Passport must not be expired."),
   passportNumber: z.string().trim().min(1, "Passport # is required."),
-  phoneNumber: z.string().min(1, "Phone number is required.").refine(
-    (v) => isValidPhoneNumber(v, "US"),
-    "Enter a valid phone number.",
-  ),
-  state: z.string().min(1, "State is required.").refine(
-    (v) => US_STATES_SET.has(v),
-    "Choose a valid US state.",
-  ),
+  phoneNumber: phoneNumberSchema("Phone number is required."),
+  state: z
+    .string()
+    .min(1, "State is required.")
+    .refine((v) => US_STATES_SET.has(v), "Choose a valid US state."),
   street: z.string().trim().min(1, "Street is required."),
 } as const
 
@@ -242,7 +329,10 @@ export const staffRegistrationSchema = accountCredentialSchema.extend({
   dateOfBirth: customerFieldValidators.dateOfBirth,
   firstName: z.string().min(1, "First name is required."),
   lastName: z.string().min(1, "Last name is required."),
-  phoneNumbers: z.string().default(""),
+  phoneNumbers: z
+    .string()
+    .default("")
+    .transform(normalizeCommaSeparatedPhoneNumbers),
   username: z.string().min(3, "Username is required."),
 })
 
