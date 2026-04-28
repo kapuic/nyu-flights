@@ -552,14 +552,14 @@ export async function getStaffDashboardInternal(filters: {
   `;
 
   const ratings = await db<
-      Array<{
-        airline_name: string;
-        average_rating: number | null;
-        comments: Array<{ comment: string | null; rating: number }>;
-        departure_datetime: string;
-        flight_number: string;
-        review_count: number;
-      }>
+    Array<{
+      airline_name: string;
+      average_rating: number | null;
+      comments: Array<{ comment: string | null; rating: number }>;
+      departure_datetime: string;
+      flight_number: string;
+      review_count: number;
+    }>
   >`
     select
       f.airline_name,
@@ -1421,12 +1421,25 @@ export async function listAllStaffInternal() {
       email: string;
       first_name: string;
       last_name: string;
+      phone_numbers: Array<string>;
       username: string;
     }>
   >`
-    select username, airline_name, first_name, last_name, email
+    select airline_staff.username,
+           airline_staff.airline_name,
+           airline_staff.first_name,
+           airline_staff.last_name,
+           airline_staff.email,
+           coalesce(
+             array_agg(airline_staff_phone.phone_number order by airline_staff_phone.phone_number)
+               filter (where airline_staff_phone.phone_number is not null),
+             array[]::varchar[]
+           ) as phone_numbers
     from airline_staff
-    order by username asc
+    left join airline_staff_phone on airline_staff_phone.username = airline_staff.username
+    group by airline_staff.username, airline_staff.airline_name, airline_staff.first_name,
+             airline_staff.last_name, airline_staff.email
+    order by airline_staff.username asc
   `;
 }
 const STAFF_FIELD_UPDATES = {
@@ -1805,4 +1818,21 @@ export async function getPaymentHistoryInternal() {
     where customer_email = ${user.email}
     order by card_number, card_expiration desc
   `;
+}
+
+export async function replaceStaffPhoneNumbersInternal(data: {
+  phoneNumbers: Array<string>;
+  username: string;
+}) {
+  await requireSuperadmin();
+  await db.begin(async (transaction) => {
+    await transaction`delete from airline_staff_phone where username = ${data.username}`;
+    for (const phoneNumber of data.phoneNumbers) {
+      await transaction`
+        insert into airline_staff_phone (username, phone_number)
+        values (${data.username}, ${phoneNumber})
+      `;
+    }
+  });
+  return { message: `Staff "${data.username}" phone numbers updated.` };
 }

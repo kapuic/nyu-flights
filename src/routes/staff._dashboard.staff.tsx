@@ -1,11 +1,12 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import type { DashboardDataTableFilterOption } from "@/components/dashboard-data-table";
 
+import { StaffPhoneNumbersSheet } from "@/components/staff-phone-numbers-sheet";
 import {
   DashboardDataTable,
   DashboardDataTableColumnHeader,
@@ -14,7 +15,12 @@ import {
 } from "@/components/dashboard-data-table";
 import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmation, useDeleteConfirmation } from "@/components/delete-confirmation";
-import { deleteStaffFn, listAllAirlinesFn, updateStaffFieldFn } from "@/lib/queries";
+import {
+  deleteStaffFn,
+  listAllAirlinesFn,
+  replaceStaffPhoneNumbersFn,
+  updateStaffFieldFn,
+} from "@/lib/queries";
 import { staffMembersQueryOptions } from "@/lib/staff-queries";
 import { getStaffPermission } from "@/lib/staff-permissions";
 
@@ -23,6 +29,7 @@ type StaffRow = {
   email: string;
   first_name: string;
   last_name: string;
+  phone_numbers: Array<string>;
   username: string;
 };
 type EditableStaffField = "airlineName" | "email" | "firstName" | "lastName";
@@ -57,8 +64,16 @@ function getRoleLabel(role: string) {
   if (role === "admin") return "Admin";
   return "Staff";
 }
+function getPhoneSummary(phoneNumbers: Array<string>) {
+  const firstPhoneNumber = phoneNumbers[0];
+  if (!firstPhoneNumber) return "Not set";
+  if (phoneNumbers.length === 1) return firstPhoneNumber;
+  return `${firstPhoneNumber} +${phoneNumbers.length - 1} more`;
+}
+
 function getStaffExportValue(staff: StaffRow, columnId: string) {
   if (columnId === "role") return getRoleLabel(getStaffPermission(staff.username));
+  if (columnId === "phone_numbers") return staff.phone_numbers.join(", ");
   return undefined;
 }
 
@@ -72,6 +87,9 @@ function ManageStaffPage() {
   const deleteConfirm = useDeleteConfirmation();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const [phoneSheetStaff, setPhoneSheetStaff] = useState<StaffRow | null>(null);
+  const [phoneSheetDraft, setPhoneSheetDraft] = useState<Array<string>>([]);
+  const [savingPhoneNumbers, setSavingPhoneNumbers] = useState(false);
 
   const refreshStaff = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: ["staff-members"] });
@@ -86,7 +104,9 @@ function ManageStaffPage() {
           value,
         },
       });
-      if ("error" in result && result.error) throw new Error(result.error);
+      if ("error" in result && typeof result.error === "string" && result.error) {
+        throw new Error(result.error);
+      }
       toast.success(result.message);
       await refreshStaff();
     },
@@ -115,6 +135,38 @@ function ManageStaffPage() {
     },
     [deleteConfirm, deleteStaffMembers],
   );
+  const openPhoneSheet = useCallback((member: StaffRow) => {
+    setPhoneSheetStaff(member);
+    setPhoneSheetDraft(member.phone_numbers.length ? member.phone_numbers : [""]);
+  }, []);
+  const closePhoneSheet = useCallback((open: boolean) => {
+    if (open) return;
+    setPhoneSheetStaff(null);
+    setPhoneSheetDraft([]);
+  }, []);
+  const savePhoneNumbers = useCallback(async () => {
+    if (!phoneSheetStaff || savingPhoneNumbers) return;
+    setSavingPhoneNumbers(true);
+    try {
+      const result = await replaceStaffPhoneNumbersFn({
+        data: {
+          phoneNumbers: phoneSheetDraft,
+          username: phoneSheetStaff.username,
+        },
+      });
+      if ("error" in result && typeof result.error === "string" && result.error) {
+        throw new Error(result.error);
+      }
+      toast.success(result.message);
+      setPhoneSheetStaff(null);
+      setPhoneSheetDraft([]);
+      await refreshStaff();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update phone numbers.");
+    } finally {
+      setSavingPhoneNumbers(false);
+    }
+  }, [phoneSheetDraft, phoneSheetStaff, refreshStaff, savingPhoneNumbers]);
 
   const columns = useMemo<Array<ColumnDef<StaffRow>>>(
     () => [
@@ -169,6 +221,24 @@ function ManageStaffPage() {
         ),
       },
       {
+        accessorKey: "phone_numbers",
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Phone" />,
+        cell: ({ row }) => (
+          <button
+            aria-label={`Manage ${row.original.username} phone numbers`}
+            className="min-h-8 rounded-md px-2.5 py-1 text-left text-sm transition-colors hover:bg-muted/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+            onClick={() => openPhoneSheet(row.original)}
+            type="button"
+          >
+            <span
+              className={row.original.phone_numbers.length ? "" : "italic text-muted-foreground"}
+            >
+              {getPhoneSummary(row.original.phone_numbers)}
+            </span>
+          </button>
+        ),
+      },
+      {
         accessorKey: "email",
         header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Email" />,
         cell: ({ row }) => (
@@ -197,7 +267,7 @@ function ManageStaffPage() {
         },
       },
     ],
-    [airlines, saveStaffField],
+    [airlines, openPhoneSheet, saveStaffField],
   );
 
   const filterOptions = useMemo(
@@ -219,11 +289,18 @@ function ManageStaffPage() {
   const tableActions = useMemo(
     () => [
       {
+        label: "Manage phones",
+        disabled: (rows: Array<StaffRow>) => rows.length !== 1,
+        onSelect: (rows: Array<StaffRow>) => {
+          if (rows.length === 1) openPhoneSheet(rows[0]);
+        },
+      },
+      {
         label: "Delete staff",
         onSelect: requestDeleteStaff,
       },
     ],
-    [requestDeleteStaff],
+    [openPhoneSheet, requestDeleteStaff],
   );
 
   return (
@@ -234,6 +311,21 @@ function ManageStaffPage() {
       </div>
 
       <DeleteConfirmation pending={deleteConfirm.pending} onClose={deleteConfirm.close} />
+
+      <StaffPhoneNumbersSheet
+        description={
+          phoneSheetStaff
+            ? `Edit phone numbers for ${phoneSheetStaff.first_name} ${phoneSheetStaff.last_name}.`
+            : "Edit staff phone numbers."
+        }
+        onOpenChange={closePhoneSheet}
+        onPhoneNumbersChange={setPhoneSheetDraft}
+        onSave={savePhoneNumbers}
+        open={phoneSheetStaff !== null}
+        phoneNumbers={phoneSheetDraft}
+        saving={savingPhoneNumbers}
+        title="Manage phone numbers"
+      />
 
       <DashboardDataTable
         bulkActions={tableActions}

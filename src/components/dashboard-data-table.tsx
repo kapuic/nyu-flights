@@ -123,6 +123,7 @@ type DashboardDataTableInlineDateTimeCellProps = {
 };
 
 type DashboardDataTableBulkAction<TData> = {
+  disabled?: (rows: Array<TData>) => boolean;
   label: string;
   onSelect: (rows: Array<TData>) => Promise<void> | void;
 };
@@ -411,6 +412,7 @@ export function DashboardDataTable<TData, TValue>({
                 {bulkActions.map((action) => (
                   <Button
                     key={action.label}
+                    disabled={action.disabled?.(selectedRows) ?? false}
                     variant="outline"
                     size="sm"
                     onClick={async () => {

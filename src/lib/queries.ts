@@ -20,6 +20,7 @@ import {
   reviewSchema,
   searchFlightsSchema,
   staffFlightFiltersSchema,
+  staffPhoneNumbersSchema,
   updateAirlineSchema,
   updateAirplaneFieldSchema,
   updateAirportFieldSchema,
@@ -55,6 +56,7 @@ import {
   listGlobeRoutesInternal,
   listReferenceData,
   purchaseTicketInternal,
+  replaceStaffPhoneNumbersInternal,
   searchAirportsInternal,
   searchFlightsInternal,
   submitReviewInternal,
@@ -265,6 +267,9 @@ export const deleteStaffFn = createServerFn({ method: "POST" })
 export const updateStaffFieldFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => updateStaffFieldSchema.parse(data))
   .handler(async ({ data }) => updateStaffFieldInternal(data));
+export const replaceStaffPhoneNumbersFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => staffPhoneNumbersSchema.parse(data))
+  .handler(async ({ data }) => replaceStaffPhoneNumbersInternal(data));
 
 export const listAllCustomersFn = createServerFn({ method: "GET" }).handler(async () =>
   listAllCustomersInternal(),

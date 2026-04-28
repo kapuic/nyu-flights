@@ -100,25 +100,32 @@ function phoneNumberSchema(requiredMessage: string) {
     });
 }
 
-function normalizeCommaSeparatedPhoneNumbers(
-  value: string,
-  context: z.core.$RefinementCtx<string>,
-) {
+function normalizePhoneNumberList(value: Array<string>) {
   const normalizedPhoneNumbers = value
-    .split(",")
     .map((phoneNumber) => phoneNumber.trim())
     .filter(Boolean)
     .map((phoneNumber) => normalizePhoneNumber(phoneNumber));
 
-  if (normalizedPhoneNumbers.some((phoneNumber) => phoneNumber === null)) {
-    context.addIssue({
-      code: "custom",
-      message: "Enter valid phone numbers.",
-    });
-    return z.NEVER;
-  }
+  if (normalizedPhoneNumbers.some((phoneNumber) => phoneNumber === null)) return null;
 
-  return normalizedPhoneNumbers.join(",");
+  const validPhoneNumbers = normalizedPhoneNumbers.filter(
+    (phoneNumber): phoneNumber is string => phoneNumber !== null,
+  );
+  return Array.from(new Set(validPhoneNumbers));
+}
+
+function normalizeCommaSeparatedPhoneNumbers(
+  value: string,
+  context: z.core.$RefinementCtx<string>,
+) {
+  const result = normalizePhoneNumberList(value.split(","));
+  if (result) return result.join(",");
+
+  context.addIssue({
+    code: "custom",
+    message: "Enter valid phone numbers.",
+  });
+  return z.NEVER;
 }
 
 export const customerFieldValidators = {
@@ -505,6 +512,22 @@ export const deleteAirportSchema = z.object({
 });
 
 export const deleteStaffSchema = z.object({
+  username: z.string().min(1),
+});
+export const staffPhoneNumbersSchema = z.object({
+  phoneNumbers: z
+    .array(z.string())
+    .default([])
+    .transform((value, context) => {
+      const result = normalizePhoneNumberList(value);
+      if (result) return result;
+
+      context.addIssue({
+        code: "custom",
+        message: "Enter valid phone numbers.",
+      });
+      return z.NEVER;
+    }),
   username: z.string().min(1),
 });
 export const updateStaffFieldSchema = z.object({
