@@ -5,8 +5,13 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query"
 import { useForm } from "@tanstack/react-form"
-import { useMemo, useState } from "react"
-import { AlertTriangleIcon, CircleCheckIcon, Plus } from "lucide-react"
+import { useCallback, useMemo, useState } from "react"
+import {
+  AlertTriangleIcon,
+  CircleCheckIcon,
+  Plus,
+  Trash2Icon,
+} from "lucide-react"
 import { toast } from "sonner"
 import type { ColumnDef } from "@tanstack/react-table"
 
@@ -20,7 +25,9 @@ import { CountryFlag } from "@/components/country-flag"
 import {
   DashboardDataTable,
   DashboardDataTableColumnHeader,
+  DashboardDataTableInlineDateTimeCell,
   DashboardDataTableInlineSelectCell,
+  DashboardDataTableInlineTextCell,
 } from "@/components/dashboard-data-table"
 
 import { Input } from "@/components/ui/input"
@@ -30,6 +37,7 @@ import {
   AirportComboboxField,
 } from "@/components/combobox-fields"
 import { DateTimePickerField } from "@/components/date-time-picker"
+import { DeleteConfirmation, useDeleteConfirmation } from "@/components/delete-confirmation"
 import { DialogGlobe } from "@/components/dialog-globe"
 import { ResponsiveModal } from "@/components/responsive-modal"
 import { isAdminOrAbove } from "@/lib/staff-permissions"
@@ -37,9 +45,18 @@ import { staffDashboardQueryOptions } from "@/lib/staff-queries"
 import { getAirportOption } from "@/lib/airports"
 import {
   createFlightFn,
+  deleteFlightFn,
   listDbAirportsFn,
-  updateFlightStatusFn,
+  updateFlightFieldFn,
 } from "@/lib/queries"
+
+type EditableFlightField =
+  | "airplaneId"
+  | "arrivalAirportCode"
+  | "arrivalDatetime"
+  | "basePrice"
+  | "departureAirportCode"
+  | "status"
 
 type FlightRow = {
   airlineName: string
@@ -219,6 +236,7 @@ function StaffFlightsPage() {
   const { currentUser } = staffDashboardRoute.useLoaderData()
   const queryClient = useQueryClient()
   const router = useRouter()
+  const deleteConfirmation = useDeleteConfirmation()
   const showAirlineColumn = isAdminOrAbove(
     currentUser.staffPermission ?? "staff"
   )
@@ -230,6 +248,22 @@ function StaffFlightsPage() {
     staleTime: 5 * 60 * 1000,
   })
   const dbAirports = dbAirportsQuery.data ?? []
+  const airportOptions = useMemo(
+    () =>
+      dbAirports.map((airport) => ({
+        label: `${airport.code} — ${airport.city}`,
+        value: airport.code,
+      })),
+    [dbAirports]
+  )
+  const airplaneOptions = useMemo(
+    () =>
+      data.airplanes.map((airplane) => ({
+        label: `${airplane.airplaneId} — ${airplane.numberOfSeats} seats`,
+        value: airplane.airplaneId,
+      })),
+    [data.airplanes]
+  )
 
   const form = useForm({
     defaultValues: {
@@ -268,42 +302,82 @@ function StaffFlightsPage() {
       setError(err instanceof Error ? err.message : "Failed to create flight.")
     }
   }
-  async function saveFlightStatus(
-    flight: Pick<
-      FlightRow,
-      "airlineName" | "departureDatetime" | "flightNumber" | "status"
-    >,
-    status: FlightRow["status"]
-  ) {
-    if (flight.status === status) return
+  const saveFlightField = useCallback(
+    async <TField extends EditableFlightField>(
+      flight: FlightRow,
+      field: TField,
+      value: TField extends "basePrice" ? number : string
+    ) => {
+      if (flight[field] === value) return
 
-    const result = await updateFlightStatusFn({
-      data: {
-        airlineName: flight.airlineName,
-        departureDatetime: flight.departureDatetime,
-        flightNumber: flight.flightNumber,
-        status,
-      },
-    })
-    if ("error" in result && result.error) throw new Error(result.error)
+      const result = await updateFlightFieldFn({
+        data: {
+          airlineName: flight.airlineName,
+          departureDatetime: flight.departureDatetime,
+          field,
+          flightNumber: flight.flightNumber,
+          value,
+        },
+      })
+      if ("error" in result && result.error) throw new Error(result.error)
 
-    toast.success(result.message)
-    await queryClient.invalidateQueries({ queryKey: ["staff-dashboard"] })
-    await router.invalidate()
+      toast.success(result.message)
+      await queryClient.invalidateQueries({ queryKey: ["staff-dashboard"] })
+      await queryClient.invalidateQueries({ queryKey: ["staff-passengers"] })
+      await router.invalidate()
+    },
+    [queryClient, router]
+  )
+
+  async function saveFlightStatus(flight: FlightRow, status: FlightRow["status"]) {
+    await saveFlightField(flight, "status", status)
   }
 
-  async function handleStatusToggle(flight: {
-    airlineName: string
-    departureDatetime: string
-    flightNumber: string
-    status: "on_time" | "delayed"
-  }) {
+  async function handleStatusToggle(flight: FlightRow) {
     try {
       const newStatus = flight.status === "on_time" ? "delayed" : "on_time"
       await saveFlightStatus(flight, newStatus)
     } catch {
       toast.error("Failed to update flight status.")
     }
+  }
+
+  async function deleteFlights(rows: Array<FlightRow>) {
+    try {
+      const results = await Promise.all(
+        rows.map((flight) =>
+          deleteFlightFn({
+            data: {
+              airlineName: flight.airlineName,
+              departureDatetime: flight.departureDatetime,
+              flightNumber: flight.flightNumber,
+            },
+          })
+        )
+      )
+      const failed = results.find((result) => "error" in result && result.error)
+      if (failed && "error" in failed) {
+        toast.error(failed.error)
+        return
+      }
+
+      toast.success(
+        `Deleted ${rows.length} flight${rows.length === 1 ? "" : "s"}.`
+      )
+      await queryClient.invalidateQueries({ queryKey: ["staff-dashboard"] })
+      await queryClient.invalidateQueries({ queryKey: ["staff-passengers"] })
+      await router.invalidate()
+    } catch {
+      toast.error("Failed to delete selected flights.")
+    }
+  }
+
+  function requestDeleteFlights(rows: Array<FlightRow>) {
+    const label =
+      rows.length === 1
+        ? `flight ${rows[0].flightNumber}`
+        : `${rows.length} selected flights`
+    deleteConfirmation.requestDelete(label, () => void deleteFlights(rows))
   }
 
   async function handleBulkStatusUpdate(
@@ -317,29 +391,12 @@ function StaffFlightsPage() {
     }
 
     try {
-      const results = await Promise.all(
-        flightsToUpdate.map((flight) =>
-          updateFlightStatusFn({
-            data: {
-              airlineName: flight.airlineName,
-              departureDatetime: flight.departureDatetime,
-              flightNumber: flight.flightNumber,
-              status,
-            },
-          })
-        )
+      await Promise.all(
+        flightsToUpdate.map((flight) => saveFlightStatus(flight, status))
       )
-      const failed = results.find((result) => "error" in result && result.error)
-      if (failed && "error" in failed) {
-        toast.error(failed.error)
-        return
-      }
-
       toast.success(
         `Updated ${flightsToUpdate.length} flight${flightsToUpdate.length === 1 ? "" : "s"}.`
       )
-      await queryClient.invalidateQueries({ queryKey: ["staff-dashboard"] })
-      await router.invalidate()
     } catch {
       toast.error("Failed to update selected flights.")
     }
@@ -379,7 +436,15 @@ function StaffFlightsPage() {
           <DashboardDataTableColumnHeader column={column} title="From" />
         ),
         cell: ({ row }) => (
-          <AirportCell code={row.original.departureAirportCode} />
+          <DashboardDataTableInlineSelectCell
+            ariaLabel={`Update ${row.original.flightNumber} departure airport`}
+            onSave={(code) =>
+              saveFlightField(row.original, "departureAirportCode", code)
+            }
+            options={airportOptions}
+            renderValue={(code) => <AirportCell code={code} />}
+            value={row.original.departureAirportCode}
+          />
         ),
       },
       {
@@ -389,7 +454,15 @@ function StaffFlightsPage() {
           <DashboardDataTableColumnHeader column={column} title="To" />
         ),
         cell: ({ row }) => (
-          <AirportCell code={row.original.arrivalAirportCode} />
+          <DashboardDataTableInlineSelectCell
+            ariaLabel={`Update ${row.original.flightNumber} arrival airport`}
+            onSave={(code) =>
+              saveFlightField(row.original, "arrivalAirportCode", code)
+            }
+            options={airportOptions}
+            renderValue={(code) => <AirportCell code={code} />}
+            value={row.original.arrivalAirportCode}
+          />
         ),
       },
       {
@@ -409,9 +482,14 @@ function StaffFlightsPage() {
           <DashboardDataTableColumnHeader column={column} title="Arrival" />
         ),
         cell: ({ row }) => (
-          <span className="text-sm text-muted-foreground">
-            {formatDateShort(row.original.arrivalDatetime)}
-          </span>
+            <DashboardDataTableInlineDateTimeCell
+              ariaLabel={`Update ${row.original.flightNumber} arrival time`}
+              formatValue={formatDateShort}
+              onSave={(value) =>
+                saveFlightField(row.original, "arrivalDatetime", value)
+              }
+              value={row.original.arrivalDatetime}
+            />
         ),
       },
       {
@@ -437,9 +515,19 @@ function StaffFlightsPage() {
           <DashboardDataTableColumnHeader column={column} title="Aircraft" />
         ),
         cell: ({ row }) => (
-          <span className="font-mono text-sm text-muted-foreground">
-            {row.original.airplaneId}
-          </span>
+          <DashboardDataTableInlineSelectCell
+            ariaLabel={`Update ${row.original.flightNumber} aircraft`}
+            onSave={(airplaneId) =>
+              saveFlightField(row.original, "airplaneId", airplaneId)
+            }
+            options={airplaneOptions}
+            renderValue={(airplaneId) => (
+              <span className="font-mono text-sm text-muted-foreground">
+                {airplaneId}
+              </span>
+            )}
+            value={row.original.airplaneId}
+          />
         ),
       },
       {
@@ -448,9 +536,21 @@ function StaffFlightsPage() {
           <DashboardDataTableColumnHeader column={column} title="Price" />
         ),
         cell: ({ row }) => (
-          <div className="text-right text-sm tabular-nums">
-            {formatCurrency(row.original.basePrice)}
-          </div>
+          <DashboardDataTableInlineTextCell
+            ariaLabel={`Update ${row.original.flightNumber} base price`}
+            className="items-end"
+            formatValue={(value) => (
+              <span className="text-right text-sm tabular-nums">
+                {formatCurrency(Number(value))}
+              </span>
+            )}
+            inputMode="decimal"
+            onSave={(value) =>
+              saveFlightField(row.original, "basePrice", Number(value))
+            }
+            type="number"
+            value={String(row.original.basePrice)}
+          />
         ),
       },
       {
@@ -503,7 +603,7 @@ function StaffFlightsPage() {
         enableSorting: false,
         header: () => <span className="sr-only">Action</span>,
         cell: ({ row }) => (
-          <div className="text-right">
+          <div className="flex justify-end gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -513,11 +613,27 @@ function StaffFlightsPage() {
                 ? "Mark Delayed"
                 : "Mark On Time"}
             </Button>
+            <Button
+              aria-label={`Delete flight ${row.original.flightNumber}`}
+              variant="destructive"
+              size="icon-sm"
+              onClick={() => requestDeleteFlights([row.original])}
+            >
+              <Trash2Icon />
+            </Button>
           </div>
         ),
       },
     ]
-  }, [showAirlineColumn])
+  }, [
+    airplaneOptions,
+    airportOptions,
+    handleStatusToggle,
+    requestDeleteFlights,
+    saveFlightField,
+    saveFlightStatus,
+    showAirlineColumn,
+  ])
 
   const filterOptions = [
     ...(showAirlineColumn
@@ -551,7 +667,7 @@ function StaffFlightsPage() {
     },
   ]
 
-  const statusActions = useMemo(
+  const tableActions = useMemo(
     () => [
       {
         label: "Mark on time",
@@ -563,8 +679,12 @@ function StaffFlightsPage() {
         onSelect: (rows: Array<FlightRow>) =>
           handleBulkStatusUpdate(rows, "delayed"),
       },
+      {
+        label: "Delete flights",
+        onSelect: requestDeleteFlights,
+      },
     ],
-    []
+    [handleBulkStatusUpdate, requestDeleteFlights]
   )
 
   return (
@@ -716,8 +836,13 @@ function StaffFlightsPage() {
         </form.Subscribe>
       </ResponsiveModal>
 
+      <DeleteConfirmation
+        pending={deleteConfirmation.pending}
+        onClose={deleteConfirmation.close}
+      />
+
       <DashboardDataTable
-        bulkActions={statusActions}
+        bulkActions={tableActions}
         columns={columns}
         data={data.flights}
         emptyMessage="No flights scheduled."
@@ -725,7 +850,7 @@ function StaffFlightsPage() {
         enableVirtualization
         filters={filterOptions}
         queryPrefix="flights"
-        rowActions={statusActions}
+        rowActions={tableActions}
         searchPlaceholder="Search flights..."
       />
     </div>

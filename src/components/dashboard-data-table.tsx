@@ -100,6 +100,7 @@ type DashboardDataTableInlineDateTimeCellProps = {
   ariaLabel: string
   className?: string
   disabled?: boolean
+  formatValue?: (value: string) => ReactNode
   onSave: (value: string) => Promise<void> | void
   value: string
 }
@@ -713,6 +714,7 @@ export function DashboardDataTableInlineDateTimeCell({
   ariaLabel,
   className,
   disabled = false,
+  formatValue,
   onSave,
   value,
 }: DashboardDataTableInlineDateTimeCellProps) {
@@ -757,7 +759,7 @@ export function DashboardDataTableInlineDateTimeCell({
           onClick={() => setEditing(true)}
         >
           {saving ? <Loader2Icon className="animate-spin" /> : null}
-          {value}
+          {formatValue ? formatValue(value) : value}
         </Button>
         {error ? <p className="text-xs text-destructive">{error}</p> : null}
       </div>
