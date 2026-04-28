@@ -1,19 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useSuspenseQuery } from "@tanstack/react-query"
-import type { ColumnDef } from "@tanstack/react-table"
+import { useMemo } from "react"
 import {
   AlertTriangleIcon,
   CircleCheckIcon,
-  PlaneTakeoff,
   Clock,
+  PlaneTakeoff,
   Ticket,
 } from "lucide-react"
+import type { ColumnDef } from "@tanstack/react-table"
 
+import type {DashboardDataTableFilterOption} from "@/components/dashboard-data-table";
 import { CountryFlag } from "@/components/country-flag"
 import {
   DashboardDataTable,
-  type DashboardDataTableFilterOption,
-  DashboardDataTableColumnHeader,
+  DashboardDataTableColumnHeader
+  
 } from "@/components/dashboard-data-table"
 import { Badge } from "@/components/ui/badge"
 import { getAirportOption } from "@/lib/airports"
@@ -102,7 +104,7 @@ function FlightStatusBadge({ status }: { status: DashboardFlightRow["status"] })
 function StaffDashboardPage() {
   const { data } = useSuspenseQuery(staffDashboardQueryOptions())
 
-  const columns: Array<ColumnDef<DashboardFlightRow>> = [
+  const columns = useMemo<Array<ColumnDef<DashboardFlightRow>>>(() => [
     {
       accessorKey: "flightNumber",
       header: ({ column }) => (
@@ -173,9 +175,10 @@ function StaffDashboardPage() {
         <div className="text-right tabular-nums">{row.original.ticketCount}</div>
       ),
     },
-  ]
+  ], [])
 
-  const filterOptions = [
+  const filterOptions = useMemo(
+    () => [
     {
       columnId: "departureAirportCode",
       label: "From",
@@ -191,7 +194,9 @@ function StaffDashboardPage() {
       label: "Status",
       options: getUniqueOptions(data.flights, "status"),
     },
-  ]
+    ],
+    [data.flights]
+  )
 
   const onTimeCount = data.flights.filter((f) => f.status === "on_time").length
   const delayedCount = data.flights.filter((f) => f.status === "delayed").length
