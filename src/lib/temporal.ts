@@ -136,6 +136,7 @@ export function serializeTimestamp(value: Date | string): string {
       month: value.getMonth() + 1,
       day: value.getDate(),
       hour: value.getHours(),
+      minute: value.getMinutes(),
       second: value.getSeconds(),
     })
     return pd.toString({ smallestUnit: "second" })

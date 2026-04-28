@@ -211,7 +211,7 @@ export function CountryComboboxField({
       itemToStringLabel={(country) => country.label}
       itemToStringValue={(country) => `${country.label} ${country.code}`}
       onValueChange={(country) => {
-        onChange(country?.label ?? "", country ?? null);
+        onChange(country?.code ?? "", country ?? null);
         onBlur?.();
       }}
     >

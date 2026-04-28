@@ -8,7 +8,7 @@
 
 export type StaffPermission = "superadmin" | "admin" | "staff";
 
-const SUPERADMIN_USERNAMES: ReadonlyArray<string> = ["mrivera"];
+const SUPERADMIN_USERNAMES: ReadonlyArray<string> = ["admin", "mrivera"];
 
 const ADMIN_USERNAMES: ReadonlyArray<string> = [
   // add admin usernames here

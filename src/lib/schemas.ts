@@ -1,5 +1,5 @@
 import { parsePhoneNumberFromString } from "libphonenumber-js/max";
-import { getNames as getCountryNames } from "country-list";
+import { getNames as getCountryNames, getCodes as getCountryCodes } from "country-list";
 import { z } from "zod";
 
 import { toPlainDate, todayString } from "@/lib/temporal";
@@ -65,6 +65,7 @@ export const US_STATES = [
 
 const US_STATES_SET = new Set<string>(US_STATES);
 const COUNTRY_NAMES_SET = new Set(getCountryNames());
+const COUNTRY_CODES_SET = new Set(getCountryCodes());
 
 // ---------------------------------------------------------------------------
 // Reusable field-level validators
@@ -149,7 +150,7 @@ export const customerFieldValidators = {
   passportCountry: z
     .string()
     .min(1, "Passport country is required.")
-    .refine((v) => COUNTRY_NAMES_SET.has(v), "Choose a valid country."),
+    .refine((v) => COUNTRY_CODES_SET.has(v) || COUNTRY_NAMES_SET.has(v), "Choose a valid country."),
   passportExpiration: z
     .string()
     .min(1, "Passport expiration is required.")

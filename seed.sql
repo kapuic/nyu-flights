@@ -294,3 +294,4 @@ VALUES
     ('user1@nyu.edu',        'United', '104', '2026-02-14 13:25:25', 5, 'Comfortable journey and Professional',                    '2026-02-15 11:56:55');
 
 COMMIT;
+

@@ -253,7 +253,7 @@ function InlineCountryField({
     setSaving(true);
     setError("");
     try {
-      await onSave(country.label);
+      await onSave(country.code);
       setEditing(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save.");
@@ -380,7 +380,7 @@ function InlineCountryField({
       >
         <span className={cn("flex items-center gap-2", !value && "italic text-muted-foreground")}>
           {code && <CountryFlag countryCode={code} size={16} />}
-          {value || "Not set"}
+          {(selected?.label ?? value) || "Not set"}
         </span>
         <Pencil className="size-3.5 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground" />
       </div>

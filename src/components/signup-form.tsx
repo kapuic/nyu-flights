@@ -149,7 +149,7 @@ function RegionCombobox({
       itemToStringValue={(option) => `${option.label} ${option.code}`}
       value={selectedOption}
       onValueChange={(option) => {
-        onChange(option?.label ?? "")
+        onChange(option?.code ?? option?.label ?? "")
         onBlur?.()
       }}
     >
@@ -250,7 +250,7 @@ export function SignupFormFields({
     form.setFieldValue("buildingNumber", faker.location.buildingNumber())
     form.setFieldValue("city", faker.location.city())
     form.setFieldValue("dateOfBirth", format(birthDate, "yyyy-MM-dd"))
-    form.setFieldValue("passportCountry", country.label)
+    form.setFieldValue("passportCountry", country.code)
     form.setFieldValue(
       "passportExpiration",
       format(passportExpiration, "yyyy-MM-dd")

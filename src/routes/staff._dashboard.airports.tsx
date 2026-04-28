@@ -9,6 +9,7 @@ import type {
   DashboardDataTableFilterOption,
   DashboardDataTableInlineSelectOption,
 } from "@/components/dashboard-data-table";
+import type { AirportOption } from "@/lib/airports";
 import { AirportComboboxField } from "@/components/combobox-fields";
 import { CountryFlag } from "@/components/country-flag";
 import {
@@ -32,10 +33,8 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { REAL_AIRPORT_OPTIONS, getAirportOption } from "@/lib/airports";
-import type { AirportOption } from "@/lib/airports";
-import type { AirportOption } from "@/lib/airports";
+
 import { createAirportFn, deleteAirportFn, updateAirportFieldFn } from "@/lib/queries";
-import { createAirportSchema } from "@/lib/schemas";
 import { createAirportSchema } from "@/lib/schemas";
 import { staffAirportsQueryOptions } from "@/lib/staff-queries";
 
@@ -66,26 +65,7 @@ function getAirportCreateFieldErrors(data: {
 
   return errors;
 }
-type AirportCreateFieldErrors = {
-  airport?: string;
-  type?: string;
-};
 
-function getAirportCreateFieldErrors(data: {
-  airportType: string;
-  selectedAirport: AirportOption | null;
-}): AirportCreateFieldErrors {
-  const errors: AirportCreateFieldErrors = {};
-  if (!data.selectedAirport) errors.airport = "Choose a real airport from the list.";
-
-  const parsedAirportType = createAirportSchema.shape.airportType.safeParse(
-    data.airportType.toLowerCase(),
-  );
-  if (!parsedAirportType.success)
-    errors.type = parsedAirportType.error.issues.at(0)?.message ?? "Choose an airport type.";
-
-  return errors;
-}
 
 function getAirportRowId(airport: AirportRow) {
   return airport.code;
@@ -171,7 +151,7 @@ function ManageAirportsPage() {
           airportType: airportType.toLowerCase(),
           city: selectedAirport.city,
           code: selectedAirport.code,
-          country: selectedAirport.country,
+          country: selectedAirport.countryCode,
         },
       });
       toast.success(result.message);
@@ -252,10 +232,10 @@ function ManageAirportsPage() {
         filterFn: "arrIncludesSome",
         header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Country" />,
         cell: ({ row }) => {
-          const airport = getAirportOption(row.original.code);
+          const countryCode = row.original.country.trim();
           return (
             <div className="flex items-center gap-2">
-              {airport ? <CountryFlag countryCode={airport.countryCode} size={18} /> : null}
+              {countryCode ? <CountryFlag countryCode={countryCode} size={18} /> : null}
               <DashboardDataTableInlineTextCell
                 ariaLabel={`Update airport ${row.original.code} country`}
                 onSave={(value) => saveAirportField(row.original, "country", value)}

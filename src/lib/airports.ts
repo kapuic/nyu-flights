@@ -17,6 +17,7 @@ const airportEntries = airportCoordinates as Record<
   AirportCoordinateEntry
 >
 
+
 export const REAL_AIRPORT_OPTIONS: Array<AirportOption> = Object.entries(
   airportEntries
 )
@@ -32,6 +33,7 @@ export function getAirportOption(code: string) {
     (airport) => airport.code === code.trim().toUpperCase()
   )
 }
+
 
 
 
