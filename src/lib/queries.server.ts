@@ -9,6 +9,7 @@ import type {
 import { db } from "@/lib/db"
 import { requireUser } from "@/lib/auth.server"
 import { isSuperadmin } from "@/lib/staff-permissions"
+import { customerFieldValidators } from "@/lib/schemas"
 import { getAirportOption } from "@/lib/airports"
 import type { AirportOption } from "@/lib/airports"
 
@@ -1107,16 +1108,16 @@ export async function getCustomerProfileInternal() {
   }
 }
 
-const EDITABLE_CUSTOMER_FIELDS: Record<string, string> = {
-  buildingNumber: "building_number",
-  city: "city",
-  name: "name",
-  passportCountry: "passport_country",
-  passportExpiration: "passport_expiration",
-  passportNumber: "passport_number",
-  phoneNumber: "phone_number",
-  state: "state",
-  street: "street",
+const EDITABLE_CUSTOMER_FIELDS: Record<string, { column: string; validate: (v: string) => string }> = {
+  buildingNumber: { column: "building_number", validate: (v) => { const r = customerFieldValidators.buildingNumber.safeParse(v); if (!r.success) throw new Error(r.error.issues[0].message); return r.data } },
+  city: { column: "city", validate: (v) => { const r = customerFieldValidators.city.safeParse(v); if (!r.success) throw new Error(r.error.issues[0].message); return r.data } },
+  name: { column: "name", validate: (v) => { const r = customerFieldValidators.name.safeParse(v); if (!r.success) throw new Error(r.error.issues[0].message); return r.data } },
+  passportCountry: { column: "passport_country", validate: (v) => { const r = customerFieldValidators.passportCountry.safeParse(v); if (!r.success) throw new Error(r.error.issues[0].message); return r.data } },
+  passportExpiration: { column: "passport_expiration", validate: (v) => { const r = customerFieldValidators.passportExpiration.safeParse(v); if (!r.success) throw new Error(r.error.issues[0].message); return r.data } },
+  passportNumber: { column: "passport_number", validate: (v) => { const r = customerFieldValidators.passportNumber.safeParse(v); if (!r.success) throw new Error(r.error.issues[0].message); return r.data } },
+  phoneNumber: { column: "phone_number", validate: (v) => { const r = customerFieldValidators.phoneNumber.safeParse(v); if (!r.success) throw new Error(r.error.issues[0].message); return r.data } },
+  state: { column: "state", validate: (v) => { const r = customerFieldValidators.state.safeParse(v); if (!r.success) throw new Error(r.error.issues[0].message); return r.data } },
+  street: { column: "street", validate: (v) => { const r = customerFieldValidators.street.safeParse(v); if (!r.success) throw new Error(r.error.issues[0].message); return r.data } },
 }
 
 export async function updateCustomerFieldInternal(data: {
@@ -1124,12 +1125,12 @@ export async function updateCustomerFieldInternal(data: {
   value: string
 }) {
   const user = await requireUser("customer")
-  const column = EDITABLE_CUSTOMER_FIELDS[data.field]
-  if (!column) throw new Error(`Field "${data.field}" is not editable.`)
-  if (!data.value.trim()) throw new Error("Value cannot be empty.")
+  const entry = EDITABLE_CUSTOMER_FIELDS[data.field]
+  if (!entry) throw new Error(`Field "${data.field}" is not editable.`)
+  const validated = entry.validate(data.value)
   await db`
     update customer
-    set ${db(column)} = ${data.value.trim()}
+    set ${db(entry.column)} = ${validated}
     where email = ${user.email}
   `
   return { success: true }

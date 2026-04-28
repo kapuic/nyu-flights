@@ -1,4 +1,75 @@
+import { isValidPhoneNumber } from "libphonenumber-js/min"
+import { getNames as getCountryNames } from "country-list"
 import { z } from "zod"
+
+// ---------------------------------------------------------------------------
+// Shared constants
+// ---------------------------------------------------------------------------
+
+/** Canonical US state list — used by both signup and profile pages. */
+export const US_STATES = [
+  "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
+  "Connecticut", "Delaware", "District of Columbia", "Florida", "Georgia",
+  "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky",
+  "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota",
+  "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire",
+  "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota",
+  "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island",
+  "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont",
+  "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming",
+] as const
+
+const US_STATES_SET = new Set<string>(US_STATES)
+const COUNTRY_NAMES_SET = new Set(getCountryNames())
+
+// ---------------------------------------------------------------------------
+// Reusable field-level validators
+// ---------------------------------------------------------------------------
+
+/** Parse a YYYY-MM-DD string into a Date, or return undefined. */
+function parseDate(value: string): Date | undefined {
+  if (!value) return undefined
+  const d = new Date(value.includes("T") ? value : `${value}T00:00:00`)
+  return Number.isNaN(d.getTime()) ? undefined : d
+}
+
+export const customerFieldValidators = {
+  buildingNumber: z.string().trim().min(1, "Building # is required."),
+  city: z.string().trim().min(1, "City is required."),
+  dateOfBirth: z.string().min(1, "Date of birth is required.").refine(
+    (v) => parseDate(v) !== undefined,
+    "Invalid date format.",
+  ).refine(
+    (v) => { const d = parseDate(v); return d ? d < new Date() : false },
+    "Date of birth must be in the past.",
+  ),
+  name: z.string().trim().min(1, "Name is required."),
+  passportCountry: z.string().min(1, "Passport country is required.").refine(
+    (v) => COUNTRY_NAMES_SET.has(v),
+    "Choose a valid country.",
+  ),
+  passportExpiration: z.string().min(1, "Passport expiration is required.").refine(
+    (v) => parseDate(v) !== undefined,
+    "Invalid date format.",
+  ).refine(
+    (v) => { const d = parseDate(v); return d ? d > new Date() : false },
+    "Passport must not be expired.",
+  ),
+  passportNumber: z.string().trim().min(1, "Passport # is required."),
+  phoneNumber: z.string().min(1, "Phone number is required.").refine(
+    (v) => isValidPhoneNumber(v, "US"),
+    "Enter a valid phone number.",
+  ),
+  state: z.string().min(1, "State is required.").refine(
+    (v) => US_STATES_SET.has(v),
+    "Choose a valid US state.",
+  ),
+  street: z.string().trim().min(1, "Street is required."),
+} as const
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 const baseFlightFiltersSchema = z.object({
   destination: z.string().default(""),
@@ -78,10 +149,6 @@ function withDateRangeValidation(
   })
 }
 
-function requiredDateField(message: string) {
-  return z.string().min(1, message)
-}
-
 function validateRoundTripSearch(
   value: {
     departureDate: string
@@ -142,15 +209,13 @@ function validateFlightSchedule(
   })
 }
 
+// ---------------------------------------------------------------------------
+// Auth schemas
+// ---------------------------------------------------------------------------
+
 const accountCredentialSchema = z.object({
   email: z.email("Use a valid email address."),
   password: z.string().min(8, "Use at least 8 characters."),
-})
-
-const flightIdentitySchema = z.object({
-  airlineName: z.string().min(1),
-  departureDatetime: z.string().min(1),
-  flightNumber: z.string().min(1),
 })
 
 export const loginSchema = z.object({
@@ -160,25 +225,35 @@ export const loginSchema = z.object({
 })
 
 export const customerRegistrationSchema = accountCredentialSchema.extend({
-  buildingNumber: z.string().min(1, "Building number is required."),
-  city: z.string().min(1, "City is required."),
-  dateOfBirth: requiredDateField("Date of birth is required."),
-  name: z.string().min(2, "Name is required."),
-  passportCountry: z.string().min(1, "Passport country is required."),
-  passportExpiration: requiredDateField("Passport expiration is required."),
-  passportNumber: z.string().min(4, "Passport number is required."),
-  phoneNumber: z.string().min(7, "Phone number is required."),
-  state: z.string().min(1, "State is required."),
-  street: z.string().min(1, "Street is required."),
+  buildingNumber: customerFieldValidators.buildingNumber,
+  city: customerFieldValidators.city,
+  dateOfBirth: customerFieldValidators.dateOfBirth,
+  name: customerFieldValidators.name,
+  passportCountry: customerFieldValidators.passportCountry,
+  passportExpiration: customerFieldValidators.passportExpiration,
+  passportNumber: customerFieldValidators.passportNumber,
+  phoneNumber: customerFieldValidators.phoneNumber,
+  state: customerFieldValidators.state,
+  street: customerFieldValidators.street,
 })
 
 export const staffRegistrationSchema = accountCredentialSchema.extend({
   airlineName: z.string().min(1, "Choose an airline."),
-  dateOfBirth: requiredDateField("Date of birth is required."),
+  dateOfBirth: customerFieldValidators.dateOfBirth,
   firstName: z.string().min(1, "First name is required."),
   lastName: z.string().min(1, "Last name is required."),
   phoneNumbers: z.string().default(""),
   username: z.string().min(3, "Username is required."),
+})
+
+// ---------------------------------------------------------------------------
+// Flight schemas
+// ---------------------------------------------------------------------------
+
+const flightIdentitySchema = z.object({
+  airlineName: z.string().min(1),
+  departureDatetime: z.string().min(1),
+  flightNumber: z.string().min(1),
 })
 
 export const searchFlightsSchema = baseFlightFiltersSchema.extend({
@@ -266,7 +341,9 @@ export const reportRangeSchema = withDateRangeValidation({
   startDate: z.string().min(1, "Start date is required."),
 })
 
-// --- Superadmin schemas ---
+// ---------------------------------------------------------------------------
+// Superadmin schemas
+// ---------------------------------------------------------------------------
 
 export const createAirlineSchema = z.object({
   name: z.string().min(1, "Airline name is required.").max(100),
@@ -298,11 +375,13 @@ export const deleteCustomerSchema = z.object({
   email: z.email(),
 })
 
-// --- Account schemas ---
+// ---------------------------------------------------------------------------
+// Account schemas
+// ---------------------------------------------------------------------------
 
 export const updateCustomerFieldSchema = z.object({
   field: z.string().min(1),
-  value: z.string().min(1, "Value cannot be empty."),
+  value: z.string(),
 })
 
 export const changePasswordSchema = z.object({

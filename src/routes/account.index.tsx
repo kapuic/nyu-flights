@@ -19,6 +19,7 @@ import {
 import { CountryFlag } from "@/components/country-flag"
 import { DatePickerField } from "@/components/date-time-picker"
 import { getCustomerProfileFn, updateCustomerFieldFn } from "@/lib/queries"
+import { US_STATES } from "@/lib/schemas"
 import { cn } from "@/lib/utils"
 
 export const Route = createFileRoute("/account/")({
@@ -31,16 +32,6 @@ const COUNTRY_OPTIONS: Array<CountryOption> = getCountries()
   .map((c) => ({ code: c.code, label: c.name }))
   .sort((a, b) => a.label.localeCompare(b.label))
 
-const US_STATES = [
-  "Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut",
-  "Delaware","District of Columbia","Florida","Georgia","Hawaii","Idaho","Illinois",
-  "Indiana","Iowa","Kansas","Kentucky","Louisiana","Maine","Maryland","Massachusetts",
-  "Michigan","Minnesota","Mississippi","Missouri","Montana","Nebraska","Nevada",
-  "New Hampshire","New Jersey","New Mexico","New York","North Carolina","North Dakota",
-  "Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina",
-  "South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington",
-  "West Virginia","Wisconsin","Wyoming",
-] as const
 type StateOption = { label: string }
 const STATE_OPTIONS: Array<StateOption> = US_STATES.map((s) => ({ label: s }))
 
@@ -516,8 +507,8 @@ function ProfilePage() {
       <Card>
         <CardHeader><CardTitle>Address</CardTitle></CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <InlineField variant={V} label="Building Number" value={profile.buildingNumber} onSave={(v) => save("buildingNumber", v)} />
           <InlineField variant={V} label="Street" value={profile.street} onSave={(v) => save("street", v)} />
+          <InlineField variant={V} label="Building #" value={profile.buildingNumber} onSave={(v) => save("buildingNumber", v)} />
           <InlineField variant={V} label="City" value={profile.city} onSave={(v) => save("city", v)} />
           <InlineStateField variant={V} controls={C} mode={M} label="State" value={profile.state} onSave={(v) => save("state", v)} />
         </CardContent>
@@ -525,7 +516,7 @@ function ProfilePage() {
       <Card>
         <CardHeader><CardTitle>Passport</CardTitle></CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <InlineField variant={V} label="Passport Number" value={profile.passportNumber} onSave={(v) => save("passportNumber", v)} />
+          <InlineField variant={V} label="Passport #" value={profile.passportNumber} onSave={(v) => save("passportNumber", v)} />
           <InlineDateField variant={V} controls={C} label="Expiration" value={profile.passportExpiration} onSave={(v) => save("passportExpiration", v)} />
           <InlineCountryField variant={V} controls={C} mode={M} label="Country" value={profile.passportCountry} onSave={(v) => save("passportCountry", v)} />
         </CardContent>
