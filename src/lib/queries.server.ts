@@ -907,16 +907,14 @@ export async function createFlightInternal(data: {
 }) {
   const user = await requireUser("staff");
   const airlineResolution = await resolveOperationalAirlineForCreate(user, data.airlineName);
-  if (!airlineResolution.ok) return { error: airlineResolution.error };
+  if (!airlineResolution.ok) throw new Error(airlineResolution.error);
   const { airlineName } = airlineResolution;
 
-  if (data.departureAirportCode === data.arrivalAirportCode) {
-    return { error: "Departure and arrival airports must be different." };
-  }
+  if (data.departureAirportCode === data.arrivalAirportCode)
+    throw new Error("Departure and arrival airports must be different.");
 
-  if (new Date(data.arrivalDatetime) <= new Date(data.departureDatetime)) {
-    return { error: "Arrival time must be after departure time." };
-  }
+  if (new Date(data.arrivalDatetime) <= new Date(data.departureDatetime))
+    throw new Error("Arrival time must be after departure time.");
 
   const airplaneRows = await db<Array<{ airplane_id: string }>>`
     select airplane_id
@@ -925,7 +923,7 @@ export async function createFlightInternal(data: {
       and airplane_id = ${data.airplaneId}
     limit 1
   `;
-  if (!airplaneRows.length) return { error: "Choose one of that airline's airplanes." };
+  if (!airplaneRows.length) throw new Error("Choose one of that airline's airplanes.");
 
   await db`
     insert into flight (

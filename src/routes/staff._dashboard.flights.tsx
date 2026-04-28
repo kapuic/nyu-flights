@@ -1,6 +1,7 @@
 import { createFileRoute, getRouteApi, useRouter } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
+import { z } from "zod";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useCallback, useMemo, useState } from "react";
 import { AlertTriangleIcon, CircleCheckIcon, Plus, Trash2Icon } from "lucide-react";
@@ -83,6 +84,53 @@ function shouldShowFieldError(
   submissionAttempts: number,
 ) {
   return (meta.isTouched || submissionAttempts > 0) && !meta.isValid;
+}
+type FormErrorMap = {
+  fields: Record<string, string>;
+  form: string | null;
+};
+
+function getFormErrorsFromIssues(issues: Array<z.core.$ZodIssue>): FormErrorMap {
+  const fields: Record<string, string> = {};
+  for (const issue of issues) {
+    const [path] = issue.path;
+    if (typeof path === "string" && !fields[path]) fields[path] = issue.message;
+  }
+
+  return {
+    fields,
+    form: issues.find((issue) => issue.path.length === 0)?.message ?? null,
+  };
+}
+
+function getSchemaErrors<T>(schema: z.ZodType<T>, value: unknown): FormErrorMap | null {
+  const parsed = schema.safeParse(value);
+  if (parsed.success) return null;
+  return getFormErrorsFromIssues(parsed.error.issues);
+}
+
+function getMutationError(result: unknown) {
+  if (result && typeof result === "object" && "error" in result && result.error) {
+    return String(result.error);
+  }
+
+  return null;
+}
+
+function getFieldErrorMessage(errors: Array<unknown>) {
+  return errors
+    .map((error) => (typeof error === "string" ? error : (error as { message?: string })?.message))
+    .find(Boolean);
+}
+
+function getFormErrorMessage(error: unknown) {
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object" && "form" in error) {
+    const formError = (error as { form?: unknown }).form;
+    return typeof formError === "string" ? formError : null;
+  }
+
+  return null;
 }
 
 export const Route = createFileRoute("/staff/_dashboard/flights")({
@@ -283,7 +331,7 @@ function StaffFlightsPage() {
       airplaneId: "",
     },
     validators: {
-      onSubmit: ({ value }) => createFlightSchema.safeParse(value).error?.issues,
+      onSubmit: ({ value }) => getSchemaErrors(createFlightSchema, value),
     },
     onSubmit: async ({ value }) => {
       const result = await createFlightFn({
@@ -293,9 +341,8 @@ function StaffFlightsPage() {
           basePrice: Number(value.basePrice),
         },
       });
-      if ("error" in result && result.error) {
-        throw new Error(result.error);
-      }
+      const mutationError = getMutationError(result);
+      if (mutationError) throw new Error(mutationError);
       toast.success(result.message);
       form.reset();
       setCreateOpen(false);
@@ -665,6 +712,7 @@ function StaffFlightsPage() {
       >
         <form.Subscribe
           selector={(state) => ({
+            errorMap: state.errorMap,
             isSubmitting: state.isSubmitting,
             submissionAttempts: state.submissionAttempts,
             departureCode: state.values.departureAirportCode,
@@ -672,10 +720,18 @@ function StaffFlightsPage() {
             airlineName: state.values.airlineName,
           })}
         >
-          {({ isSubmitting, submissionAttempts, departureCode, arrivalCode, airlineName }) => {
+          {({
+            errorMap,
+            isSubmitting,
+            submissionAttempts,
+            departureCode,
+            arrivalCode,
+            airlineName,
+          }) => {
             const createAirplaneOptions = showAirlineColumn
               ? data.airplanes.filter((airplane) => airplane.airlineName === airlineName)
               : data.airplanes;
+            const formError = getFormErrorMessage(errorMap.onSubmit) ?? error;
 
             return (
               <>
@@ -734,7 +790,11 @@ function StaffFlightsPage() {
                               onChange={(e) => field.handleChange(e.target.value)}
                             />
                             {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
-                              <FieldError errors={field.state.meta.errors} />
+                              <FieldError
+                                errors={[
+                                  { message: getFieldErrorMessage(field.state.meta.errors) },
+                                ]}
+                              />
                             ) : null}
                           </Field>
                         )}
@@ -760,7 +820,11 @@ function StaffFlightsPage() {
                               }
                             />
                             {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
-                              <FieldError errors={field.state.meta.errors} />
+                              <FieldError
+                                errors={[
+                                  { message: getFieldErrorMessage(field.state.meta.errors) },
+                                ]}
+                              />
                             ) : null}
                           </Field>
                         )}
@@ -782,7 +846,11 @@ function StaffFlightsPage() {
                               placeholder="Search departure airport"
                             />
                             {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
-                              <FieldError errors={field.state.meta.errors} />
+                              <FieldError
+                                errors={[
+                                  { message: getFieldErrorMessage(field.state.meta.errors) },
+                                ]}
+                              />
                             ) : null}
                           </Field>
                         )}
@@ -804,7 +872,11 @@ function StaffFlightsPage() {
                               placeholder="Search arrival airport"
                             />
                             {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
-                              <FieldError errors={field.state.meta.errors} />
+                              <FieldError
+                                errors={[
+                                  { message: getFieldErrorMessage(field.state.meta.errors) },
+                                ]}
+                              />
                             ) : null}
                           </Field>
                         )}
@@ -825,7 +897,11 @@ function StaffFlightsPage() {
                               placeholder="Pick departure time"
                             />
                             {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
-                              <FieldError errors={field.state.meta.errors} />
+                              <FieldError
+                                errors={[
+                                  { message: getFieldErrorMessage(field.state.meta.errors) },
+                                ]}
+                              />
                             ) : null}
                           </Field>
                         )}
@@ -846,7 +922,11 @@ function StaffFlightsPage() {
                               placeholder="Pick arrival time"
                             />
                             {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
-                              <FieldError errors={field.state.meta.errors} />
+                              <FieldError
+                                errors={[
+                                  { message: getFieldErrorMessage(field.state.meta.errors) },
+                                ]}
+                              />
                             ) : null}
                           </Field>
                         )}
@@ -873,14 +953,16 @@ function StaffFlightsPage() {
                             onChange={(e) => field.handleChange(e.target.value)}
                           />
                           {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
-                            <FieldError errors={field.state.meta.errors} />
+                            <FieldError
+                              errors={[{ message: getFieldErrorMessage(field.state.meta.errors) }]}
+                            />
                           ) : null}
                         </Field>
                       )}
                     </form.Field>
-                    {error ? (
+                    {formError ? (
                       <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                        {error}
+                        {formError}
                       </div>
                     ) : null}
                     <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">

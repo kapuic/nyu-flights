@@ -43,10 +43,12 @@ function ManageAirlinesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [submissionAttempts, setSubmissionAttempts] = useState(0);
   const deleteConfirm = useDeleteConfirmation();
   const queryClient = useQueryClient();
   const router = useRouter();
-  const airlineNameError = getAirlineNameError(newName);
+  const showFieldErrors = submissionAttempts > 0;
+  const airlineNameError = showFieldErrors ? getAirlineNameError(newName) : null;
 
   async function refreshAirlines() {
     await queryClient.invalidateQueries({ queryKey: ["staff-airlines"] });
@@ -55,6 +57,7 @@ function ManageAirlinesPage() {
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();
+    setSubmissionAttempts((attempts) => attempts + 1);
     setError(null);
     try {
       const parsed = createAirlineSchema.safeParse({ name: newName });
@@ -62,6 +65,7 @@ function ManageAirlinesPage() {
 
       const result = await createAirlineFn({ data: parsed.data });
       toast.success(result.message);
+      setSubmissionAttempts(0);
       setNewName("");
       setCreateOpen(false);
       await refreshAirlines();
@@ -147,7 +151,14 @@ function ManageAirlinesPage() {
           <h1 className="text-lg font-semibold">Airlines</h1>
           <p className="text-sm text-muted-foreground">Manage airlines in the system</p>
         </div>
-        <Button size="sm" onClick={() => setCreateOpen(true)}>
+        <Button
+          size="sm"
+          onClick={() => {
+            setSubmissionAttempts(0);
+            setError(null);
+            setCreateOpen(true);
+          }}
+        >
           <Plus data-icon="inline-start" />
           Create
         </Button>
@@ -169,6 +180,7 @@ function ManageAirlinesPage() {
                 placeholder="Pacific Airlines"
                 value={newName}
                 onChange={(event) => {
+                  if (submissionAttempts > 0) setSubmissionAttempts(0);
                   setError(null);
                   setNewName(event.target.value);
                 }}

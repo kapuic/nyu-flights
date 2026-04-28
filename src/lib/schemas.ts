@@ -426,13 +426,21 @@ export const updateFlightFieldSchema = z.intersection(
 
 export const deleteFlightSchema = flightIdentitySchema;
 
-export const addAirplaneSchema = z.object({
-  airlineName: z.string().trim().default(""),
-  airplaneId: z.string().min(2, "Airplane ID is required."),
-  manufacturingCompany: z.string().min(2, "Manufacturer is required."),
-  manufacturingDate: z.string().min(1, "Manufacturing date is required."),
-  numberOfSeats: z.coerce.number().int().positive("Seat count must be positive."),
-});
+export const addAirplaneSchema = z
+  .object({
+    airlineName: z.string().trim().default(""),
+    airplaneId: z.string().min(2, "Airplane ID is required."),
+    manufacturingCompany: z.string().min(2, "Manufacturer is required."),
+    manufacturingDate: z.string().min(1, "Manufacturing date is required."),
+    numberOfSeats: z.coerce.number().int().positive("Seat count must be positive."),
+  })
+  .superRefine((value, context) => {
+    const today = new Date();
+    const manufacturingDate = parseDate(value.manufacturingDate);
+    if (manufacturingDate && manufacturingDate > today) {
+      addFieldIssue(context, ["manufacturingDate"], "Manufacturing date cannot be in the future.");
+    }
+  });
 export const updateAirplaneFieldSchema = z.object({
   airlineName: z.string().min(1),
   airplaneId: z.string().min(1),
