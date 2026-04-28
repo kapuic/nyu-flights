@@ -730,7 +730,7 @@ export async function purchaseTicketInternal(data: {
         ${data.cardType},
         ${data.cardNumber},
         ${data.nameOnCard},
-        ${data.cardExpiration}
+        ${data.cardExpiration.length === 5 ? `20${data.cardExpiration.slice(3)}-${data.cardExpiration.slice(0, 2)}-01` : data.cardExpiration}
       )
     `;
 
