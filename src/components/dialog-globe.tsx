@@ -1,11 +1,17 @@
 "use client"
 
 import createGlobe from "cobe"
-import type { Marker, Arc } from "cobe"
-import { useEffect, useRef, useMemo } from "react"
+import { useEffect, useMemo, useRef } from "react"
+import type { Arc, Marker } from "cobe"
 
 import { CountryFlag } from "@/components/country-flag"
 import { cn } from "@/lib/utils"
+
+const TAU = Math.PI * 2
+
+function getNearestAngle(current: number, target: number) {
+  return current + ((((target - current) % TAU) + Math.PI + TAU) % TAU) - Math.PI
+}
 
 type GlobeMarker = {
   countryCode: string
@@ -42,7 +48,6 @@ export function DialogGlobe({ arcs = [], className, markers = [] }: DialogGlobeP
   const phiRef = useRef(0)
   const thetaRef = useRef(0.15)
 
-  // Refs so the animation loop always reads fresh values
   const markersRef = useRef(markers)
   markersRef.current = markers
   const arcsRef = useRef(arcs)
@@ -52,7 +57,6 @@ export function DialogGlobe({ arcs = [], className, markers = [] }: DialogGlobeP
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-color-scheme: dark)").matches
 
-  // Compute focus target
   const target = useMemo(() => {
     if (markers.length === 0) return null
     const avgLat =
@@ -77,10 +81,10 @@ export function DialogGlobe({ arcs = [], className, markers = [] }: DialogGlobeP
     canvas.style.width = `${w}px`
     canvas.style.height = `${w}px`
 
-    const toCobeMarkers = (ms: GlobeMarker[]): Marker[] =>
+    const toCobeMarkers = (ms: Array<GlobeMarker>): Array<Marker> =>
       ms.map((m) => ({ location: m.location, size: 0, id: m.id }))
 
-    const toCobeArcs = (as: GlobeArc[]): Arc[] =>
+    const toCobeArcs = (as: Array<GlobeArc>): Array<Arc> =>
       as.map((a, i) => ({ from: a.from, to: a.to, id: `arc-${i}` }))
 
     const globe = createGlobe(canvas, {
@@ -94,14 +98,14 @@ export function DialogGlobe({ arcs = [], className, markers = [] }: DialogGlobeP
       mapSamples: 16000,
       mapBrightness: isDark ? 2 : 6,
       mapBaseBrightness: isDark ? 0.1 : 0.05,
-      baseColor: isDark ? [0.15, 0.18, 0.25] : [0.95, 0.95, 0.97],
-      markerColor: isDark ? [0.4, 0.65, 1] : [0.1, 0.4, 1],
-      glowColor: isDark ? [0.08, 0.1, 0.2] : [0.9, 0.9, 1],
+      baseColor: isDark ? [0.13, 0.13, 0.14] : [0.95, 0.95, 0.97],
+      markerColor: isDark ? [0.86, 0.86, 0.82] : [0.1, 0.4, 1],
+      glowColor: isDark ? [0.06, 0.06, 0.07] : [0.9, 0.9, 1],
       scale: 1.05,
       offset: [0, w * 0.15],
       markers: toCobeMarkers(markersRef.current),
       arcs: toCobeArcs(arcsRef.current),
-      arcColor: isDark ? [0.4, 0.65, 1] : [0.1, 0.4, 1],
+      arcColor: isDark ? [0.78, 0.78, 0.74] : [0.1, 0.4, 1],
       arcWidth: 0.8,
       arcHeight: 0.35,
       markerElevation: 0.02,
@@ -111,7 +115,8 @@ export function DialogGlobe({ arcs = [], className, markers = [] }: DialogGlobeP
       const t = targetRef.current
 
       if (t) {
-        phiRef.current += (t.phi - phiRef.current) * 0.08
+        const targetPhi = getNearestAngle(phiRef.current, t.phi)
+        phiRef.current += (targetPhi - phiRef.current) * 0.08
         thetaRef.current += (t.theta - thetaRef.current) * 0.08
       } else {
         phiRef.current += 0.004
@@ -133,7 +138,6 @@ export function DialogGlobe({ arcs = [], className, markers = [] }: DialogGlobeP
       cancelAnimationFrame(rafRef.current)
       globe.destroy()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDark])
 
   return (
@@ -147,7 +151,6 @@ export function DialogGlobe({ arcs = [], className, markers = [] }: DialogGlobeP
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
         />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-popover to-transparent" />
-        {/* Pin labels anchored to marker coordinates via cobe v2 CSS anchor vars */}
         {markers.map((m) => (
           <div
             key={m.id}
