@@ -1,11 +1,19 @@
-import { type FormEvent, useState } from "react"
+import { type FormEvent, useId, useState } from "react"
+import { useForm } from "@tanstack/react-form"
 import { createFileRoute } from "@tanstack/react-router"
+import { Eye } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { changePasswordSchema } from "@/lib/schemas"
 import { changePasswordFn } from "@/lib/queries"
 import { getErrorMessage } from "@/lib/utils"
 
@@ -13,27 +21,40 @@ export const Route = createFileRoute("/account/security")({
   component: SecurityPage,
 })
 
+const formSchema = changePasswordSchema.extend({
+  confirmPassword: changePasswordSchema.shape.newPassword,
+})
+
 function SecurityPage() {
-  const [currentPassword, setCurrentPassword] = useState("")
-  const [newPassword, setNewPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState("")
+  const formId = useId()
+  const [error, setError] = useState<string | null>(null)
+  const [showCurrent, setShowCurrent] = useState(false)
+  const [showNew, setShowNew] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+
+  const form = useForm({
+    defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
+    validators: {
+      onSubmit: formSchema,
+    },
+    onSubmit: async ({ value }) => {
+      if (value.newPassword !== value.confirmPassword) {
+        throw new Error("New passwords do not match.")
+      }
+      await changePasswordFn({ data: { currentPassword: value.currentPassword, newPassword: value.newPassword } })
+      toast.success("Password updated.")
+      form.reset()
+    },
+  })
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (submitting) return
-    setError("")
-    if (newPassword !== confirmPassword) { setError("New passwords do not match."); return }
-    setSubmitting(true)
+    e.stopPropagation()
+    setError(null)
     try {
-      await changePasswordFn({ data: { currentPassword, newPassword } })
-      toast.success("Password updated.")
-      setCurrentPassword(""); setNewPassword(""); setConfirmPassword("")
+      await form.handleSubmit()
     } catch (err) {
       setError(getErrorMessage(err, "Failed to update password."))
-    } finally {
-      setSubmitting(false)
     }
   }
 
@@ -46,23 +67,132 @@ function SecurityPage() {
       <Card>
         <CardHeader><CardTitle>Change Password</CardTitle></CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
-            <div className="space-y-2">
-              <Label htmlFor="current-password">Current Password</Label>
-              <Input id="current-password" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required autoComplete="current-password" />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="new-password">New Password</Label>
-                <Input id="new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={8} autoComplete="new-password" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm New Password</Label>
-                <Input id="confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={8} autoComplete="new-password" />
-              </div>
-            </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" disabled={submitting}>{submitting ? "Updating…" : "Update Password"}</Button>
+          <form noValidate onSubmit={handleSubmit}>
+            <FieldGroup>
+              <form.Subscribe selector={(s) => s.submissionAttempts}>
+                {(submissionAttempts) => (
+                  <>
+                    <form.Field name="currentPassword">
+                      {(field) => {
+                        const isInvalid = (field.state.meta.isTouched || submissionAttempts > 0) && !field.state.meta.isValid
+                        return (
+                          <Field data-invalid={isInvalid}>
+                            <Label htmlFor={`${formId}-current`}>Current Password</Label>
+                            <div className="relative">
+                              <Input
+                                aria-invalid={isInvalid}
+                                autoComplete="current-password"
+                                className="pr-10"
+                                id={`${formId}-current`}
+                                onBlur={field.handleBlur}
+                                onChange={(e) => field.handleChange(e.target.value)}
+                                type={showCurrent ? "text" : "password"}
+                                value={field.state.value}
+                              />
+                              <Button
+                                aria-label={showCurrent ? "Hide password" : "Show password"}
+                                className="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                onClick={() => setShowCurrent((p) => !p)}
+                                size="icon-sm"
+                                type="button"
+                                variant="ghost"
+                              >
+                                <Eye className="size-4" />
+                              </Button>
+                            </div>
+                            {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                          </Field>
+                        )
+                      }}
+                    </form.Field>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <form.Field name="newPassword">
+                        {(field) => {
+                          const isInvalid = (field.state.meta.isTouched || submissionAttempts > 0) && !field.state.meta.isValid
+                          return (
+                            <Field data-invalid={isInvalid}>
+                              <Label htmlFor={`${formId}-new`}>New Password</Label>
+                              <div className="relative">
+                                <Input
+                                  aria-invalid={isInvalid}
+                                  autoComplete="new-password"
+                                  className="pr-10"
+                                  id={`${formId}-new`}
+                                  onBlur={field.handleBlur}
+                                  onChange={(e) => field.handleChange(e.target.value)}
+                                  type={showNew ? "text" : "password"}
+                                  value={field.state.value}
+                                />
+                                <Button
+                                  aria-label={showNew ? "Hide password" : "Show password"}
+                                  className="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                  onClick={() => setShowNew((p) => !p)}
+                                  size="icon-sm"
+                                  type="button"
+                                  variant="ghost"
+                                >
+                                  <Eye className="size-4" />
+                                </Button>
+                              </div>
+                              {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                            </Field>
+                          )
+                        }}
+                      </form.Field>
+
+                      <form.Field name="confirmPassword">
+                        {(field) => {
+                          const isInvalid = (field.state.meta.isTouched || submissionAttempts > 0) && !field.state.meta.isValid
+                          return (
+                            <Field data-invalid={isInvalid}>
+                              <Label htmlFor={`${formId}-confirm`}>Confirm New Password</Label>
+                              <div className="relative">
+                                <Input
+                                  aria-invalid={isInvalid}
+                                  autoComplete="new-password"
+                                  className="pr-10"
+                                  id={`${formId}-confirm`}
+                                  onBlur={field.handleBlur}
+                                  onChange={(e) => field.handleChange(e.target.value)}
+                                  type={showConfirm ? "text" : "password"}
+                                  value={field.state.value}
+                                />
+                                <Button
+                                  aria-label={showConfirm ? "Hide password" : "Show password"}
+                                  className="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                  onClick={() => setShowConfirm((p) => !p)}
+                                  size="icon-sm"
+                                  type="button"
+                                  variant="ghost"
+                                >
+                                  <Eye className="size-4" />
+                                </Button>
+                              </div>
+                              {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                            </Field>
+                          )
+                        }}
+                      </form.Field>
+                    </div>
+                  </>
+                )}
+              </form.Subscribe>
+
+              {error && (
+                <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                  {error}
+                </div>
+              )}
+
+              <form.Subscribe selector={(s) => s.isSubmitting}>
+                {(isSubmitting) => (
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? "Updating…" : "Update Password"}
+                  </Button>
+                )}
+              </form.Subscribe>
+            </FieldGroup>
           </form>
         </CardContent>
       </Card>
