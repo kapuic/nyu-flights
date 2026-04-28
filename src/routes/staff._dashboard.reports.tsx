@@ -17,7 +17,7 @@ import { staffDashboardQueryOptions, staffReportQueryOptions } from "@/lib/staff
 type RatingRow = {
   airlineName: string;
   averageRating: number | null;
-  comments: Array<string>;
+  comments: Array<{ comment: string | null; rating: number }>;
   departureDatetime: string;
   flightNumber: string;
   reviewCount: number;
@@ -97,7 +97,7 @@ function StaffReportsPage() {
       },
       {
         id: "comments",
-        accessorFn: (row) => row.comments.join(" "),
+        accessorFn: (row) => row.comments.map((comment) => `${comment.rating} ${comment.comment ?? ""}`).join(" "),
         header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Comments" />,
         cell: ({ row }) => {
           if (row.original.comments.length === 0)
@@ -106,8 +106,12 @@ function StaffReportsPage() {
           return (
             <div className="flex max-w-xs flex-col gap-1">
               {row.original.comments.slice(0, 3).map((comment) => (
-                <span key={comment} className="truncate text-sm text-muted-foreground">
-                  “{comment}”
+                <span
+                  key={`${comment.rating}:${comment.comment}`}
+                  className="truncate text-sm text-muted-foreground"
+                >
+                  <span className="font-medium tabular-nums text-foreground">{comment.rating}/5</span>{" "}
+                  {comment.comment ? `“${comment.comment}”` : "No comment"}
                 </span>
               ))}
               {row.original.comments.length > 3 ? (

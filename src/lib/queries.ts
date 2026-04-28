@@ -135,7 +135,7 @@ export type StaffDashboardData = {
   ratings: Array<{
     airlineName: string;
     averageRating: number | null;
-    comments: Array<string>;
+    comments: Array<{ comment: string | null; rating: number }>;
     departureDatetime: string;
     flightNumber: string;
     reviewCount: number;

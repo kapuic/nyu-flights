@@ -547,14 +547,14 @@ export async function getStaffDashboardInternal(filters: {
   `;
 
   const ratings = await db<
-    Array<{
-      airline_name: string;
-      average_rating: number | null;
-      comments: Array<string>;
-      departure_datetime: string;
-      flight_number: string;
-      review_count: number;
-    }>
+      Array<{
+        airline_name: string;
+        average_rating: number | null;
+        comments: Array<{ comment: string | null; rating: number }>;
+        departure_datetime: string;
+        flight_number: string;
+        review_count: number;
+      }>
   >`
     select
       f.airline_name,
@@ -563,8 +563,11 @@ export async function getStaffDashboardInternal(filters: {
       round(avg(review.rating)::numeric, 1)::float8 as average_rating,
       count(distinct review.customer_email)::int as review_count,
       coalesce(
-        array_remove(array_agg(review.comment order by review.review_datetime) filter (where review.comment is not null and btrim(review.comment) <> ''), null),
-        array[]::text[]
+        jsonb_agg(
+          jsonb_build_object('comment', nullif(btrim(review.comment), ''), 'rating', review.rating)
+          order by review.review_datetime
+        ) filter (where review.customer_email is not null),
+        '[]'::jsonb
       ) as comments
     from flight f
     left join review on review.airline_name = f.airline_name and review.flight_number = f.flight_number and review.departure_datetime = f.departure_datetime
@@ -670,23 +673,27 @@ export async function purchaseTicketInternal(data: {
       Array<{
         available_seats: number;
         base_price: string;
+        is_future: boolean;
       }>
     >`
       select
         greatest(airplane.number_of_seats - count(ticket.ticket_id), 0)::int as available_seats,
-        f.base_price
+        f.base_price,
+        f.departure_datetime > now() as is_future
       from flight f
       join airplane on airplane.airline_name = f.airline_name and airplane.airplane_id = f.airplane_id
       left join ticket on ticket.airline_name = f.airline_name and ticket.flight_number = f.flight_number and ticket.departure_datetime = f.departure_datetime
       where f.airline_name = ${data.airlineName}
         and f.flight_number = ${data.flightNumber}
         and f.departure_datetime::text = replace(${data.departureDatetime}, 'T', ' ')
-      group by f.base_price, airplane.number_of_seats
+      group by f.base_price, f.departure_datetime, airplane.number_of_seats
       limit 1
     `;
     if (!flightRows.length) throw new Error("That flight could not be found anymore.");
 
     const flight = flightRows[0];
+    if (!flight.is_future) throw new Error("Tickets can only be purchased for future flights.");
+
     if (flight.available_seats <= 0) throw new Error("That flight is already full.");
 
     const [nextTicket] = await transaction<Array<{ next_id: number }>>`
