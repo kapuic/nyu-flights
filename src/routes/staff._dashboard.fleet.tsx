@@ -1,15 +1,17 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query"
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
 import { useForm } from "@tanstack/react-form"
-import type { ColumnDef } from "@tanstack/react-table"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Plus } from "lucide-react"
+import type { ColumnDef } from "@tanstack/react-table"
 
+import type {DashboardDataTableFilterOption} from "@/components/dashboard-data-table";
 import { DatePickerField } from "@/components/date-time-picker"
 import {
   DashboardDataTable,
-  DashboardDataTableColumnHeader,
+  DashboardDataTableColumnHeader
+  
 } from "@/components/dashboard-data-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,6 +30,28 @@ type AirplaneRow = {
 export const Route = createFileRoute("/staff/_dashboard/fleet")({
   component: StaffFleetPage,
 })
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })
+}
+
+function getUniqueOptions(
+  airplanes: Array<AirplaneRow>,
+  valueKey: "manufacturingCompany"
+): Array<DashboardDataTableFilterOption> {
+  const options = new Map<string, string>()
+  for (const airplane of airplanes) {
+    const value = airplane[valueKey]
+    options.set(value, value)
+  }
+  return Array.from(options, ([value, label]) => ({ label, value })).sort(
+    (a, b) => a.label.localeCompare(b.label)
+  )
+}
 
 function StaffFleetPage() {
   const { data } = useSuspenseQuery(staffDashboardQueryOptions())
@@ -70,7 +94,8 @@ function StaffFleetPage() {
     }
   }
 
-  const columns: Array<ColumnDef<AirplaneRow>> = [
+  const columns = useMemo<Array<ColumnDef<AirplaneRow>>>(
+    () => [
     {
       accessorKey: "airplaneId",
       header: ({ column }) => (
@@ -82,6 +107,7 @@ function StaffFleetPage() {
     },
     {
       accessorKey: "manufacturingCompany",
+      filterFn: "arrIncludesSome",
       header: ({ column }) => (
         <DashboardDataTableColumnHeader column={column} title="Manufacturer" />
       ),
@@ -93,11 +119,7 @@ function StaffFleetPage() {
       ),
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground">
-          {new Date(row.original.manufacturingDate).toLocaleDateString("en-US", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-          })}
+          {formatDate(row.original.manufacturingDate)}
         </span>
       ),
     },
@@ -116,7 +138,20 @@ function StaffFleetPage() {
         </div>
       ),
     },
-  ]
+  ],
+    []
+  )
+
+  const filterOptions = useMemo(
+    () => [
+      {
+        columnId: "manufacturingCompany",
+        label: "Manufacturer",
+        options: getUniqueOptions(data.airplanes, "manufacturingCompany"),
+      },
+    ],
+    [data.airplanes]
+  )
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -220,6 +255,8 @@ function StaffFleetPage() {
         columns={columns}
         data={data.airplanes}
         emptyMessage="No aircraft registered."
+        enableVirtualization
+        filters={filterOptions}
         searchPlaceholder="Search fleet..."
         queryPrefix="fleet"
       />
