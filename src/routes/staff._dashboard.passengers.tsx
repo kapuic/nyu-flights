@@ -1,60 +1,70 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
-import { parseAsString, useQueryStates } from "nuqs"
-import { useMemo } from "react"
-import type { ColumnDef } from "@tanstack/react-table"
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { parseAsString, useQueryStates } from "nuqs";
+import { useMemo } from "react";
+import type { ColumnDef } from "@tanstack/react-table";
 
 import {
   DashboardDataTable,
   DashboardDataTableColumnHeader,
-} from "@/components/dashboard-data-table"
+} from "@/components/dashboard-data-table";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import {
-  staffDashboardQueryOptions,
-  staffPassengersQueryOptions,
-} from "@/lib/staff-queries"
+} from "@/components/ui/select";
+import { staffDashboardQueryOptions, staffPassengersQueryOptions } from "@/lib/staff-queries";
 
 type PassengerRow = {
-  customerEmail: string
-  customerName: string
-  passportNumber: string
-  purchaseDatetime: string
-  ticketId: number
+  customerEmail: string;
+  customerName: string;
+  passportNumber: string;
+  purchaseDatetime: string;
+  ticketId: number;
+};
+
+function getPassengerRowId(passenger: PassengerRow) {
+  return String(passenger.ticketId);
 }
 
 const passengerSearchParams = {
   flight: parseAsString.withDefault(""),
-}
+};
+const passengerFlightFilters = {
+  destination: "",
+  endDate: "",
+  source: "",
+  startDate: "1900-01-01",
+};
 
 export const Route = createFileRoute("/staff/_dashboard/passengers")({
   component: StaffPassengersPage,
-})
+});
 
 function formatDateShort(iso: string) {
-  const d = new Date(iso)
+  const d = new Date(iso);
   return d.toLocaleString("en-US", {
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-  })
+  });
 }
 
+function getFlightSelectionKey(flight: {
+  airlineName: string;
+  departureDatetime: string;
+  flightNumber: string;
+}) {
+  return `${flight.airlineName}::${flight.flightNumber}::${flight.departureDatetime}`;
+}
 function StaffPassengersPage() {
-  const { data } = useSuspenseQuery(staffDashboardQueryOptions())
-  const [{ flight: selectedFlightKey }, setSearchParams] = useQueryStates(
-    passengerSearchParams
-  )
+  const { data } = useSuspenseQuery(staffDashboardQueryOptions(passengerFlightFilters));
+  const [{ flight: selectedFlightKey }, setSearchParams] = useQueryStates(passengerSearchParams);
 
-  const selectedFlight = data.flights.find(
-    (f) => `${f.flightNumber}::${f.departureDatetime}` === selectedFlightKey
-  )
+  const selectedFlight = data.flights.find((f) => getFlightSelectionKey(f) === selectedFlightKey);
 
   const passengersQuery = useQuery({
     ...staffPassengersQueryOptions({
@@ -63,69 +73,57 @@ function StaffPassengersPage() {
       flightNumber: selectedFlight?.flightNumber ?? "",
     }),
     enabled: !!selectedFlight,
-  })
+  });
 
-  const passengers = passengersQuery.data ?? []
+  const passengers = passengersQuery.data ?? [];
   const columns = useMemo<Array<ColumnDef<PassengerRow>>>(
     () => [
-    {
-      accessorKey: "ticketId",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Ticket" />
-      ),
-      cell: ({ row }) => (
-        <span className="font-medium tabular-nums">#{row.original.ticketId}</span>
-      ),
-    },
-    {
-      accessorKey: "customerName",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Name" />
-      ),
-    },
-    {
-      accessorKey: "customerEmail",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Email" />
-      ),
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {row.original.customerEmail}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "passportNumber",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Passport" />
-      ),
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {row.original.passportNumber}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "purchaseDatetime",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Purchased" />
-      ),
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {formatDateShort(row.original.purchaseDatetime)}
-        </span>
-      ),
-    },
-  ],
-    []
-  )
+      {
+        accessorKey: "ticketId",
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Ticket" />,
+        cell: ({ row }) => (
+          <span className="font-medium tabular-nums">#{row.original.ticketId}</span>
+        ),
+      },
+      {
+        accessorKey: "customerName",
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Name" />,
+      },
+      {
+        accessorKey: "customerEmail",
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Email" />,
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">{row.original.customerEmail}</span>
+        ),
+      },
+      {
+        accessorKey: "passportNumber",
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Passport" />,
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">{row.original.passportNumber}</span>
+        ),
+      },
+      {
+        accessorKey: "purchaseDatetime",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="Purchased" />
+        ),
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {formatDateShort(row.original.purchaseDatetime)}
+          </span>
+        ),
+      },
+    ],
+    [],
+  );
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
       <div>
         <h1 className="text-lg font-semibold">Passengers</h1>
         <p className="text-sm text-muted-foreground">
-          View passenger manifest for a flight
+          View passenger manifest for any flight in your staff scope
         </p>
       </div>
 
@@ -135,7 +133,7 @@ function StaffPassengersPage() {
           <Select
             value={selectedFlightKey}
             onValueChange={(value) => {
-              void setSearchParams({ flight: value ?? "" })
+              void setSearchParams({ flight: value ?? "" });
             }}
           >
             <SelectTrigger>
@@ -143,13 +141,13 @@ function StaffPassengersPage() {
             </SelectTrigger>
             <SelectContent>
               {data.flights.map((flight) => {
-                const key = `${flight.flightNumber}::${flight.departureDatetime}`
+                const key = getFlightSelectionKey(flight);
                 return (
                   <SelectItem key={key} value={key}>
-                    {flight.flightNumber} — {flight.departureAirportCode} →{" "}
+                    {flight.airlineName} · {flight.flightNumber} — {flight.departureAirportCode} →{" "}
                     {flight.arrivalAirportCode} ({formatDateShort(flight.departureDatetime)})
                   </SelectItem>
-                )
+                );
               })}
             </SelectContent>
           </Select>
@@ -175,6 +173,7 @@ function StaffPassengersPage() {
             data={passengers}
             emptyMessage="No passengers on this flight."
             enableVirtualization
+            getRowId={getPassengerRowId}
             searchPlaceholder="Search passengers..."
             queryPrefix="passengers"
           />
@@ -186,6 +185,5 @@ function StaffPassengersPage() {
         </>
       )}
     </div>
-  )
+  );
 }
-

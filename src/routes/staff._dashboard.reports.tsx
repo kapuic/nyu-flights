@@ -1,44 +1,46 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
-import { useMemo, useState } from "react"
-import { Star } from "lucide-react"
-import type { ColumnDef } from "@tanstack/react-table"
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { Star } from "lucide-react";
+import type { ColumnDef } from "@tanstack/react-table";
 
-import { DatePickerField } from "@/components/date-time-picker"
+import { DatePickerField } from "@/components/date-time-picker";
 import {
   DashboardDataTable,
   DashboardDataTableColumnHeader,
-} from "@/components/dashboard-data-table"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import {
-  staffDashboardQueryOptions,
-  staffReportQueryOptions,
-} from "@/lib/staff-queries"
+} from "@/components/dashboard-data-table";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { staffDashboardQueryOptions, staffReportQueryOptions } from "@/lib/staff-queries";
 
 type RatingRow = {
-  averageRating: number | null
-  comments: Array<string>
-  departureDatetime: string
-  flightNumber: string
-  reviewCount: number
+  airlineName: string;
+  averageRating: number | null;
+  comments: Array<string>;
+  departureDatetime: string;
+  flightNumber: string;
+  reviewCount: number;
+};
+
+function getRatingRowId(rating: RatingRow) {
+  return `${rating.airlineName}:${rating.flightNumber}:${rating.departureDatetime}`;
 }
 
 export const Route = createFileRoute("/staff/_dashboard/reports")({
   component: StaffReportsPage,
-})
+});
 
 function StaffReportsPage() {
-  const { data } = useSuspenseQuery(staffDashboardQueryOptions())
+  const { data } = useSuspenseQuery(staffDashboardQueryOptions());
 
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
-  const [reportError, setReportError] = useState<string | null>(null)
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [reportError, setReportError] = useState<string | null>(null);
   const [queryRange, setQueryRange] = useState<{
-    endDate: string
-    startDate: string
-  } | null>(null)
+    endDate: string;
+    startDate: string;
+  } | null>(null);
 
   const reportQuery = useQuery({
     ...staffReportQueryOptions({
@@ -46,96 +48,80 @@ function StaffReportsPage() {
       startDate: queryRange?.startDate ?? "",
     }),
     enabled: !!queryRange,
-  })
+  });
 
   function handleReportSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setReportError(null)
+    event.preventDefault();
+    setReportError(null);
     if (startDate && endDate) {
       if (new Date(startDate) > new Date(endDate)) {
-        setReportError("Start date must be on or before end date.")
-        setQueryRange(null)
-        return
+        setReportError("Start date must be on or before end date.");
+        setQueryRange(null);
+        return;
       }
-      setQueryRange({ startDate, endDate })
+      setQueryRange({ startDate, endDate });
     }
   }
 
-  const maxBarValue = Math.max(
-    ...data.monthlySales.map((month) => month.ticketsSold),
-    1
-  )
+  const maxBarValue = Math.max(...data.monthlySales.map((month) => month.ticketsSold), 1);
 
   const ratedFlights = useMemo(
     () => data.ratings.filter((rating) => rating.reviewCount > 0),
-    [data.ratings]
-  )
+    [data.ratings],
+  );
   const columns = useMemo<Array<ColumnDef<RatingRow>>>(
     () => [
-    {
-      accessorKey: "flightNumber",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Flight" />
-      ),
-      cell: ({ row }) => (
-        <span className="font-medium">{row.original.flightNumber}</span>
-      ),
-    },
-    {
-      accessorKey: "averageRating",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Rating" />
-      ),
-      cell: ({ row }) => (
-        <span className="inline-flex items-center gap-1 tabular-nums">
-          <Star className="size-3.5 fill-current text-amber-500" />
-          {row.original.averageRating?.toFixed(1) ?? "—"}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "reviewCount",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Reviews" />
-      ),
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground tabular-nums">
-          {row.original.reviewCount}
-        </span>
-      ),
-    },
-    {
-      id: "comments",
-      accessorFn: (row) => row.comments.join(" "),
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Comments" />
-      ),
-      cell: ({ row }) => {
-        if (row.original.comments.length === 0)
-          return <span className="text-sm text-muted-foreground">—</span>
-
-        return (
-          <div className="flex max-w-xs flex-col gap-1">
-            {row.original.comments.slice(0, 3).map((comment) => (
-              <span
-                key={comment}
-                className="truncate text-sm text-muted-foreground"
-              >
-                “{comment}”
-              </span>
-            ))}
-            {row.original.comments.length > 3 ? (
-              <span className="text-xs text-muted-foreground">
-                +{row.original.comments.length - 3} more
-              </span>
-            ) : null}
-          </div>
-        )
+      {
+        accessorKey: "flightNumber",
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Flight" />,
+        cell: ({ row }) => <span className="font-medium">{row.original.flightNumber}</span>,
       },
-    },
-  ],
-    []
-  )
+      {
+        accessorKey: "averageRating",
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Rating" />,
+        cell: ({ row }) => (
+          <span className="inline-flex items-center gap-1 tabular-nums">
+            <Star className="size-3.5 fill-current text-amber-500" />
+            {row.original.averageRating?.toFixed(1) ?? "—"}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "reviewCount",
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Reviews" />,
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground tabular-nums">
+            {row.original.reviewCount}
+          </span>
+        ),
+      },
+      {
+        id: "comments",
+        accessorFn: (row) => row.comments.join(" "),
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Comments" />,
+        cell: ({ row }) => {
+          if (row.original.comments.length === 0)
+            return <span className="text-sm text-muted-foreground">—</span>;
+
+          return (
+            <div className="flex max-w-xs flex-col gap-1">
+              {row.original.comments.slice(0, 3).map((comment) => (
+                <span key={comment} className="truncate text-sm text-muted-foreground">
+                  “{comment}”
+                </span>
+              ))}
+              {row.original.comments.length > 3 ? (
+                <span className="text-xs text-muted-foreground">
+                  +{row.original.comments.length - 3} more
+                </span>
+              ) : null}
+            </div>
+          );
+        },
+      },
+    ],
+    [],
+  );
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -193,25 +179,20 @@ function StaffReportsPage() {
               {reportError ? (
                 <p className="text-sm text-destructive">{reportError}</p>
               ) : reportQuery.isError ? (
-                <p className="text-sm text-destructive">
-                  Failed to load report.
-                </p>
+                <p className="text-sm text-destructive">Failed to load report.</p>
               ) : reportQuery.isLoading ? (
                 <p className="text-sm text-muted-foreground">Loading...</p>
               ) : reportQuery.data ? (
                 <div className="rounded-md border bg-muted/50 px-4 py-3">
                   {"error" in reportQuery.data && reportQuery.data.error ? (
-                    <p className="text-sm text-destructive">
-                      {reportQuery.data.error}
-                    </p>
+                    <p className="text-sm text-destructive">{reportQuery.data.error}</p>
                   ) : (
                     <p className="text-sm">
                       <span className="font-semibold tabular-nums">
                         {reportQuery.data.ticketsSold}
                       </span>{" "}
-                      ticket{reportQuery.data.ticketsSold !== 1 ? "s" : ""} sold
-                      between {reportQuery.data.startDate} and{" "}
-                      {reportQuery.data.endDate}
+                      ticket{reportQuery.data.ticketsSold !== 1 ? "s" : ""} sold between{" "}
+                      {reportQuery.data.startDate} and {reportQuery.data.endDate}
                     </p>
                   )}
                 </div>
@@ -231,7 +212,7 @@ function StaffReportsPage() {
           <div className="rounded-md border p-4">
             <div className="flex items-end gap-1.5" style={{ height: 160 }}>
               {data.monthlySales.map((month) => {
-                const percentage = (month.ticketsSold / maxBarValue) * 100
+                const percentage = (month.ticketsSold / maxBarValue) * 100;
                 return (
                   <div
                     key={month.month}
@@ -251,7 +232,7 @@ function StaffReportsPage() {
                       {month.ticketsSold}
                     </div>
                   </div>
-                )
+                );
               })}
             </div>
           </div>
@@ -265,11 +246,11 @@ function StaffReportsPage() {
           data={ratedFlights}
           emptyMessage="No ratings yet."
           enableVirtualization
+          getRowId={getRatingRowId}
           searchPlaceholder="Search ratings..."
           queryPrefix="ratings"
         />
       </div>
     </div>
-  )
+  );
 }
-

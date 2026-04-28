@@ -1,12 +1,5 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
-import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu"
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu";
 import {
   flexRender,
   getCoreRowModel,
@@ -16,9 +9,9 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table"
-import { useVirtualizer } from "@tanstack/react-virtual"
-import { parseAsInteger, parseAsString, useQueryStates } from "nuqs"
+} from "@tanstack/react-table";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -29,9 +22,9 @@ import {
   Loader2Icon,
   SearchIcon,
   XIcon,
-} from "lucide-react"
-import type { ReactNode } from "react"
-import type { VirtualItem } from "@tanstack/react-virtual"
+} from "lucide-react";
+import type { ReactNode } from "react";
+import type { VirtualItem } from "@tanstack/react-virtual";
 import type {
   Column,
   ColumnDef,
@@ -42,10 +35,10 @@ import type {
   RowSelectionState,
   SortingState,
   VisibilityState,
-} from "@tanstack/react-table"
+} from "@tanstack/react-table";
 
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -53,7 +46,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -62,9 +55,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { DateTimePickerField } from "@/components/date-time-picker"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { DateTimePickerField } from "@/components/date-time-picker";
 import {
   Table,
   TableBody,
@@ -72,82 +65,81 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 export type DashboardDataTableFilterOption = {
-  label: string
-  value: string
-}
+  label: string;
+  value: string;
+};
 
 export type DashboardDataTableInlineSelectOption<TValue extends string> = {
-  label: string
-  value: TValue
-}
+  label: string;
+  value: TValue;
+};
 type DashboardDataTableInlineTextCellProps = {
-  ariaLabel: string
-  className?: string
-  disabled?: boolean
-  formatValue?: (value: string) => ReactNode
-  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"]
-  onSave: (value: string) => Promise<void> | void
-  placeholder?: string
-  type?: React.HTMLInputTypeAttribute
-  value: string
-}
+  ariaLabel: string;
+  className?: string;
+  disabled?: boolean;
+  formatValue?: (value: string) => ReactNode;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  onSave: (value: string) => Promise<void> | void;
+  placeholder?: string;
+  type?: React.HTMLInputTypeAttribute;
+  value: string;
+};
 
 type DashboardDataTableInlineDateTimeCellProps = {
-  ariaLabel: string
-  className?: string
-  disabled?: boolean
-  formatValue?: (value: string) => ReactNode
-  onSave: (value: string) => Promise<void> | void
-  value: string
-}
-
+  ariaLabel: string;
+  className?: string;
+  disabled?: boolean;
+  formatValue?: (value: string) => ReactNode;
+  onSave: (value: string) => Promise<void> | void;
+  value: string;
+};
 
 type DashboardDataTableBulkAction<TData> = {
-  label: string
-  onSelect: (rows: Array<TData>) => Promise<void> | void
-}
+  label: string;
+  onSelect: (rows: Array<TData>) => Promise<void> | void;
+};
 
 type DashboardDataTableRowAction<TData> = {
-  label: string
-  onSelect: (rows: Array<TData>) => Promise<void> | void
-}
+  label: string;
+  onSelect: (rows: Array<TData>) => Promise<void> | void;
+};
 
 type DashboardDataTableFilter = {
-  columnId: string
-  label: string
-  options: Array<DashboardDataTableFilterOption>
-}
+  columnId: string;
+  label: string;
+  options: Array<DashboardDataTableFilterOption>;
+};
 
 type DashboardDataTableProps<TData, TValue> = {
-  bulkActions?: Array<DashboardDataTableBulkAction<TData>>
-  columns: Array<ColumnDef<TData, TValue>>
-  data: Array<TData>
-  emptyMessage: string
-  enableRowSelection?: boolean
-  enableVirtualization?: boolean
-  filters?: Array<DashboardDataTableFilter>
-  globalFilterFn?: "auto" | "includesString"
-  queryPrefix?: string
-  rowActions?: Array<DashboardDataTableRowAction<TData>>
-  searchPlaceholder?: string
-}
+  bulkActions?: Array<DashboardDataTableBulkAction<TData>>;
+  columns: Array<ColumnDef<TData, TValue>>;
+  data: Array<TData>;
+  emptyMessage: string;
+  enableRowSelection?: boolean;
+  enableVirtualization?: boolean;
+  filters?: Array<DashboardDataTableFilter>;
+  globalFilterFn?: "auto" | "includesString";
+  queryPrefix?: string;
+  getRowId?: (originalRow: TData, index: number, parent?: Row<TData>) => string;
+  rowActions?: Array<DashboardDataTableRowAction<TData>>;
+  searchPlaceholder?: string;
+};
 
 type DashboardDataTableFilterContextValue = {
-  filtersByColumnId: Map<string, DashboardDataTableFilter>
-}
+  filtersByColumnId: Map<string, DashboardDataTableFilter>;
+};
 
-const DashboardDataTableFilterContext =
-  createContext<DashboardDataTableFilterContextValue>({
-    filtersByColumnId: new Map(),
-  })
+const DashboardDataTableFilterContext = createContext<DashboardDataTableFilterContextValue>({
+  filtersByColumnId: new Map(),
+});
 
 function getQueryKey(prefix: string, key: string) {
-  if (!prefix) return key
-  return `${prefix}${key.charAt(0).toUpperCase()}${key.slice(1)}`
+  if (!prefix) return key;
+  return `${prefix}${key.charAt(0).toUpperCase()}${key.slice(1)}`;
 }
 
 export function DashboardDataTable<TData, TValue>({
@@ -158,6 +150,7 @@ export function DashboardDataTable<TData, TValue>({
   enableRowSelection = false,
   enableVirtualization = false,
   filters = [],
+  getRowId,
   globalFilterFn = "includesString",
   queryPrefix = "",
   rowActions = [],
@@ -171,79 +164,94 @@ export function DashboardDataTable<TData, TValue>({
       [getQueryKey(queryPrefix, "q")]: parseAsString.withDefault(""),
       [getQueryKey(queryPrefix, "sort")]: parseAsString.withDefault(""),
     }),
-    [queryPrefix]
-  )
-  const [query, setQuery] = useQueryStates(queryParsers)
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
-  const tableContainerRef = useRef<HTMLDivElement>(null)
+    [queryPrefix],
+  );
+  const [query, setQuery] = useQueryStates(queryParsers);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const tableContainerRef = useRef<HTMLDivElement>(null);
 
-  const dirKey = getQueryKey(queryPrefix, "dir")
-  const pageKey = getQueryKey(queryPrefix, "page")
-  const pageSizeKey = getQueryKey(queryPrefix, "pageSize")
-  const qKey = getQueryKey(queryPrefix, "q")
-  const sortKey = getQueryKey(queryPrefix, "sort")
+  const dirKey = getQueryKey(queryPrefix, "dir");
+  const pageKey = getQueryKey(queryPrefix, "page");
+  const pageSizeKey = getQueryKey(queryPrefix, "pageSize");
+  const qKey = getQueryKey(queryPrefix, "q");
+  const sortKey = getQueryKey(queryPrefix, "sort");
 
-  const page = Math.max(1, Number(query[pageKey]))
-  const pageSize = Math.max(1, Number(query[pageSizeKey]))
-  const search = String(query[qKey] ?? "")
-  const sort = String(query[sortKey] ?? "")
-  const dir = String(query[dirKey] ?? "asc")
+  const page = Math.max(1, Number(query[pageKey]));
+  const pageSize = Math.max(1, Number(query[pageSizeKey]));
+  const search = String(query[qKey] ?? "");
+  const sort = String(query[sortKey] ?? "");
+  const dir = String(query[dirKey] ?? "asc");
 
   const sorting = useMemo<SortingState>(() => {
-    if (!sort) return []
-    return [{ id: sort, desc: dir === "desc" }]
-  }, [dir, sort])
+    if (!sort) return [];
+    return [{ id: sort, desc: dir === "desc" }];
+  }, [dir, sort]);
 
   const pagination = useMemo<PaginationState>(
     () => ({ pageIndex: page - 1, pageSize }),
-    [page, pageSize]
-  )
+    [page, pageSize],
+  );
 
   const handleSortingChange: OnChangeFn<SortingState> = (updater) => {
-    const nextSorting =
-      typeof updater === "function" ? updater(sorting) : updater
-    const [next] = nextSorting as Array<SortingState[number] | undefined>
+    const nextSorting = typeof updater === "function" ? updater(sorting) : updater;
+    const [next] = nextSorting as Array<SortingState[number] | undefined>;
     if (!next) {
       void setQuery({
         [dirKey]: "asc",
         [pageKey]: 1,
         [sortKey]: "",
-      })
-      return
+      });
+      return;
     }
 
     void setQuery({
       [dirKey]: next.desc ? "desc" : "asc",
       [pageKey]: 1,
       [sortKey]: next.id,
-    })
-  }
+    });
+  };
 
   const handlePaginationChange: OnChangeFn<PaginationState> = (updater) => {
-    const nextPagination =
-      typeof updater === "function" ? updater(pagination) : updater
+    const nextPagination = typeof updater === "function" ? updater(pagination) : updater;
     void setQuery({
       [pageKey]: nextPagination.pageIndex + 1,
       [pageSizeKey]: nextPagination.pageSize,
-    })
-  }
+    });
+  };
 
   const selectColumn = useMemo<ColumnDef<TData, TValue>>(
     () => ({
       id: "select",
       enableHiding: false,
       enableSorting: false,
-      header: ({ table }) => (
-        <Checkbox
-          aria-label="Select all visible rows"
-          checked={table.getIsAllPageRowsSelected()}
-          onCheckedChange={(value) =>
-            table.toggleAllPageRowsSelected(Boolean(value))
-          }
-        />
-      ),
+      header: ({ table }) => {
+        const allRowsSelected = enableVirtualization
+          ? table.getIsAllRowsSelected()
+          : table.getIsAllPageRowsSelected();
+        const someRowsSelected = enableVirtualization
+          ? table.getIsSomeRowsSelected()
+          : table.getIsSomePageRowsSelected();
+
+        return (
+          <Checkbox
+            aria-label={
+              enableVirtualization ? "Select all filtered rows" : "Select all visible rows"
+            }
+            checked={allRowsSelected}
+            data-indeterminate={someRowsSelected && !allRowsSelected ? "" : undefined}
+            onCheckedChange={(value) => {
+              if (enableVirtualization) {
+                table.toggleAllRowsSelected(Boolean(value));
+                return;
+              }
+
+              table.toggleAllPageRowsSelected(Boolean(value));
+            }}
+          />
+        );
+      },
       cell: ({ row }) => (
         <Checkbox
           aria-label="Select row"
@@ -252,18 +260,18 @@ export function DashboardDataTable<TData, TValue>({
         />
       ),
     }),
-    []
-  )
+    [enableVirtualization],
+  );
 
   const tableColumns = useMemo(
     () => (enableRowSelection ? [selectColumn, ...columns] : columns),
-    [columns, enableRowSelection, selectColumn]
-  )
+    [columns, enableRowSelection, selectColumn],
+  );
 
   const filtersByColumnId = useMemo(
     () => new Map(filters.map((filter) => [filter.columnId, filter])),
-    [filters]
-  )
+    [filters],
+  );
 
   const table = useReactTable({
     columns: tableColumns,
@@ -273,12 +281,16 @@ export function DashboardDataTable<TData, TValue>({
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
     getFilteredRowModel: getFilteredRowModel(),
+    getRowId,
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    onColumnFiltersChange: setColumnFilters,
+    onColumnFiltersChange: (updater) => {
+      setColumnFilters(updater);
+      void setQuery({ [pageKey]: 1 });
+    },
     onColumnVisibilityChange: setColumnVisibility,
     onGlobalFilterChange: (value) => {
-      void setQuery({ [pageKey]: 1, [qKey]: String(value) })
+      void setQuery({ [pageKey]: 1, [qKey]: String(value) });
     },
     onPaginationChange: handlePaginationChange,
     onRowSelectionChange: setRowSelection,
@@ -291,47 +303,42 @@ export function DashboardDataTable<TData, TValue>({
       rowSelection,
       sorting,
     },
-  })
+  });
 
   useEffect(() => {
-    const pageCount = table.getPageCount()
-    if (pageCount === 0 || page <= pageCount) return
-    void setQuery({ [pageKey]: pageCount })
-  }, [page, pageKey, setQuery, table])
+    const pageCount = table.getPageCount();
+    if (pageCount === 0 || page <= pageCount) return;
+    void setQuery({ [pageKey]: pageCount });
+  }, [page, pageKey, setQuery, table]);
 
-  const visibleColumnCount = table.getVisibleLeafColumns().length
+  const visibleColumnCount = table.getVisibleLeafColumns().length;
   const rows = enableVirtualization
     ? table.getPrePaginationRowModel().rows
-    : table.getRowModel().rows
+    : table.getRowModel().rows;
   const virtualizer = useVirtualizer({
     count: rows.length,
     enabled: enableVirtualization,
     estimateSize: () => 56,
     getScrollElement: () => tableContainerRef.current,
     overscan: 8,
-  })
-  const virtualRows = enableVirtualization ? virtualizer.getVirtualItems() : []
-  const selectedRows = table
-    .getFilteredSelectedRowModel()
-    .rows.map((row) => row.original)
-  const hasFilters = columnFilters.length > 0 || search.length > 0
+  });
+  const virtualRows = enableVirtualization ? virtualizer.getVirtualItems() : [];
+  const selectedRows = table.getFilteredSelectedRowModel().rows.map((row) => row.original);
+  const hasFilters = columnFilters.length > 0 || search.length > 0;
 
   function getContextRows(row: Row<TData>) {
-    if (enableRowSelection && row.getIsSelected()) return selectedRows
-    return [row.original]
+    if (enableRowSelection && row.getIsSelected()) return selectedRows;
+    return [row.original];
   }
 
-  async function runRowAction(
-    action: DashboardDataTableRowAction<TData>,
-    row: Row<TData>
-  ) {
-    await action.onSelect(getContextRows(row))
-    setRowSelection({})
+  async function runRowAction(action: DashboardDataTableRowAction<TData>, row: Row<TData>) {
+    await action.onSelect(getContextRows(row));
+    setRowSelection({});
   }
 
   function clearFilters() {
-    setColumnFilters([])
-    void setQuery({ [pageKey]: 1, [qKey]: "" })
+    setColumnFilters([]);
+    void setQuery({ [pageKey]: 1, [qKey]: "" });
   }
 
   return (
@@ -351,8 +358,7 @@ export function DashboardDataTable<TData, TValue>({
             {enableRowSelection && selectedRows.length > 0 ? (
               <>
                 <span className="text-sm text-muted-foreground">
-                  {selectedRows.length} of{" "}
-                  {table.getFilteredRowModel().rows.length} selected
+                  {selectedRows.length} of {table.getFilteredRowModel().rows.length} selected
                 </span>
                 {bulkActions.map((action) => (
                   <Button
@@ -360,18 +366,14 @@ export function DashboardDataTable<TData, TValue>({
                     variant="outline"
                     size="sm"
                     onClick={async () => {
-                      await action.onSelect(selectedRows)
-                      setRowSelection({})
+                      await action.onSelect(selectedRows);
+                      setRowSelection({});
                     }}
                   >
                     {action.label}
                   </Button>
                 ))}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setRowSelection({})}
-                >
+                <Button variant="ghost" size="sm" onClick={() => setRowSelection({})}>
                   Clear selection
                 </Button>
               </>
@@ -383,9 +385,7 @@ export function DashboardDataTable<TData, TValue>({
               </Button>
             ) : null}
             <DropdownMenu>
-              <DropdownMenuTrigger
-                render={<Button variant="outline" size="sm" />}
-              >
+              <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
                 <Columns3Icon data-icon="inline-start" />
                 Columns
               </DropdownMenuTrigger>
@@ -400,9 +400,7 @@ export function DashboardDataTable<TData, TValue>({
                       <DropdownMenuCheckboxItem
                         key={column.id}
                         checked={column.getIsVisible()}
-                        onCheckedChange={(value) =>
-                          column.toggleVisibility(Boolean(value))
-                        }
+                        onCheckedChange={(value) => column.toggleVisibility(Boolean(value))}
                       >
                         {getColumnLabel(column)}
                       </DropdownMenuCheckboxItem>
@@ -417,7 +415,7 @@ export function DashboardDataTable<TData, TValue>({
           ref={tableContainerRef}
           className={cn(
             "overflow-auto rounded-md border",
-            enableVirtualization && "max-h-[calc(100svh-13rem)] min-h-0"
+            enableVirtualization && "max-h-[calc(100svh-13rem)] min-h-0",
           )}
         >
           <Table>
@@ -425,16 +423,10 @@ export function DashboardDataTable<TData, TValue>({
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="hover:bg-transparent">
                   {headerGroup.headers.map((header) => (
-                    <TableHead
-                      key={header.id}
-                      style={{ width: header.getSize() }}
-                    >
+                    <TableHead key={header.id} style={{ width: header.getSize() }}>
                       {header.isPlaceholder
                         ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                        : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   ))}
                 </TableRow>
@@ -447,9 +439,7 @@ export function DashboardDataTable<TData, TValue>({
                     colSpan={visibleColumnCount}
                     className="h-24 text-center text-muted-foreground"
                   >
-                    {data.length === 0
-                      ? emptyMessage
-                      : "No rows match this search."}
+                    {data.length === 0 ? emptyMessage : "No rows match this search."}
                   </TableCell>
                 </TableRow>
               ) : enableVirtualization ? (
@@ -476,8 +466,7 @@ export function DashboardDataTable<TData, TValue>({
 
         <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <div>
-            Showing {rows.length} of {table.getFilteredRowModel().rows.length}{" "}
-            rows
+            Showing {rows.length} of {table.getFilteredRowModel().rows.length} rows
           </div>
           {!enableVirtualization ? (
             <div className="flex items-center gap-2">
@@ -506,31 +495,31 @@ export function DashboardDataTable<TData, TValue>({
         </div>
       </div>
     </DashboardDataTableFilterContext.Provider>
-  )
+  );
 }
 
 type DashboardDataTableColumnHeaderProps<TData, TValue> = {
-  className?: string
-  column: Column<TData, TValue>
-  title: string
-}
+  className?: string;
+  column: Column<TData, TValue>;
+  title: string;
+};
 
 export function DashboardDataTableColumnHeader<TData, TValue>({
   className,
   column,
   title,
 }: DashboardDataTableColumnHeaderProps<TData, TValue>) {
-  const { filtersByColumnId } = useContext(DashboardDataTableFilterContext)
-  const filter = filtersByColumnId.get(column.id)
-  const isSorted = column.getIsSorted()
+  const { filtersByColumnId } = useContext(DashboardDataTableFilterContext);
+  const filter = filtersByColumnId.get(column.id);
+  const isSorted = column.getIsSorted();
 
   function toggleSorting() {
     if (isSorted === "desc") {
-      column.clearSorting()
-      return
+      column.clearSorting();
+      return;
     }
 
-    column.toggleSorting(isSorted === "asc")
+    column.toggleSorting(isSorted === "asc");
   }
 
   return (
@@ -561,17 +550,17 @@ export function DashboardDataTableColumnHeader<TData, TValue>({
         />
       ) : null}
     </div>
-  )
+  );
 }
 
 function getColumnLabel<TData, TValue>(column: Column<TData, TValue>) {
-  const header = column.columnDef.header
-  if (typeof header === "string") return header
+  const header = column.columnDef.header;
+  if (typeof header === "string") return header;
 
   return column.id
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .replace(/[_-]+/g, " ")
-    .replace(/^./, (letter) => letter.toUpperCase())
+    .replace(/^./, (letter) => letter.toUpperCase());
 }
 
 function DashboardDataTableRow<TData>({
@@ -579,12 +568,9 @@ function DashboardDataTableRow<TData>({
   rowActions,
   runRowAction,
 }: {
-  row: Row<TData>
-  rowActions: Array<DashboardDataTableRowAction<TData>>
-  runRowAction: (
-    action: DashboardDataTableRowAction<TData>,
-    row: Row<TData>
-  ) => Promise<void>
+  row: Row<TData>;
+  rowActions: Array<DashboardDataTableRowAction<TData>>;
+  runRowAction: (action: DashboardDataTableRowAction<TData>, row: Row<TData>) => Promise<void>;
 }) {
   function renderRow() {
     return (
@@ -595,10 +581,10 @@ function DashboardDataTableRow<TData>({
           </TableCell>
         ))}
       </TableRow>
-    )
+    );
   }
 
-  if (rowActions.length === 0) return renderRow()
+  if (rowActions.length === 0) return renderRow();
 
   return (
     <ContextMenuPrimitive.Root>
@@ -621,7 +607,7 @@ function DashboardDataTableRow<TData>({
         </ContextMenuPrimitive.Positioner>
       </ContextMenuPrimitive.Portal>
     </ContextMenuPrimitive.Root>
-  )
+  );
 }
 
 export function DashboardDataTableInlineTextCell({
@@ -635,32 +621,32 @@ export function DashboardDataTableInlineTextCell({
   type = "text",
   value,
 }: DashboardDataTableInlineTextCellProps) {
-  const [draft, setDraft] = useState(value)
-  const [error, setError] = useState("")
-  const [editing, setEditing] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const [draft, setDraft] = useState(value);
+  const [error, setError] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!editing) setDraft(value)
-  }, [editing, value])
+    if (!editing) setDraft(value);
+  }, [editing, value]);
 
   async function save(nextValue = draft) {
-    const normalized = nextValue.trim()
+    const normalized = nextValue.trim();
     if (normalized === value) {
-      setEditing(false)
-      return
+      setEditing(false);
+      return;
     }
 
-    setSaving(true)
-    setError("")
+    setSaving(true);
+    setError("");
     try {
-      await onSave(normalized)
-      setEditing(false)
+      await onSave(normalized);
+      setEditing(false);
     } catch (err) {
-      setDraft(value)
-      setError(err instanceof Error ? err.message : "Failed to save.")
+      setDraft(value);
+      setError(err instanceof Error ? err.message : "Failed to save.");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
@@ -681,7 +667,7 @@ export function DashboardDataTableInlineTextCell({
         </Button>
         {error ? <p className="text-xs text-destructive">{error}</p> : null}
       </div>
-    )
+    );
   }
 
   return (
@@ -697,17 +683,17 @@ export function DashboardDataTableInlineTextCell({
         onBlur={() => void save()}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === "Enter") void save()
+          if (event.key === "Enter") void save();
           if (event.key === "Escape") {
-            setDraft(value)
-            setEditing(false)
+            setDraft(value);
+            setEditing(false);
           }
         }}
         className="h-8 min-w-28 px-1.5"
       />
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
-  )
+  );
 }
 
 export function DashboardDataTableInlineDateTimeCell({
@@ -718,31 +704,31 @@ export function DashboardDataTableInlineDateTimeCell({
   onSave,
   value,
 }: DashboardDataTableInlineDateTimeCellProps) {
-  const [draft, setDraft] = useState(value)
-  const [error, setError] = useState("")
-  const [editing, setEditing] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const [draft, setDraft] = useState(value);
+  const [error, setError] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!editing) setDraft(value)
-  }, [editing, value])
+    if (!editing) setDraft(value);
+  }, [editing, value]);
 
   async function save() {
     if (draft === value) {
-      setEditing(false)
-      return
+      setEditing(false);
+      return;
     }
 
-    setSaving(true)
-    setError("")
+    setSaving(true);
+    setError("");
     try {
-      await onSave(draft)
-      setEditing(false)
+      await onSave(draft);
+      setEditing(false);
     } catch (err) {
-      setDraft(value)
-      setError(err instanceof Error ? err.message : "Failed to save.")
+      setDraft(value);
+      setError(err instanceof Error ? err.message : "Failed to save.");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
@@ -763,7 +749,7 @@ export function DashboardDataTableInlineDateTimeCell({
         </Button>
         {error ? <p className="text-xs text-destructive">{error}</p> : null}
       </div>
-    )
+    );
   }
 
   return (
@@ -775,12 +761,7 @@ export function DashboardDataTableInlineDateTimeCell({
         placeholder="Pick arrival time"
       />
       <div className="flex items-center gap-1">
-        <Button
-          type="button"
-          size="xs"
-          disabled={disabled || saving}
-          onClick={() => void save()}
-        >
+        <Button type="button" size="xs" disabled={disabled || saving} onClick={() => void save()}>
           Save
         </Button>
         <Button
@@ -789,8 +770,8 @@ export function DashboardDataTableInlineDateTimeCell({
           variant="ghost"
           disabled={saving}
           onClick={() => {
-            setDraft(value)
-            setEditing(false)
+            setDraft(value);
+            setEditing(false);
           }}
         >
           Cancel
@@ -798,18 +779,18 @@ export function DashboardDataTableInlineDateTimeCell({
       </div>
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
-  )
+  );
 }
 
 type DashboardDataTableInlineSelectCellProps<TValue extends string> = {
-  ariaLabel: string
-  className?: string
-  disabled?: boolean
-  onSave: (value: TValue) => Promise<void> | void
-  options: Array<DashboardDataTableInlineSelectOption<TValue>>
-  renderValue?: (value: TValue) => ReactNode
-  value: TValue
-}
+  ariaLabel: string;
+  className?: string;
+  disabled?: boolean;
+  onSave: (value: TValue) => Promise<void> | void;
+  options: Array<DashboardDataTableInlineSelectOption<TValue>>;
+  renderValue?: (value: TValue) => ReactNode;
+  value: TValue;
+};
 
 export function DashboardDataTableInlineSelectCell<TValue extends string>({
   ariaLabel,
@@ -820,42 +801,37 @@ export function DashboardDataTableInlineSelectCell<TValue extends string>({
   renderValue,
   value,
 }: DashboardDataTableInlineSelectCellProps<TValue>) {
-  const [draft, setDraft] = useState<TValue>(value)
-  const [error, setError] = useState("")
-  const [open, setOpen] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const [draft, setDraft] = useState<TValue>(value);
+  const [error, setError] = useState("");
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!open) setDraft(value)
-  }, [open, value])
+    if (!open) setDraft(value);
+  }, [open, value]);
 
   async function handleValueChange(nextValue: TValue | Array<TValue> | null) {
-    if (!nextValue || Array.isArray(nextValue)) return
+    if (!nextValue || Array.isArray(nextValue)) return;
 
-    setDraft(nextValue)
-    if (nextValue === value) return
+    setDraft(nextValue);
+    if (nextValue === value) return;
 
-    setSaving(true)
-    setError("")
+    setSaving(true);
+    setError("");
     try {
-      await onSave(nextValue)
-      setOpen(false)
+      await onSave(nextValue);
+      setOpen(false);
     } catch (err) {
-      setDraft(value)
-      setError(err instanceof Error ? err.message : "Failed to save.")
+      setDraft(value);
+      setError(err instanceof Error ? err.message : "Failed to save.");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
   return (
     <div className={cn("flex min-w-32 flex-col items-start gap-1", className)}>
-      <Select
-        open={open}
-        value={draft}
-        onOpenChange={setOpen}
-        onValueChange={handleValueChange}
-      >
+      <Select open={open} value={draft} onOpenChange={setOpen} onValueChange={handleValueChange}>
         <SelectTrigger
           aria-label={ariaLabel}
           disabled={disabled || saving}
@@ -876,19 +852,16 @@ export function DashboardDataTableInlineSelectCell<TValue extends string>({
       </Select>
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
-  )
+  );
 }
 
 type VirtualizedRowsProps<TData> = {
-  rowActions: Array<DashboardDataTableRowAction<TData>>
-  rows: Array<Row<TData>>
-  runRowAction: (
-    action: DashboardDataTableRowAction<TData>,
-    row: Row<TData>
-  ) => Promise<void>
-  totalSize: number
-  virtualRows: Array<VirtualItem>
-}
+  rowActions: Array<DashboardDataTableRowAction<TData>>;
+  rows: Array<Row<TData>>;
+  runRowAction: (action: DashboardDataTableRowAction<TData>, row: Row<TData>) => Promise<void>;
+  totalSize: number;
+  virtualRows: Array<VirtualItem>;
+};
 
 function VirtualizedRows<TData>({
   rowActions,
@@ -897,12 +870,12 @@ function VirtualizedRows<TData>({
   totalSize,
   virtualRows,
 }: VirtualizedRowsProps<TData>) {
-  if (virtualRows.length === 0) return null
+  if (virtualRows.length === 0) return null;
 
-  const firstVirtualRow = virtualRows[0]
-  const lastVirtualRow = virtualRows[virtualRows.length - 1]
-  const paddingTop = firstVirtualRow.start
-  const paddingBottom = Math.max(0, totalSize - lastVirtualRow.end)
+  const firstVirtualRow = virtualRows[0];
+  const lastVirtualRow = virtualRows[virtualRows.length - 1];
+  const paddingTop = firstVirtualRow.start;
+  const paddingBottom = Math.max(0, totalSize - lastVirtualRow.end);
 
   return (
     <>
@@ -915,7 +888,7 @@ function VirtualizedRows<TData>({
         </TableRow>
       ) : null}
       {virtualRows.map((virtualRow) => {
-        const row = rows[virtualRow.index]
+        const row = rows[virtualRow.index];
         return (
           <DashboardDataTableRow
             key={virtualRow.key}
@@ -923,7 +896,7 @@ function VirtualizedRows<TData>({
             rowActions={rowActions}
             runRowAction={runRowAction}
           />
-        )
+        );
       })}
       {paddingBottom > 0 ? (
         <TableRow aria-hidden="true">
@@ -934,7 +907,7 @@ function VirtualizedRows<TData>({
         </TableRow>
       ) : null}
     </>
-  )
+  );
 }
 
 function DashboardDataTableFacetedFilter<TData, TValue>({
@@ -942,16 +915,14 @@ function DashboardDataTableFacetedFilter<TData, TValue>({
   label,
   options,
 }: {
-  column: Column<TData, TValue>
-  label: string
-  options: Array<DashboardDataTableFilterOption>
+  column: Column<TData, TValue>;
+  label: string;
+  options: Array<DashboardDataTableFilterOption>;
 }) {
   const selectedValues = new Set(
-    Array.isArray(column.getFilterValue())
-      ? (column.getFilterValue() as Array<string>)
-      : []
-  )
-  const facetedValues = column.getFacetedUniqueValues()
+    Array.isArray(column.getFilterValue()) ? (column.getFilterValue() as Array<string>) : [],
+  );
+  const facetedValues = column.getFacetedUniqueValues();
 
   return (
     <DropdownMenu>
@@ -973,33 +944,29 @@ function DashboardDataTableFacetedFilter<TData, TValue>({
           <DropdownMenuLabel>{label} is</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {options.map((option) => {
-            const isSelected = selectedValues.has(option.value)
-            const count = facetedValues.get(option.value) ?? 0
+            const isSelected = selectedValues.has(option.value);
+            const count = facetedValues.get(option.value) ?? 0;
             return (
               <DropdownMenuCheckboxItem
                 key={option.value}
                 checked={isSelected}
                 onCheckedChange={(checked) => {
-                  const next = new Set(selectedValues)
-                  if (checked) next.add(option.value)
-                  else next.delete(option.value)
-                  column.setFilterValue(
-                    next.size ? Array.from(next) : undefined
-                  )
+                  const next = new Set(selectedValues);
+                  if (checked) next.add(option.value);
+                  else next.delete(option.value);
+                  column.setFilterValue(next.size ? Array.from(next) : undefined);
                 }}
               >
                 <span className="flex min-w-0 flex-1 items-center gap-2">
                   {isSelected ? <CheckIcon data-icon="inline-start" /> : null}
                   <span className="truncate">{option.label}</span>
                 </span>
-                <span className="ms-auto text-xs text-muted-foreground tabular-nums">
-                  {count}
-                </span>
+                <span className="ms-auto text-xs text-muted-foreground tabular-nums">{count}</span>
               </DropdownMenuCheckboxItem>
-            )
+            );
           })}
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }

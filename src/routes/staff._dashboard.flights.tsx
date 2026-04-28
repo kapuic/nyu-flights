@@ -1,63 +1,52 @@
-import { createFileRoute, getRouteApi, useRouter } from "@tanstack/react-router"
-import {
-  useQuery,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query"
-import { useForm } from "@tanstack/react-form"
-import { useCallback, useMemo, useState } from "react"
-import {
-  AlertTriangleIcon,
-  CircleCheckIcon,
-  Plus,
-  Trash2Icon,
-} from "lucide-react"
-import { toast } from "sonner"
-import type { ColumnDef } from "@tanstack/react-table"
+import { createFileRoute, getRouteApi, useRouter } from "@tanstack/react-router";
+import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useForm } from "@tanstack/react-form";
+import { parseAsString, useQueryStates } from "nuqs";
+import { useCallback, useMemo, useState } from "react";
+import { AlertTriangleIcon, CircleCheckIcon, Plus, Trash2Icon } from "lucide-react";
+import { toast } from "sonner";
+import type { ColumnDef } from "@tanstack/react-table";
 
 import type {
   DashboardDataTableFilterOption,
   DashboardDataTableInlineSelectOption,
-} from "@/components/dashboard-data-table"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { CountryFlag } from "@/components/country-flag"
+} from "@/components/dashboard-data-table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { CountryFlag } from "@/components/country-flag";
 import {
   DashboardDataTable,
   DashboardDataTableColumnHeader,
   DashboardDataTableInlineDateTimeCell,
   DashboardDataTableInlineSelectCell,
   DashboardDataTableInlineTextCell,
-} from "@/components/dashboard-data-table"
+} from "@/components/dashboard-data-table";
 
-import { Input } from "@/components/ui/input"
+import { Input } from "@/components/ui/input";
 import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field"
-import {
-  AirplaneComboboxField,
-  AirportComboboxField,
-} from "@/components/combobox-fields"
-import { DateTimePickerField } from "@/components/date-time-picker"
-import {
-  DeleteConfirmation,
-  useDeleteConfirmation,
-} from "@/components/delete-confirmation"
-import { DialogGlobe } from "@/components/dialog-globe"
-import { ResponsiveModal } from "@/components/responsive-modal"
-import { isAdminOrAbove } from "@/lib/staff-permissions"
-import { createFlightSchema } from "@/lib/schemas"
-import { staffDashboardQueryOptions } from "@/lib/staff-queries"
-import { getAirportOption } from "@/lib/airports"
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { AirplaneComboboxField, AirportComboboxField } from "@/components/combobox-fields";
+import { DateTimePickerField } from "@/components/date-time-picker";
+import { DeleteConfirmation, useDeleteConfirmation } from "@/components/delete-confirmation";
+import { DialogGlobe } from "@/components/dialog-globe";
+import { ResponsiveModal } from "@/components/responsive-modal";
+import { isAdminOrAbove } from "@/lib/staff-permissions";
+import { staffDashboardQueryOptions } from "@/lib/staff-queries";
+import { getAirportOption } from "@/lib/airports";
 import {
   createFlightFn,
   deleteFlightFn,
   listDbAirportsFn,
+  listReferenceDataFn,
   updateFlightFieldFn,
-} from "@/lib/queries"
+} from "@/lib/queries";
 
 type EditableFlightField =
   | "airplaneId"
@@ -65,223 +54,218 @@ type EditableFlightField =
   | "arrivalDatetime"
   | "basePrice"
   | "departureAirportCode"
-  | "status"
+  | "departureDatetime"
+  | "status";
 
 type FlightRow = {
-  airlineName: string
-  airplaneId: string
-  arrivalAirportCode: string
-  arrivalAirportName: string
-  arrivalCity: string
-  arrivalDatetime: string
-  averageRating: number | null
-  availableSeats: number
-  basePrice: number
-  departureAirportCode: string
-  departureAirportName: string
-  departureCity: string
-  departureDatetime: string
-  flightNumber: string
-  reviewCount: number
-  status: "on_time" | "delayed"
-  ticketCount: number
-}
-function shouldShowFieldError(
-  meta: { isTouched: boolean; isValid: boolean },
-  submissionAttempts: number
-) {
-  return (meta.isTouched || submissionAttempts > 0) && !meta.isValid
-}
+  airlineName: string;
+  airplaneId: string;
+  arrivalAirportCode: string;
+  arrivalAirportName: string;
+  arrivalCity: string;
+  arrivalDatetime: string;
+  averageRating: number | null;
+  availableSeats: number;
+  basePrice: number;
+  departureAirportCode: string;
+  departureAirportName: string;
+  departureCity: string;
+  departureDatetime: string;
+  flightNumber: string;
+  reviewCount: number;
+  status: "on_time" | "delayed";
+  ticketCount: number;
+};
 
 export const Route = createFileRoute("/staff/_dashboard/flights")({
   component: StaffFlightsPage,
-})
+});
 
-const staffDashboardRoute = getRouteApi("/staff/_dashboard")
-const flightStatusOptions: Array<
-  DashboardDataTableInlineSelectOption<FlightRow["status"]>
-> = [
+const staffDashboardRoute = getRouteApi("/staff/_dashboard");
+const flightFilterSearchParams = {
+  destination: parseAsString.withDefault(""),
+  endDate: parseAsString.withDefault(""),
+  source: parseAsString.withDefault(""),
+  startDate: parseAsString.withDefault(""),
+};
+const flightStatusOptions: Array<DashboardDataTableInlineSelectOption<FlightRow["status"]>> = [
   { label: "On Time", value: "on_time" },
   { label: "Delayed", value: "delayed" },
-]
+];
 
 function formatDateShort(iso: string) {
-  const d = new Date(iso)
+  const d = new Date(iso);
   return d.toLocaleString("en-US", {
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-  })
+  });
 }
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-US", {
     currency: "USD",
     style: "currency",
-  }).format(value)
+  }).format(value);
 }
 
 function formatRating(value: number | null) {
-  if (value === null) return "—"
-  return value.toFixed(1)
+  if (value === null) return "—";
+  return value.toFixed(1);
 }
 function getStatusLabel(status: FlightRow["status"]) {
-  return status === "on_time" ? "On Time" : "Delayed"
+  return status === "on_time" ? "On Time" : "Delayed";
+}
+
+function getFlightRowId(flight: FlightRow) {
+  return `${flight.airlineName}:${flight.flightNumber}:${flight.departureDatetime}`;
 }
 
 function getUniqueOptions(
   flights: Array<FlightRow>,
-  valueKey:
-    | "airlineName"
-    | "airplaneId"
-    | "arrivalAirportCode"
-    | "departureAirportCode"
-    | "status"
+  valueKey: "airlineName" | "airplaneId" | "arrivalAirportCode" | "departureAirportCode" | "status",
 ): Array<DashboardDataTableFilterOption> {
-  const options = new Map<string, string>()
+  const options = new Map<string, string>();
   for (const flight of flights) {
-    const value = flight[valueKey]
-    options.set(value, getFilterOptionLabel(valueKey, value))
+    const value = flight[valueKey];
+    options.set(value, getFilterOptionLabel(valueKey, value));
   }
-  return Array.from(options, ([value, label]) => ({ label, value })).sort(
-    (a, b) => a.label.localeCompare(b.label)
-  )
+  return Array.from(options, ([value, label]) => ({ label, value })).sort((a, b) =>
+    a.label.localeCompare(b.label),
+  );
 }
 
 function getFilterOptionLabel(
-  valueKey:
-    | "airlineName"
-    | "airplaneId"
-    | "arrivalAirportCode"
-    | "departureAirportCode"
-    | "status",
-  value: string
+  valueKey: "airlineName" | "airplaneId" | "arrivalAirportCode" | "departureAirportCode" | "status",
+  value: string,
 ) {
-  if (valueKey === "status") return getStatusLabel(value as FlightRow["status"])
-  if (valueKey === "airlineName") return value
-  if (valueKey === "airplaneId") return `Aircraft ${value}`
-  const airport = getAirportOption(value)
-  return airport ? `${value} — ${airport.city}` : value
+  if (valueKey === "status") return getStatusLabel(value as FlightRow["status"]);
+  if (valueKey === "airlineName") return value;
+  if (valueKey === "airplaneId") return `Aircraft ${value}`;
+  const airport = getAirportOption(value);
+  return airport ? `${value} — ${airport.city}` : value;
 }
 
 function AirportCell({ code }: { code: string }) {
-  const airport = getAirportOption(code)
+  const airport = getAirportOption(code);
   return (
     <div className="flex min-w-36 items-center gap-2">
-      {airport ? (
-        <CountryFlag countryCode={airport.countryCode} size={18} />
-      ) : null}
+      {airport ? <CountryFlag countryCode={airport.countryCode} size={18} /> : null}
       <div className="min-w-0">
-        <div className="font-mono text-sm font-medium tracking-tight">
-          {code}
-        </div>
+        <div className="font-mono text-sm font-medium tracking-tight">{code}</div>
         <div className="truncate text-xs text-muted-foreground">
           {airport?.name ?? airport?.city ?? "Unknown airport"}
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function FlightStatusBadge({ status }: { status: FlightRow["status"] }) {
-  const isOnTime = status === "on_time"
-  const Icon = isOnTime ? CircleCheckIcon : AlertTriangleIcon
+  const isOnTime = status === "on_time";
+  const Icon = isOnTime ? CircleCheckIcon : AlertTriangleIcon;
   return (
     <Badge variant={isOnTime ? "secondary" : "destructive"} className="text-xs">
       <Icon data-icon="inline-start" />
       {isOnTime ? "On Time" : "Delayed"}
     </Badge>
-  )
+  );
 }
 
 function FlightGlobe({
   departureCode,
   arrivalCode,
 }: {
-  arrivalCode: string
-  departureCode: string
+  arrivalCode: string;
+  departureCode: string;
 }) {
-  const depAirport = getAirportOption(departureCode)
-  const arrAirport = getAirportOption(arrivalCode)
+  const depAirport = getAirportOption(departureCode);
+  const arrAirport = getAirportOption(arrivalCode);
 
   const globeMarkers = useMemo(() => {
     const m: Array<{
-      id: string
-      countryCode: string
-      label: string
-      location: [number, number]
-    }> = []
+      id: string;
+      countryCode: string;
+      label: string;
+      location: [number, number];
+    }> = [];
     if (depAirport)
       m.push({
         id: `dep-${depAirport.code.toLowerCase()}`,
         countryCode: depAirport.countryCode,
         label: `${depAirport.city} (${depAirport.code})`,
         location: [depAirport.lat, depAirport.lng],
-      })
+      });
     if (arrAirport)
       m.push({
         id: `arr-${arrAirport.code.toLowerCase()}`,
         countryCode: arrAirport.countryCode,
         label: `${arrAirport.city} (${arrAirport.code})`,
         location: [arrAirport.lat, arrAirport.lng],
-      })
-    return m
-  }, [depAirport, arrAirport])
+      });
+    return m;
+  }, [depAirport, arrAirport]);
 
   const globeArcs = useMemo(() => {
-    if (!depAirport || !arrAirport) return []
+    if (!depAirport || !arrAirport) return [];
     return [
       {
         from: [depAirport.lat, depAirport.lng] as [number, number],
         to: [arrAirport.lat, arrAirport.lng] as [number, number],
       },
-    ]
-  }, [depAirport, arrAirport])
+    ];
+  }, [depAirport, arrAirport]);
 
   return (
     <div className="-mx-6 -mt-2">
       <DialogGlobe markers={globeMarkers} arcs={globeArcs} />
     </div>
-  )
+  );
 }
 
 function StaffFlightsPage() {
-  const { data } = useSuspenseQuery(staffDashboardQueryOptions())
-  const { currentUser } = staffDashboardRoute.useLoaderData()
-  const queryClient = useQueryClient()
-  const router = useRouter()
-  const deleteConfirmation = useDeleteConfirmation()
-  const showAirlineColumn = isAdminOrAbove(
-    currentUser.staffPermission ?? "staff"
-  )
-  const [createOpen, setCreateOpen] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [flightFilters, setFlightFilters] = useQueryStates(flightFilterSearchParams, {
+    history: "replace",
+    urlKeys: {
+      destination: "flightsDestination",
+      endDate: "flightsEndDate",
+      source: "flightsSource",
+      startDate: "flightsStartDate",
+    },
+  });
+  const { data } = useSuspenseQuery(staffDashboardQueryOptions(flightFilters));
+  const { currentUser } = staffDashboardRoute.useLoaderData();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const deleteConfirmation = useDeleteConfirmation();
+  const showAirlineColumn = isAdminOrAbove(currentUser.staffPermission ?? "staff");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const dbAirportsQuery = useQuery({
     queryKey: ["db-airports"],
     queryFn: () => listDbAirportsFn(),
     staleTime: 5 * 60 * 1000,
-  })
-  const dbAirports = dbAirportsQuery.data ?? []
+  });
+  const referenceDataQuery = useQuery({
+    queryKey: ["reference-data"],
+    queryFn: () => listReferenceDataFn(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const dbAirports = dbAirportsQuery.data ?? [];
+  const airlineOptions = referenceDataQuery.data?.airlines ?? [];
   const airportOptions = useMemo(
     () =>
       dbAirports.map((airport) => ({
         label: `${airport.code} — ${airport.city}`,
         value: airport.code,
       })),
-    [dbAirports]
-  )
-  const airplaneOptions = useMemo(
-    () =>
-      data.airplanes.map((airplane) => ({
-        label: `${airplane.airplaneId} — ${airplane.numberOfSeats} seats`,
-        value: airplane.airplaneId,
-      })),
-    [data.airplanes]
-  )
+    [dbAirports],
+  );
 
   const form = useForm({
     defaultValues: {
+      airlineName: "",
       flightNumber: "",
       departureAirportCode: "",
       arrivalAirportCode: "",
@@ -290,44 +274,41 @@ function StaffFlightsPage() {
       basePrice: "",
       airplaneId: "",
     },
-    validators: {
-      onSubmit: ({ value }) =>
-        createFlightSchema.safeParse(value).error?.issues,
-    },
     onSubmit: async ({ value }) => {
       const result = await createFlightFn({
         data: {
           ...value,
+          airlineName: value.airlineName,
           basePrice: Number(value.basePrice),
         },
-      })
+      });
       if ("error" in result && result.error) {
-        throw new Error(result.error)
+        throw new Error(result.error);
       }
-      toast.success(result.message)
-      form.reset()
-      setCreateOpen(false)
-      await queryClient.invalidateQueries({ queryKey: ["staff-dashboard"] })
-      await router.invalidate()
+      toast.success(result.message);
+      form.reset();
+      setCreateOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ["staff-dashboard"] });
+      await router.invalidate();
     },
-  })
+  });
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setError(null)
+    event.preventDefault();
+    setError(null);
     try {
-      await form.handleSubmit()
+      await form.handleSubmit();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create flight.")
+      setError(err instanceof Error ? err.message : "Failed to create flight.");
     }
   }
   const saveFlightField = useCallback(
     async <TField extends EditableFlightField>(
       flight: FlightRow,
       field: TField,
-      value: TField extends "basePrice" ? number : string
+      value: TField extends "basePrice" ? number : string,
     ) => {
-      if (flight[field] === value) return
+      if (flight[field] === value) return;
 
       const result = await updateFlightFieldFn({
         data: {
@@ -337,30 +318,27 @@ function StaffFlightsPage() {
           flightNumber: flight.flightNumber,
           value,
         },
-      })
-      if ("error" in result && result.error) throw new Error(result.error)
+      });
+      if ("error" in result && result.error) throw new Error(result.error);
 
-      toast.success(result.message)
-      await queryClient.invalidateQueries({ queryKey: ["staff-dashboard"] })
-      await queryClient.invalidateQueries({ queryKey: ["staff-passengers"] })
-      await router.invalidate()
+      toast.success(result.message);
+      await queryClient.invalidateQueries({ queryKey: ["staff-dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["staff-passengers"] });
+      await router.invalidate();
     },
-    [queryClient, router]
-  )
+    [queryClient, router],
+  );
 
-  async function saveFlightStatus(
-    flight: FlightRow,
-    status: FlightRow["status"]
-  ) {
-    await saveFlightField(flight, "status", status)
+  async function saveFlightStatus(flight: FlightRow, status: FlightRow["status"]) {
+    await saveFlightField(flight, "status", status);
   }
 
   async function handleStatusToggle(flight: FlightRow) {
     try {
-      const newStatus = flight.status === "on_time" ? "delayed" : "on_time"
-      await saveFlightStatus(flight, newStatus)
+      const newStatus = flight.status === "on_time" ? "delayed" : "on_time";
+      await saveFlightStatus(flight, newStatus);
     } catch {
-      toast.error("Failed to update flight status.")
+      toast.error("Failed to update flight status.");
     }
   }
 
@@ -374,53 +352,44 @@ function StaffFlightsPage() {
               departureDatetime: flight.departureDatetime,
               flightNumber: flight.flightNumber,
             },
-          })
-        )
-      )
-      const failed = results.find((result) => "error" in result && result.error)
+          }),
+        ),
+      );
+      const failed = results.find((result) => "error" in result && result.error);
       if (failed && "error" in failed) {
-        toast.error(failed.error)
-        return
+        toast.error(failed.error);
+        return;
       }
 
-      toast.success(
-        `Deleted ${rows.length} flight${rows.length === 1 ? "" : "s"}.`
-      )
-      await queryClient.invalidateQueries({ queryKey: ["staff-dashboard"] })
-      await queryClient.invalidateQueries({ queryKey: ["staff-passengers"] })
-      await router.invalidate()
+      toast.success(`Deleted ${rows.length} flight${rows.length === 1 ? "" : "s"}.`);
+      await queryClient.invalidateQueries({ queryKey: ["staff-dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["staff-passengers"] });
+      await router.invalidate();
     } catch {
-      toast.error("Failed to delete selected flights.")
+      toast.error("Failed to delete selected flights.");
     }
   }
 
   function requestDeleteFlights(rows: Array<FlightRow>) {
     const label =
-      rows.length === 1
-        ? `flight ${rows[0].flightNumber}`
-        : `${rows.length} selected flights`
-    deleteConfirmation.requestDelete(label, () => void deleteFlights(rows))
+      rows.length === 1 ? `flight ${rows[0].flightNumber}` : `${rows.length} selected flights`;
+    deleteConfirmation.requestDelete(label, () => void deleteFlights(rows));
   }
 
-  async function handleBulkStatusUpdate(
-    rows: Array<FlightRow>,
-    status: FlightRow["status"]
-  ) {
-    const flightsToUpdate = rows.filter((flight) => flight.status !== status)
+  async function handleBulkStatusUpdate(rows: Array<FlightRow>, status: FlightRow["status"]) {
+    const flightsToUpdate = rows.filter((flight) => flight.status !== status);
     if (!flightsToUpdate.length) {
-      toast.info("Selected flights already have that status.")
-      return
+      toast.info("Selected flights already have that status.");
+      return;
     }
 
     try {
-      await Promise.all(
-        flightsToUpdate.map((flight) => saveFlightStatus(flight, status))
-      )
+      await Promise.all(flightsToUpdate.map((flight) => saveFlightStatus(flight, status)));
       toast.success(
-        `Updated ${flightsToUpdate.length} flight${flightsToUpdate.length === 1 ? "" : "s"}.`
-      )
+        `Updated ${flightsToUpdate.length} flight${flightsToUpdate.length === 1 ? "" : "s"}.`,
+      );
     } catch {
-      toast.error("Failed to update selected flights.")
+      toast.error("Failed to update selected flights.");
     }
   }
 
@@ -428,23 +397,17 @@ function StaffFlightsPage() {
     const airlineColumn: ColumnDef<FlightRow> = {
       accessorKey: "airlineName",
       filterFn: "arrIncludesSome",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Airline" />
-      ),
+      header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Airline" />,
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {row.original.airlineName}
-        </span>
+        <span className="text-sm text-muted-foreground">{row.original.airlineName}</span>
       ),
-    }
+    };
 
     return [
       ...(showAirlineColumn ? [airlineColumn] : []),
       {
         accessorKey: "flightNumber",
-        header: ({ column }) => (
-          <DashboardDataTableColumnHeader column={column} title="Flight" />
-        ),
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Flight" />,
         cell: ({ row }) => (
           <span className="font-mono text-sm font-medium tracking-tight">
             {row.original.flightNumber}
@@ -454,15 +417,11 @@ function StaffFlightsPage() {
       {
         accessorKey: "departureAirportCode",
         filterFn: "arrIncludesSome",
-        header: ({ column }) => (
-          <DashboardDataTableColumnHeader column={column} title="From" />
-        ),
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="From" />,
         cell: ({ row }) => (
           <DashboardDataTableInlineSelectCell
             ariaLabel={`Update ${row.original.flightNumber} departure airport`}
-            onSave={(code) =>
-              saveFlightField(row.original, "departureAirportCode", code)
-            }
+            onSave={(code) => saveFlightField(row.original, "departureAirportCode", code)}
             options={airportOptions}
             renderValue={(code) => <AirportCell code={code} />}
             value={row.original.departureAirportCode}
@@ -472,15 +431,11 @@ function StaffFlightsPage() {
       {
         accessorKey: "arrivalAirportCode",
         filterFn: "arrIncludesSome",
-        header: ({ column }) => (
-          <DashboardDataTableColumnHeader column={column} title="To" />
-        ),
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="To" />,
         cell: ({ row }) => (
           <DashboardDataTableInlineSelectCell
             ariaLabel={`Update ${row.original.flightNumber} arrival airport`}
-            onSave={(code) =>
-              saveFlightField(row.original, "arrivalAirportCode", code)
-            }
+            onSave={(code) => saveFlightField(row.original, "arrivalAirportCode", code)}
             options={airportOptions}
             renderValue={(code) => <AirportCell code={code} />}
             value={row.original.arrivalAirportCode}
@@ -493,23 +448,22 @@ function StaffFlightsPage() {
           <DashboardDataTableColumnHeader column={column} title="Departure" />
         ),
         cell: ({ row }) => (
-          <span className="text-sm text-muted-foreground">
-            {formatDateShort(row.original.departureDatetime)}
-          </span>
+          <DashboardDataTableInlineDateTimeCell
+            ariaLabel={`Update ${row.original.flightNumber} departure time`}
+            formatValue={formatDateShort}
+            onSave={(value) => saveFlightField(row.original, "departureDatetime", value)}
+            value={row.original.departureDatetime}
+          />
         ),
       },
       {
         accessorKey: "arrivalDatetime",
-        header: ({ column }) => (
-          <DashboardDataTableColumnHeader column={column} title="Arrival" />
-        ),
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Arrival" />,
         cell: ({ row }) => (
           <DashboardDataTableInlineDateTimeCell
             ariaLabel={`Update ${row.original.flightNumber} arrival time`}
             formatValue={formatDateShort}
-            onSave={(value) =>
-              saveFlightField(row.original, "arrivalDatetime", value)
-            }
+            onSave={(value) => saveFlightField(row.original, "arrivalDatetime", value)}
             value={row.original.arrivalDatetime}
           />
         ),
@@ -517,9 +471,7 @@ function StaffFlightsPage() {
       {
         accessorKey: "status",
         filterFn: "arrIncludesSome",
-        header: ({ column }) => (
-          <DashboardDataTableColumnHeader column={column} title="Status" />
-        ),
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Status" />,
         cell: ({ row }) => (
           <DashboardDataTableInlineSelectCell
             ariaLabel={`Update ${row.original.flightNumber} status`}
@@ -533,20 +485,19 @@ function StaffFlightsPage() {
       {
         accessorKey: "airplaneId",
         filterFn: "arrIncludesSome",
-        header: ({ column }) => (
-          <DashboardDataTableColumnHeader column={column} title="Aircraft" />
-        ),
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Aircraft" />,
         cell: ({ row }) => (
           <DashboardDataTableInlineSelectCell
             ariaLabel={`Update ${row.original.flightNumber} aircraft`}
-            onSave={(airplaneId) =>
-              saveFlightField(row.original, "airplaneId", airplaneId)
-            }
-            options={airplaneOptions}
+            onSave={(airplaneId) => saveFlightField(row.original, "airplaneId", airplaneId)}
+            options={data.airplanes
+              .filter((airplane) => airplane.airlineName === row.original.airlineName)
+              .map((airplane) => ({
+                label: `${airplane.airplaneId} — ${airplane.numberOfSeats} seats`,
+                value: airplane.airplaneId,
+              }))}
             renderValue={(airplaneId) => (
-              <span className="font-mono text-sm text-muted-foreground">
-                {airplaneId}
-              </span>
+              <span className="font-mono text-sm text-muted-foreground">{airplaneId}</span>
             )}
             value={row.original.airplaneId}
           />
@@ -554,9 +505,7 @@ function StaffFlightsPage() {
       },
       {
         accessorKey: "basePrice",
-        header: ({ column }) => (
-          <DashboardDataTableColumnHeader column={column} title="Price" />
-        ),
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Price" />,
         cell: ({ row }) => (
           <DashboardDataTableInlineTextCell
             ariaLabel={`Update ${row.original.flightNumber} base price`}
@@ -567,9 +516,7 @@ function StaffFlightsPage() {
               </span>
             )}
             inputMode="decimal"
-            onSave={(value) =>
-              saveFlightField(row.original, "basePrice", Number(value))
-            }
+            onSave={(value) => saveFlightField(row.original, "basePrice", Number(value))}
             type="number"
             value={String(row.original.basePrice)}
           />
@@ -577,31 +524,21 @@ function StaffFlightsPage() {
       },
       {
         accessorKey: "availableSeats",
-        header: ({ column }) => (
-          <DashboardDataTableColumnHeader column={column} title="Seats" />
-        ),
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Seats" />,
         cell: ({ row }) => (
-          <div className="text-right text-sm tabular-nums">
-            {row.original.availableSeats}
-          </div>
+          <div className="text-right text-sm tabular-nums">{row.original.availableSeats}</div>
         ),
       },
       {
         accessorKey: "ticketCount",
-        header: ({ column }) => (
-          <DashboardDataTableColumnHeader column={column} title="Tickets" />
-        ),
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Tickets" />,
         cell: ({ row }) => (
-          <div className="text-right text-sm tabular-nums">
-            {row.original.ticketCount}
-          </div>
+          <div className="text-right text-sm tabular-nums">{row.original.ticketCount}</div>
         ),
       },
       {
         accessorKey: "averageRating",
-        header: ({ column }) => (
-          <DashboardDataTableColumnHeader column={column} title="Rating" />
-        ),
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Rating" />,
         cell: ({ row }) => (
           <div className="text-right text-sm tabular-nums">
             {formatRating(row.original.averageRating)}
@@ -610,13 +547,9 @@ function StaffFlightsPage() {
       },
       {
         accessorKey: "reviewCount",
-        header: ({ column }) => (
-          <DashboardDataTableColumnHeader column={column} title="Reviews" />
-        ),
+        header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Reviews" />,
         cell: ({ row }) => (
-          <div className="text-right text-sm tabular-nums">
-            {row.original.reviewCount}
-          </div>
+          <div className="text-right text-sm tabular-nums">{row.original.reviewCount}</div>
         ),
       },
       {
@@ -626,14 +559,8 @@ function StaffFlightsPage() {
         header: () => <span className="sr-only">Action</span>,
         cell: ({ row }) => (
           <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleStatusToggle(row.original)}
-            >
-              {row.original.status === "on_time"
-                ? "Mark Delayed"
-                : "Mark On Time"}
+            <Button variant="outline" size="sm" onClick={() => handleStatusToggle(row.original)}>
+              {row.original.status === "on_time" ? "Mark Delayed" : "Mark On Time"}
             </Button>
             <Button
               aria-label={`Delete flight ${row.original.flightNumber}`}
@@ -646,16 +573,16 @@ function StaffFlightsPage() {
           </div>
         ),
       },
-    ]
+    ];
   }, [
-    airplaneOptions,
+    data.airplanes,
     airportOptions,
     handleStatusToggle,
     requestDeleteFlights,
     saveFlightField,
     saveFlightStatus,
     showAirlineColumn,
-  ])
+  ]);
 
   const filterOptions = [
     ...(showAirlineColumn
@@ -687,36 +614,31 @@ function StaffFlightsPage() {
       label: "Aircraft",
       options: getUniqueOptions(data.flights, "airplaneId"),
     },
-  ]
+  ];
 
   const tableActions = useMemo(
     () => [
       {
         label: "Mark on time",
-        onSelect: (rows: Array<FlightRow>) =>
-          handleBulkStatusUpdate(rows, "on_time"),
+        onSelect: (rows: Array<FlightRow>) => handleBulkStatusUpdate(rows, "on_time"),
       },
       {
         label: "Mark delayed",
-        onSelect: (rows: Array<FlightRow>) =>
-          handleBulkStatusUpdate(rows, "delayed"),
+        onSelect: (rows: Array<FlightRow>) => handleBulkStatusUpdate(rows, "delayed"),
       },
       {
         label: "Delete flights",
         onSelect: requestDeleteFlights,
       },
     ],
-    [handleBulkStatusUpdate, requestDeleteFlights]
-  )
-
+    [handleBulkStatusUpdate, requestDeleteFlights],
+  );
   return (
     <div className="flex min-w-0 flex-col gap-6 overflow-hidden p-4 md:p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold">Flights</h1>
-          <p className="text-sm text-muted-foreground">
-            Schedule and manage flight status
-          </p>
+          <p className="text-sm text-muted-foreground">Schedule and manage flight status</p>
         </div>
         <Button size="sm" onClick={() => setCreateOpen(true)}>
           <Plus className="mr-1.5 size-4" />
@@ -733,233 +655,206 @@ function StaffFlightsPage() {
         <form.Subscribe
           selector={(state) => ({
             isSubmitting: state.isSubmitting,
-            submissionAttempts: state.submissionAttempts,
             departureCode: state.values.departureAirportCode,
             arrivalCode: state.values.arrivalAirportCode,
+            airlineName: state.values.airlineName,
           })}
         >
-          {({
-            isSubmitting,
-            submissionAttempts,
-            departureCode,
-            arrivalCode,
-          }) => (
-            <>
-              <FlightGlobe
-                departureCode={departureCode}
-                arrivalCode={arrivalCode}
-              />
-              <form onSubmit={handleSubmit}>
-                <FieldGroup>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <form.Field name="flightNumber">
-                      {(field) => (
-                        <Field
-                          data-invalid={shouldShowFieldError(
-                            field.state.meta,
-                            submissionAttempts
+          {({ isSubmitting, departureCode, arrivalCode, airlineName }) => {
+            const createAirplaneOptions = showAirlineColumn
+              ? data.airplanes.filter((airplane) => airplane.airlineName === airlineName)
+              : data.airplanes;
+
+            return (
+              <>
+                <FlightGlobe departureCode={departureCode} arrivalCode={arrivalCode} />
+                <form onSubmit={handleSubmit}>
+                  <FieldGroup>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      {showAirlineColumn ? (
+                        <form.Field name="airlineName">
+                          {(field) => (
+                            <Field>
+                              <FieldLabel>Airline</FieldLabel>
+                              <Select
+                                value={field.state.value}
+                                onValueChange={(value) => {
+                                  if (value === null) return;
+                                  field.handleChange(value);
+                                  form.setFieldValue("airplaneId", "");
+                                }}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Choose airline" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectGroup>
+                                    {airlineOptions.map((airline) => (
+                                      <SelectItem key={airline} value={airline}>
+                                        {airline}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectGroup>
+                                </SelectContent>
+                              </Select>
+                            </Field>
                           )}
-                        >
-                          <FieldLabel>Flight Number</FieldLabel>
+                        </form.Field>
+                      ) : null}
+                      <form.Field name="flightNumber">
+                        {(field) => (
+                          <Field>
+                            <FieldLabel>Flight Number</FieldLabel>
+                            <Input
+                              placeholder="SK100"
+                              required
+                              value={field.state.value}
+                              onChange={(e) => field.handleChange(e.target.value)}
+                            />
+                          </Field>
+                        )}
+                      </form.Field>
+                      <form.Field name="airplaneId">
+                        {(field) => (
+                          <Field>
+                            <FieldLabel>Airplane</FieldLabel>
+                            <AirplaneComboboxField
+                              items={createAirplaneOptions}
+                              value={field.state.value}
+                              onChange={(value) => field.handleChange(value)}
+                              placeholder={
+                                showAirlineColumn && !airlineName
+                                  ? "Choose airline first"
+                                  : "Search airplanes"
+                              }
+                            />
+                          </Field>
+                        )}
+                      </form.Field>
+                      <form.Field name="departureAirportCode">
+                        {(field) => (
+                          <Field>
+                            <FieldLabel>Departure Airport</FieldLabel>
+                            <AirportComboboxField
+                              items={dbAirports}
+                              value={field.state.value}
+                              onChange={(value) => field.handleChange(value)}
+                              placeholder="Search departure airport"
+                            />
+                          </Field>
+                        )}
+                      </form.Field>
+                      <form.Field name="arrivalAirportCode">
+                        {(field) => (
+                          <Field>
+                            <FieldLabel>Arrival Airport</FieldLabel>
+                            <AirportComboboxField
+                              items={dbAirports}
+                              value={field.state.value}
+                              onChange={(value) => field.handleChange(value)}
+                              placeholder="Search arrival airport"
+                            />
+                          </Field>
+                        )}
+                      </form.Field>
+                      <form.Field name="departureDatetime">
+                        {(field) => (
+                          <Field>
+                            <FieldLabel>Departure Time</FieldLabel>
+                            <DateTimePickerField
+                              value={field.state.value}
+                              onChange={(value) => field.handleChange(value)}
+                              placeholder="Pick departure time"
+                            />
+                          </Field>
+                        )}
+                      </form.Field>
+                      <form.Field name="arrivalDatetime">
+                        {(field) => (
+                          <Field>
+                            <FieldLabel>Arrival Time</FieldLabel>
+                            <DateTimePickerField
+                              value={field.state.value}
+                              onChange={(value) => field.handleChange(value)}
+                              placeholder="Pick arrival time"
+                            />
+                          </Field>
+                        )}
+                      </form.Field>
+                    </div>
+                    <form.Field name="basePrice">
+                      {(field) => (
+                        <Field>
+                          <FieldLabel>Base Price ($)</FieldLabel>
                           <Input
-                            aria-invalid={shouldShowFieldError(
-                              field.state.meta,
-                              submissionAttempts
-                            )}
-                            placeholder="SK100"
+                            type="number"
+                            min="0"
+                            step="0.01"
                             required
+                            placeholder="199.00"
                             value={field.state.value}
-                            onBlur={field.handleBlur}
                             onChange={(e) => field.handleChange(e.target.value)}
                           />
-                          {shouldShowFieldError(
-                            field.state.meta,
-                            submissionAttempts
-                          ) ? (
-                            <FieldError errors={field.state.meta.errors} />
-                          ) : null}
                         </Field>
                       )}
                     </form.Field>
-                    <form.Field name="airplaneId">
-                      {(field) => (
-                        <Field
-                          data-invalid={shouldShowFieldError(
-                            field.state.meta,
-                            submissionAttempts
-                          )}
-                        >
-                          <FieldLabel>Airplane</FieldLabel>
-                          <AirplaneComboboxField
-                            items={data.airplanes}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(value) => field.handleChange(value)}
-                            placeholder="Search airplanes"
-                          />
-                          {shouldShowFieldError(
-                            field.state.meta,
-                            submissionAttempts
-                          ) ? (
-                            <FieldError errors={field.state.meta.errors} />
-                          ) : null}
-                        </Field>
-                      )}
-                    </form.Field>
-                    <form.Field name="departureAirportCode">
-                      {(field) => (
-                        <Field
-                          data-invalid={shouldShowFieldError(
-                            field.state.meta,
-                            submissionAttempts
-                          )}
-                        >
-                          <FieldLabel>Departure Airport</FieldLabel>
-                          <AirportComboboxField
-                            items={dbAirports}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(value) => field.handleChange(value)}
-                            placeholder="Search departure airport"
-                          />
-                          {shouldShowFieldError(
-                            field.state.meta,
-                            submissionAttempts
-                          ) ? (
-                            <FieldError errors={field.state.meta.errors} />
-                          ) : null}
-                        </Field>
-                      )}
-                    </form.Field>
-                    <form.Field name="arrivalAirportCode">
-                      {(field) => (
-                        <Field
-                          data-invalid={shouldShowFieldError(
-                            field.state.meta,
-                            submissionAttempts
-                          )}
-                        >
-                          <FieldLabel>Arrival Airport</FieldLabel>
-                          <AirportComboboxField
-                            items={dbAirports}
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(value) => field.handleChange(value)}
-                            placeholder="Search arrival airport"
-                          />
-                          {shouldShowFieldError(
-                            field.state.meta,
-                            submissionAttempts
-                          ) ? (
-                            <FieldError errors={field.state.meta.errors} />
-                          ) : null}
-                        </Field>
-                      )}
-                    </form.Field>
-                    <form.Field name="departureDatetime">
-                      {(field) => (
-                        <Field
-                          data-invalid={shouldShowFieldError(
-                            field.state.meta,
-                            submissionAttempts
-                          )}
-                        >
-                          <FieldLabel>Departure Time</FieldLabel>
-                          <DateTimePickerField
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(value) => field.handleChange(value)}
-                            placeholder="Pick departure time"
-                          />
-                          {shouldShowFieldError(
-                            field.state.meta,
-                            submissionAttempts
-                          ) ? (
-                            <FieldError errors={field.state.meta.errors} />
-                          ) : null}
-                        </Field>
-                      )}
-                    </form.Field>
-                    <form.Field name="arrivalDatetime">
-                      {(field) => (
-                        <Field
-                          data-invalid={shouldShowFieldError(
-                            field.state.meta,
-                            submissionAttempts
-                          )}
-                        >
-                          <FieldLabel>Arrival Time</FieldLabel>
-                          <DateTimePickerField
-                            value={field.state.value}
-                            onBlur={field.handleBlur}
-                            onChange={(value) => field.handleChange(value)}
-                            placeholder="Pick arrival time"
-                          />
-                          {shouldShowFieldError(
-                            field.state.meta,
-                            submissionAttempts
-                          ) ? (
-                            <FieldError errors={field.state.meta.errors} />
-                          ) : null}
-                        </Field>
-                      )}
-                    </form.Field>
-                  </div>
-                  <form.Field name="basePrice">
-                    {(field) => (
-                      <Field
-                        data-invalid={shouldShowFieldError(
-                          field.state.meta,
-                          submissionAttempts
-                        )}
-                      >
-                        <FieldLabel>Base Price ($)</FieldLabel>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          required
-                          placeholder="199.00"
-                          aria-invalid={shouldShowFieldError(
-                            field.state.meta,
-                            submissionAttempts
-                          )}
-                          value={field.state.value}
-                          onBlur={field.handleBlur}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                        />
-                        {shouldShowFieldError(
-                          field.state.meta,
-                          submissionAttempts
-                        ) ? (
-                          <FieldError errors={field.state.meta.errors} />
-                        ) : null}
-                      </Field>
-                    )}
-                  </form.Field>
-                  {error ? (
-                    <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                      {error}
-                    </div>
-                  ) : null}
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full sm:w-auto"
-                  >
-                    {isSubmitting ? "Creating…" : "Create Flight"}
-                  </Button>
-                </FieldGroup>
-              </form>
-            </>
-          )}
+                    {error ? (
+                      <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                        {error}
+                      </div>
+                    ) : null}
+                    <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+                      {isSubmitting ? "Creating…" : "Create Flight"}
+                    </Button>
+                  </FieldGroup>
+                </form>
+              </>
+            );
+          }}
         </form.Subscribe>
       </ResponsiveModal>
 
-      <DeleteConfirmation
-        pending={deleteConfirmation.pending}
-        onClose={deleteConfirmation.close}
-      />
+      <DeleteConfirmation pending={deleteConfirmation.pending} onClose={deleteConfirmation.close} />
+
+      <div className="grid grid-cols-1 gap-3 rounded-md border p-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Field>
+          <FieldLabel>Start date</FieldLabel>
+          <Input
+            type="date"
+            value={flightFilters.startDate}
+            onChange={(event) => void setFlightFilters({ startDate: event.target.value })}
+          />
+        </Field>
+        <Field>
+          <FieldLabel>End date</FieldLabel>
+          <Input
+            type="date"
+            value={flightFilters.endDate}
+            onChange={(event) => void setFlightFilters({ endDate: event.target.value })}
+          />
+        </Field>
+        <Field>
+          <FieldLabel>From</FieldLabel>
+          <Input
+            value={flightFilters.source}
+            onChange={(event) => void setFlightFilters({ source: event.target.value })}
+            placeholder="City or airport code"
+          />
+        </Field>
+        <Field>
+          <FieldLabel>To</FieldLabel>
+          <Input
+            value={flightFilters.destination}
+            onChange={(event) => void setFlightFilters({ destination: event.target.value })}
+            placeholder="City or airport code"
+          />
+        </Field>
+        <div className="flex items-end sm:col-span-2 lg:col-span-4">
+          <Button variant="outline" size="sm" onClick={() => void setFlightFilters(null)}>
+            Clear flight filters
+          </Button>
+        </div>
+      </div>
 
       <DashboardDataTable
         bulkActions={tableActions}
@@ -969,10 +864,11 @@ function StaffFlightsPage() {
         enableRowSelection
         enableVirtualization
         filters={filterOptions}
+        getRowId={getFlightRowId}
         queryPrefix="flights"
         rowActions={tableActions}
         searchPlaceholder="Search flights..."
       />
     </div>
-  )
+  );
 }
