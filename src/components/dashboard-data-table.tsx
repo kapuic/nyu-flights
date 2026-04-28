@@ -1104,7 +1104,7 @@ export function DashboardDataTableInlineSelectCell<TValue extends string>({
           aria-label={ariaLabel}
           disabled={disabled || saving}
           size="sm"
-          className="w-full min-w-32 justify-between border-transparent bg-transparent px-1.5 shadow-none hover:bg-muted/70 data-[popup-open]:border-input data-[popup-open]:bg-background"
+          className="w-full min-w-32 justify-between border-transparent bg-transparent px-1.5 shadow-none hover:bg-muted data-[popup-open]:border-input data-[popup-open]:bg-background"
         >
           <SelectValue>{renderValue ? renderValue(draft) : draft}</SelectValue>
         </SelectTrigger>

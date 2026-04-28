@@ -160,7 +160,7 @@ export function InlineField({
         }
         className={cn(
           "flex min-h-8 items-center justify-between rounded-md px-2.5 py-1 text-sm transition-colors",
-          readOnly ? "cursor-default" : "cursor-pointer hover:bg-muted/50",
+          readOnly ? "cursor-default" : "cursor-pointer hover:bg-muted",
         )}
       >
         <span className={currentValue ? "" : "italic text-muted-foreground"}>
@@ -310,7 +310,7 @@ export function InlinePhoneField({
         onKeyDown={(event) => {
           if (event.key === "Enter") startEditing();
         }}
-        className="flex min-h-8 cursor-pointer items-center justify-between rounded-md px-2.5 py-1 text-sm transition-colors hover:bg-muted/50"
+        className="flex min-h-8 cursor-pointer items-center justify-between rounded-md px-2.5 py-1 text-sm transition-colors hover:bg-muted"
       >
         <span className={value ? "" : "italic text-muted-foreground"}>
           {displayValue || value || "Not set"}
@@ -540,7 +540,7 @@ export function InlineStateField({
         onKeyDown={(event) => {
           if (event.key === "Enter") setEditing(true);
         }}
-        className="flex min-h-8 cursor-pointer items-center justify-between rounded-md px-2.5 py-1 text-sm transition-colors hover:bg-muted/50"
+        className="flex min-h-8 cursor-pointer items-center justify-between rounded-md px-2.5 py-1 text-sm transition-colors hover:bg-muted"
       >
         <span className={value ? "" : "italic text-muted-foreground"}>{value || "Not set"}</span>
         <Pencil className="size-3.5 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground" />

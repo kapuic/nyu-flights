@@ -177,7 +177,7 @@ function InlineDateField({
         onKeyDown={(e) => {
           if (e.key === "Enter") setEditing(true);
         }}
-        className="flex min-h-8 items-center justify-between rounded-md px-2.5 py-1 text-sm cursor-pointer transition-colors hover:bg-muted/50"
+        className="flex min-h-8 items-center justify-between rounded-md px-2.5 py-1 text-sm cursor-pointer transition-colors hover:bg-muted"
       >
         <span className={value ? "" : "italic text-muted-foreground"}>
           {formatDisplayDate(value) || "Not set"}
@@ -376,7 +376,7 @@ function InlineCountryField({
         onKeyDown={(e) => {
           if (e.key === "Enter") setEditing(true);
         }}
-        className="flex min-h-8 items-center justify-between rounded-md px-2.5 py-1 text-sm cursor-pointer transition-colors hover:bg-muted/50"
+        className="flex min-h-8 items-center justify-between rounded-md px-2.5 py-1 text-sm cursor-pointer transition-colors hover:bg-muted"
       >
         <span className={cn("flex items-center gap-2", !value && "italic text-muted-foreground")}>
           {code && <CountryFlag countryCode={code} size={16} />}

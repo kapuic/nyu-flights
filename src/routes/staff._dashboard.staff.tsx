@@ -226,7 +226,7 @@ function ManageStaffPage() {
         cell: ({ row }) => (
           <button
             aria-label={`Manage ${row.original.username} phone numbers`}
-            className="min-h-8 rounded-md px-2.5 py-1 text-left text-sm transition-colors hover:bg-muted/50 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+            className="min-h-8 rounded-md px-2.5 py-1 text-left text-sm transition-colors hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
             onClick={() => openPhoneSheet(row.original)}
             type="button"
           >
