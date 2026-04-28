@@ -161,46 +161,63 @@ function MastercardLogo({ className }: { className?: string }) {
 
 function AmexLogo({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 60 40">
-      <text
-        x="50%"
-        y="55%"
-        dominantBaseline="middle"
-        textAnchor="middle"
+    <svg className={className} viewBox="0 0 780 500" fill="none">
+      <path d="M0 0h780v500H0z" fill="#2557D6" />
+      <path
+        d="M723.8 249.8L780 186.5h-65.4l-27.8 30.8-26.9-30.8h-213v127h210.1l28.6-31.6 27.4 31.6h66.1l-55.3-63.7zm-167.5 45.3H460V269h89.2v-27.7H460v-27.2h99.3l41.2 45.5-43.2 35.5zm116.5 3.1l-46.2-48.4 46.2-47.3v95.7z"
         fill="#fff"
-        fontSize="14"
-        fontWeight="800"
-        fontFamily="system-ui, sans-serif"
-        letterSpacing="1"
-      >
-        AMEX
-      </text>
+      />
+      <path
+        d="M360.4 186.5h-156l-27 62.3-27.9-62.3H78.7v11.3L110 284.4l-36.3 29.1h63.5l10.3-25.4h23.4l10.4 25.4h70v-20l6.3 20h36.4l6.3-20.5v20.5h175.4l22-23.5 20.6 23.5h72.3l-55.5-63.5 55.5-63.5h-70.8l-21.3 23-20-23h-158zm11.7 100.4h-25.3v-72l-35.7 72h-21.7l-35.8-72.1v72.1h-50.1l-10.3-25.5h-55.8l-10.4 25.5h-28.5l47.6-110.6h36.7l45.2 104.8V176.3h40.3l32.3 62.3 29.6-62.3h40.9v110.6zm-222.8-49.2l-18.1-44.4-18 44.4h36.1z"
+        fill="#fff"
+      />
     </svg>
   )
 }
 
-function GenericBrandLogo({
-  brand,
-  className,
-}: {
-  brand: string
-  className?: string
-}) {
+function DiscoverLogo({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 60 40">
-      <text
-        x="50%"
-        y="55%"
-        dominantBaseline="middle"
-        textAnchor="middle"
-        fill="#fff"
-        fontSize="12"
-        fontWeight="700"
-        fontFamily="system-ui, sans-serif"
-        letterSpacing="0.5"
-      >
-        {brand.toUpperCase()}
-      </text>
+    <svg className={className} viewBox="0 0 780 500" fill="none">
+      <path d="M0 0h780v500H0z" fill="#fff" />
+      <path d="M0 462h780v38H0z" fill="#F48120" />
+      <circle cx="397" cy="250" r="80" fill="#F48120" />
+      <text x="390" y="468" textAnchor="middle" fill="#231F20" fontSize="60" fontWeight="700" fontFamily="system-ui, sans-serif">DISCOVER</text>
+    </svg>
+  )
+}
+
+function DinersLogo({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 780 500" fill="none">
+      <rect width="780" height="500" rx="40" fill="#0079BE" />
+      <circle cx="352" cy="250" r="145" fill="#fff" />
+      <path d="M280 160c-49.6 28.7-83 82.3-83 143.5s33.4 114.8 83 143.5V160zm144 287c49.6-28.7 83-82.3 83-143.5S473.6 188.7 424 160v287z" fill="#0079BE" />
+    </svg>
+  )
+}
+
+function JcbLogo({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 780 500" fill="none">
+      <rect width="780" height="500" rx="40" fill="#fff" />
+      <rect x="410" y="50" width="170" height="400" rx="30" fill="#047AB1" />
+      <rect x="250" y="50" width="170" height="400" rx="30" fill="#C4151C" />
+      <rect x="90" y="50" width="170" height="400" rx="30" fill="#4FA951" />
+      <text x="165" y="320" textAnchor="middle" fill="#fff" fontSize="85" fontWeight="800" fontFamily="system-ui, sans-serif">J</text>
+      <text x="325" y="320" textAnchor="middle" fill="#fff" fontSize="85" fontWeight="800" fontFamily="system-ui, sans-serif">C</text>
+      <text x="490" y="320" textAnchor="middle" fill="#fff" fontSize="85" fontWeight="800" fontFamily="system-ui, sans-serif">B</text>
+    </svg>
+  )
+}
+
+function UnionPayLogo({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 780 500" fill="none">
+      <rect width="780" height="500" rx="40" fill="#034A68" />
+      <path d="M150 50h160c20 0 30 10 25 30L265 430c-5 20-25 30-45 30H60c-20 0-30-10-25-30L105 80c5-20 25-30 45-30z" fill="#E21836" />
+      <path d="M300 50h180c20 0 30 10 25 30L435 430c-5 20-25 30-45 30H210c-20 0-30-10-25-30L255 80c5-20 25-30 45-30z" fill="#00447C" />
+      <path d="M470 50h180c20 0 30 10 25 30L605 430c-5 20-25 30-45 30H380c-20 0-30-10-25-30L425 80c5-20 25-30 45-30z" fill="#007B84" />
+      <text x="390" y="300" textAnchor="middle" fill="#fff" fontSize="75" fontWeight="700" fontFamily="system-ui, sans-serif">UnionPay</text>
     </svg>
   )
 }
@@ -219,15 +236,16 @@ export function CardBrandLogo({
       return <MastercardLogo className={className} />
     case "amex":
       return <AmexLogo className={className} />
+    case "discover":
+      return <DiscoverLogo className={className} />
+    case "diners":
+      return <DinersLogo className={className} />
+    case "jcb":
+      return <JcbLogo className={className} />
+    case "unionpay":
+      return <UnionPayLogo className={className} />
     case "unknown":
       return null
-    default:
-      return (
-        <GenericBrandLogo
-          brand={BRAND_THEMES[brand].logo}
-          className={className}
-        />
-      )
   }
 }
 

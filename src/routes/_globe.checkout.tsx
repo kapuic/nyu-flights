@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { faker } from "@faker-js/faker"
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router"
 import {
   ArrowLeft,
@@ -6,6 +7,7 @@ import {
   CheckCircle2,
   Clock,
   CreditCard,
+  Dices,
   Plane,
 } from "lucide-react"
 
@@ -19,6 +21,7 @@ import { useBookingStore } from "@/lib/booking-store"
 import { formatCurrency } from "@/lib/format"
 import { purchaseTicketFn } from "@/lib/queries"
 import { cn, getErrorMessage } from "@/lib/utils"
+import { detectCardBrand } from "@/components/ui/credit-card"
 
 export const Route = createFileRoute("/_globe/checkout")({
   component: CheckoutPage,
@@ -104,6 +107,49 @@ const INITIAL_CARD: PaymentCardValues = {
   cardExpiration: "",
   cvv: "",
   brand: "unknown",
+}
+
+const FAKER_ISSUERS = [
+  "visa",
+  "mastercard",
+  "american_express",
+  "discover",
+  "diners_club",
+  "jcb",
+  "instapayment",
+] as const
+
+function generateRandomCard(): PaymentCardValues {
+  const issuer = FAKER_ISSUERS[Math.floor(Math.random() * FAKER_ISSUERS.length)]
+  const rawNumber = faker.finance.creditCardNumber(issuer).replace(/-/g, "")
+  const brand = detectCardBrand(rawNumber)
+
+  // Format with spaces
+  let formatted: string
+  if (brand === "amex") {
+    formatted = `${rawNumber.slice(0, 4)} ${rawNumber.slice(4, 10)} ${rawNumber.slice(10)}`
+  } else {
+    const groups: Array<string> = []
+    for (let i = 0; i < rawNumber.length; i += 4) groups.push(rawNumber.slice(i, i + 4))
+    formatted = groups.join(" ")
+  }
+
+  // Random future expiration
+  const now = new Date()
+  const futureMonth = Math.floor(Math.random() * 12) + 1
+  const futureYear = (now.getFullYear() % 100) + Math.floor(Math.random() * 5) + 1
+  const expiration = `${String(futureMonth).padStart(2, "0")}/${String(futureYear).padStart(2, "0")}`
+
+  const cvv = faker.finance.creditCardCVV()
+  const name = faker.person.fullName()
+
+  return {
+    cardNumber: formatted,
+    nameOnCard: name,
+    cardExpiration: expiration,
+    cvv,
+    brand,
+  }
 }
 
 function CheckoutForm({
@@ -254,25 +300,50 @@ function CheckoutForm({
             <form noValidate ref={formRef} onSubmit={handleSubmit}>
               {/* Card type toggle (credit/debit for DB) */}
               <div className="mb-5">
-                <label className="mb-2 block text-[10px] font-medium tracking-widest text-white/40 uppercase">
-                  Card Type
-                </label>
-                <div className="flex gap-2">
-                  {(["credit", "debit"] as const).map((type) => (
+                <div className="flex items-start gap-2">
+                  <div>
+                    <label className="mb-2 block text-[10px] font-medium tracking-widest text-white/40 uppercase">
+                      Card Type
+                    </label>
+                    <div className="flex gap-2">
+                      {(["credit", "debit"] as const).map((type) => (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => setCardType(type)}
+                          className={cn(
+                            "rounded-lg border px-4 py-2 text-sm font-medium capitalize transition-colors",
+                            cardType === type
+                              ? "border-white/20 bg-white/10 text-white"
+                              : "border-white/[0.06] text-white/40 hover:border-white/10 hover:text-white/60"
+                          )}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="ml-auto">
+                    <label className="mb-2 block text-[10px] font-medium tracking-widest text-white/40 uppercase">
+                      Testing
+                    </label>
                     <button
-                      key={type}
                       type="button"
-                      onClick={() => setCardType(type)}
-                      className={cn(
-                        "rounded-lg border px-4 py-2 text-sm font-medium capitalize transition-colors",
-                        cardType === type
-                          ? "border-white/20 bg-white/10 text-white"
-                          : "border-white/[0.06] text-white/40 hover:border-white/10 hover:text-white/60"
-                      )}
+                      onClick={() => {
+                        const random = generateRandomCard()
+                        setCard(random)
+                        setCardErrors({})
+                        setCardTouched({})
+                        setSubmitted(false)
+                        setError(null)
+                      }}
+                      className="flex items-center gap-1.5 rounded-lg border border-white/[0.06] px-4 py-2 text-sm font-medium text-white/40 transition-colors hover:border-white/10 hover:text-white/60"
                     >
-                      {type}
+                      <Dices className="size-3.5" />
+                      Fill Random
                     </button>
-                  ))}
+                  </div>
                 </div>
               </div>
 
