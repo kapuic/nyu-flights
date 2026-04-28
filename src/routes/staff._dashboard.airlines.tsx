@@ -204,6 +204,7 @@ function ManageAirlinesPage() {
         data={airlines}
         emptyMessage="No airlines."
         enableRowSelection
+        exportOptions={{ filename: "airlines.csv" }}
         getRowId={getAirlineRowId}
         searchPlaceholder="Search airlines..."
         queryPrefix="airlines"

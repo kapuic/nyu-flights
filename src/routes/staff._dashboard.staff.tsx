@@ -57,6 +57,11 @@ function getRoleLabel(role: string) {
   if (role === "admin") return "Admin";
   return "Staff";
 }
+function getStaffExportValue(staff: StaffRow, columnId: string) {
+  if (columnId === "role") return getRoleLabel(getStaffPermission(staff.username));
+  return undefined;
+}
+
 function ManageStaffPage() {
   const { data: staff } = useSuspenseQuery(staffMembersQueryOptions());
   const { data: airlines } = useSuspenseQuery({
@@ -236,6 +241,10 @@ function ManageStaffPage() {
         data={staff}
         emptyMessage="No staff accounts."
         enableRowSelection
+        exportOptions={{
+          filename: "staff.csv",
+          getValue: getStaffExportValue,
+        }}
         getRowId={getStaffRowId}
         filters={filterOptions}
         searchPlaceholder="Search staff..."

@@ -97,6 +97,13 @@ function FlightStatusBadge({ status }: { status: DashboardFlightRow["status"] })
   );
 }
 
+function getDashboardExportValue(row: DashboardFlightRow, columnId: string) {
+  if (columnId === "departureDatetime") return formatDateShort(row.departureDatetime);
+  if (columnId === "arrivalDatetime") return formatDateShort(row.arrivalDatetime);
+  if (columnId === "status") return row.status === "on_time" ? "On Time" : "Delayed";
+  return undefined;
+}
+
 function StaffDashboardPage() {
   const { data } = useSuspenseQuery(staffDashboardQueryOptions());
   const showAirlineColumn = data.airlineName === "All airlines";
@@ -246,6 +253,10 @@ function StaffDashboardPage() {
         data={data.flights}
         emptyMessage="No flights found."
         enableVirtualization
+        exportOptions={{
+          filename: "staff-dashboard-flights.csv",
+          getValue: getDashboardExportValue,
+        }}
         filters={filterOptions}
         getRowId={getDashboardFlightRowId}
         searchPlaceholder="Search flights..."

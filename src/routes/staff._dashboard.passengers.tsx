@@ -82,6 +82,11 @@ function getFlightSelectionSearchValue(flight: {
 }) {
   return `${flight.airlineName} ${flight.flightNumber} ${flight.departureAirportCode} ${flight.arrivalAirportCode} ${formatDateShort(flight.departureDatetime)}`;
 }
+function getPassengerExportValue(passenger: PassengerRow, columnId: string) {
+  if (columnId === "ticketId") return `#${passenger.ticketId}`;
+  if (columnId === "purchaseDatetime") return formatDateShort(passenger.purchaseDatetime);
+  return undefined;
+}
 
 function StaffPassengersPage() {
   const { data } = useSuspenseQuery(staffDashboardQueryOptions(passengerFlightFilters));
@@ -196,6 +201,12 @@ function StaffPassengersPage() {
             data={passengers}
             emptyMessage="No passengers on this flight."
             enableVirtualization
+            exportOptions={{
+              filename: selectedFlight
+                ? `passengers-${selectedFlight.flightNumber}.csv`
+                : "passengers.csv",
+              getValue: getPassengerExportValue,
+            }}
             getRowId={getPassengerRowId}
             searchPlaceholder="Search passengers..."
             queryPrefix="passengers"

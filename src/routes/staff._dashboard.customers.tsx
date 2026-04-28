@@ -71,6 +71,12 @@ function formatDisplayPhoneNumber(value: string) {
   return formatIncompletePhoneNumber(editableValue, "US");
 }
 
+function getCustomerExportValue(customer: CustomerRow, columnId: string) {
+  if (columnId === "phone_number") return formatDisplayPhoneNumber(customer.phone_number);
+  if (columnId === "date_of_birth") return formatDisplayDate(customer.date_of_birth);
+  return undefined;
+}
+
 function renderEditableTextCell({
   ariaLabel,
   className = "min-w-36",
@@ -363,6 +369,10 @@ function ManageCustomersPage() {
         data={customers}
         emptyMessage="No customers."
         enableRowSelection
+        exportOptions={{
+          filename: "customers.csv",
+          getValue: getCustomerExportValue,
+        }}
         getRowId={getCustomerRowId}
         filters={filterOptions}
         searchPlaceholder="Search customers..."

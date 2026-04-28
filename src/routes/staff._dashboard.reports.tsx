@@ -26,6 +26,14 @@ type RatingRow = {
 function getRatingRowId(rating: RatingRow) {
   return `${rating.airlineName}:${rating.flightNumber}:${rating.departureDatetime}`;
 }
+function getRatingExportValue(rating: RatingRow, columnId: string) {
+  if (columnId === "averageRating") return rating.averageRating?.toFixed(1) ?? "";
+  if (columnId === "comments")
+    return rating.comments
+      .map((comment) => `${comment.rating}/5 ${comment.comment ?? "No comment"}`)
+      .join("; ");
+  return undefined;
+}
 
 export const Route = createFileRoute("/staff/_dashboard/reports")({
   component: StaffReportsPage,
@@ -97,7 +105,8 @@ function StaffReportsPage() {
       },
       {
         id: "comments",
-        accessorFn: (row) => row.comments.map((comment) => `${comment.rating} ${comment.comment ?? ""}`).join(" "),
+        accessorFn: (row) =>
+          row.comments.map((comment) => `${comment.rating} ${comment.comment ?? ""}`).join(" "),
         header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Comments" />,
         cell: ({ row }) => {
           if (row.original.comments.length === 0)
@@ -110,7 +119,9 @@ function StaffReportsPage() {
                   key={`${comment.rating}:${comment.comment}`}
                   className="truncate text-sm text-muted-foreground"
                 >
-                  <span className="font-medium tabular-nums text-foreground">{comment.rating}/5</span>{" "}
+                  <span className="font-medium tabular-nums text-foreground">
+                    {comment.rating}/5
+                  </span>{" "}
                   {comment.comment ? `“${comment.comment}”` : "No comment"}
                 </span>
               ))}
@@ -250,6 +261,10 @@ function StaffReportsPage() {
           data={ratedFlights}
           emptyMessage="No ratings yet."
           enableVirtualization
+          exportOptions={{
+            filename: "flight-ratings.csv",
+            getValue: getRatingExportValue,
+          }}
           getRowId={getRatingRowId}
           searchPlaceholder="Search ratings..."
           queryPrefix="ratings"

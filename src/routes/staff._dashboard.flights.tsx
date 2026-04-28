@@ -200,6 +200,17 @@ function getFilterOptionLabel(
   if (valueKey === "airplaneId") return `Aircraft ${value}`;
   return getAirportDisplayLabel(value);
 }
+function getFlightExportValue(flight: FlightRow, columnId: string) {
+  if (columnId === "departureAirportCode")
+    return getAirportDisplayLabel(flight.departureAirportCode);
+  if (columnId === "arrivalAirportCode") return getAirportDisplayLabel(flight.arrivalAirportCode);
+  if (columnId === "departureDatetime") return formatDateShort(flight.departureDatetime);
+  if (columnId === "arrivalDatetime") return formatDateShort(flight.arrivalDatetime);
+  if (columnId === "status") return getStatusLabel(flight.status);
+  if (columnId === "basePrice") return formatCurrency(flight.basePrice);
+  if (columnId === "averageRating") return formatRating(flight.averageRating);
+  return undefined;
+}
 
 function AirportCell({ code }: { code: string }) {
   const airport = getAirportOption(code);
@@ -1047,6 +1058,10 @@ function StaffFlightsPage() {
         emptyMessage="No flights scheduled."
         enableRowSelection
         enableVirtualization
+        exportOptions={{
+          filename: "flights.csv",
+          getValue: getFlightExportValue,
+        }}
         filters={filterOptions}
         getRowId={getFlightRowId}
         queryPrefix="flights"

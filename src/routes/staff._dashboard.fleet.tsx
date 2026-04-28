@@ -112,6 +112,11 @@ function formatDate(value: string) {
   });
 }
 
+function getFleetExportValue(airplane: AirplaneRow, columnId: string) {
+  if (columnId === "manufacturingDate") return formatDate(airplane.manufacturingDate);
+  return undefined;
+}
+
 function getUniqueOptions(
   airplanes: Array<AirplaneRow>,
   valueKey: "manufacturingCompany",
@@ -543,6 +548,10 @@ function StaffFleetPage() {
         emptyMessage="No aircraft registered."
         enableRowSelection
         enableVirtualization
+        exportOptions={{
+          filename: "fleet.csv",
+          getValue: getFleetExportValue,
+        }}
         filters={filterOptions}
         getRowId={getAirplaneRowId}
         searchPlaceholder="Search fleet..."

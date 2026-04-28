@@ -373,6 +373,7 @@ function ManageAirportsPage() {
         data={airports}
         emptyMessage="No airports."
         enableRowSelection
+        exportOptions={{ filename: "airports.csv" }}
         getRowId={getAirportRowId}
         filters={filterOptions}
         searchPlaceholder="Search airports..."
