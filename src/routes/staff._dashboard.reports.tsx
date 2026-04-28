@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
-import type { ColumnDef } from "@tanstack/react-table"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Star } from "lucide-react"
+import type { ColumnDef } from "@tanstack/react-table"
 
 import { DatePickerField } from "@/components/date-time-picker"
 import {
@@ -66,8 +66,12 @@ function StaffReportsPage() {
     1
   )
 
-  const ratedFlights = data.ratings.filter((rating) => rating.reviewCount > 0)
-  const columns: Array<ColumnDef<RatingRow>> = [
+  const ratedFlights = useMemo(
+    () => data.ratings.filter((rating) => rating.reviewCount > 0),
+    [data.ratings]
+  )
+  const columns = useMemo<Array<ColumnDef<RatingRow>>>(
+    () => [
     {
       accessorKey: "flightNumber",
       header: ({ column }) => (
@@ -129,7 +133,9 @@ function StaffReportsPage() {
         )
       },
     },
-  ]
+  ],
+    []
+  )
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -258,6 +264,7 @@ function StaffReportsPage() {
           columns={columns}
           data={ratedFlights}
           emptyMessage="No ratings yet."
+          enableVirtualization
           searchPlaceholder="Search ratings..."
           queryPrefix="ratings"
         />
