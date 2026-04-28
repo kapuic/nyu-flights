@@ -312,6 +312,40 @@ export const updateStatusSchema = flightIdentitySchema.extend({
   status: z.enum(["on_time", "delayed"]),
 })
 
+const flightEditableFieldSchema = z.discriminatedUnion("field", [
+  z.object({
+    field: z.literal("airplaneId"),
+    value: z.string().min(1, "Choose an airplane."),
+  }),
+  z.object({
+    field: z.literal("arrivalAirportCode"),
+    value: z.string().length(3, "Arrival airport code is required."),
+  }),
+  z.object({
+    field: z.literal("arrivalDatetime"),
+    value: z.string().min(1, "Arrival time is required."),
+  }),
+  z.object({
+    field: z.literal("basePrice"),
+    value: z.coerce.number().nonnegative("Price cannot be negative."),
+  }),
+  z.object({
+    field: z.literal("departureAirportCode"),
+    value: z.string().length(3, "Departure airport code is required."),
+  }),
+  z.object({
+    field: z.literal("status"),
+    value: z.enum(["on_time", "delayed"]),
+  }),
+])
+
+export const updateFlightFieldSchema = z.intersection(
+  flightIdentitySchema,
+  flightEditableFieldSchema
+)
+
+export const deleteFlightSchema = flightIdentitySchema
+
 export const addAirplaneSchema = z.object({
   airplaneId: z.string().min(2, "Airplane ID is required."),
   manufacturingCompany: z.string().min(2, "Manufacturer is required."),

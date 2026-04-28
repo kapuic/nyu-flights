@@ -26,6 +26,7 @@ import {
   ChevronsUpDownIcon,
   Columns3Icon,
   FilterIcon,
+  Loader2Icon,
   SearchIcon,
   XIcon,
 } from "lucide-react"
@@ -63,6 +64,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { DateTimePickerField } from "@/components/date-time-picker"
 import {
   Table,
   TableBody,
@@ -82,6 +84,26 @@ export type DashboardDataTableInlineSelectOption<TValue extends string> = {
   label: string
   value: TValue
 }
+type DashboardDataTableInlineTextCellProps = {
+  ariaLabel: string
+  className?: string
+  disabled?: boolean
+  formatValue?: (value: string) => ReactNode
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"]
+  onSave: (value: string) => Promise<void> | void
+  placeholder?: string
+  type?: React.HTMLInputTypeAttribute
+  value: string
+}
+
+type DashboardDataTableInlineDateTimeCellProps = {
+  ariaLabel: string
+  className?: string
+  disabled?: boolean
+  onSave: (value: string) => Promise<void> | void
+  value: string
+}
+
 
 type DashboardDataTableBulkAction<TData> = {
   label: string
@@ -598,6 +620,182 @@ function DashboardDataTableRow<TData>({
         </ContextMenuPrimitive.Positioner>
       </ContextMenuPrimitive.Portal>
     </ContextMenuPrimitive.Root>
+  )
+}
+
+export function DashboardDataTableInlineTextCell({
+  ariaLabel,
+  className,
+  disabled = false,
+  formatValue,
+  inputMode,
+  onSave,
+  placeholder,
+  type = "text",
+  value,
+}: DashboardDataTableInlineTextCellProps) {
+  const [draft, setDraft] = useState(value)
+  const [error, setError] = useState("")
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!editing) setDraft(value)
+  }, [editing, value])
+
+  async function save(nextValue = draft) {
+    const normalized = nextValue.trim()
+    if (normalized === value) {
+      setEditing(false)
+      return
+    }
+
+    setSaving(true)
+    setError("")
+    try {
+      await onSave(normalized)
+      setEditing(false)
+    } catch (err) {
+      setDraft(value)
+      setError(err instanceof Error ? err.message : "Failed to save.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!editing) {
+    return (
+      <div className={cn("flex min-w-28 flex-col items-start gap-1", className)}>
+        <Button
+          aria-label={ariaLabel}
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={disabled || saving}
+          className="h-8 justify-start px-1.5 font-normal"
+          onClick={() => setEditing(true)}
+        >
+          {saving ? <Loader2Icon className="animate-spin" /> : null}
+          {formatValue ? formatValue(value) : value}
+        </Button>
+        {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      </div>
+    )
+  }
+
+  return (
+    <div className={cn("flex min-w-28 flex-col items-start gap-1", className)}>
+      <Input
+        aria-label={ariaLabel}
+        autoFocus
+        disabled={disabled || saving}
+        inputMode={inputMode}
+        placeholder={placeholder}
+        type={type}
+        value={draft}
+        onBlur={() => void save()}
+        onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") void save()
+          if (event.key === "Escape") {
+            setDraft(value)
+            setEditing(false)
+          }
+        }}
+        className="h-8 min-w-28 px-1.5"
+      />
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
+  )
+}
+
+export function DashboardDataTableInlineDateTimeCell({
+  ariaLabel,
+  className,
+  disabled = false,
+  onSave,
+  value,
+}: DashboardDataTableInlineDateTimeCellProps) {
+  const [draft, setDraft] = useState(value)
+  const [error, setError] = useState("")
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!editing) setDraft(value)
+  }, [editing, value])
+
+  async function save() {
+    if (draft === value) {
+      setEditing(false)
+      return
+    }
+
+    setSaving(true)
+    setError("")
+    try {
+      await onSave(draft)
+      setEditing(false)
+    } catch (err) {
+      setDraft(value)
+      setError(err instanceof Error ? err.message : "Failed to save.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!editing) {
+    return (
+      <div className={cn("flex min-w-40 flex-col items-start gap-1", className)}>
+        <Button
+          aria-label={ariaLabel}
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={disabled || saving}
+          className="h-8 justify-start px-1.5 font-normal text-muted-foreground"
+          onClick={() => setEditing(true)}
+        >
+          {saving ? <Loader2Icon className="animate-spin" /> : null}
+          {value}
+        </Button>
+        {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      </div>
+    )
+  }
+
+  return (
+    <div className={cn("flex min-w-48 flex-col items-start gap-1", className)}>
+      <DateTimePickerField
+        value={draft}
+        onChange={setDraft}
+        onBlur={() => void save()}
+        placeholder="Pick arrival time"
+      />
+      <div className="flex items-center gap-1">
+        <Button
+          type="button"
+          size="xs"
+          disabled={disabled || saving}
+          onClick={() => void save()}
+        >
+          Save
+        </Button>
+        <Button
+          type="button"
+          size="xs"
+          variant="ghost"
+          disabled={saving}
+          onClick={() => {
+            setDraft(value)
+            setEditing(false)
+          }}
+        >
+          Cancel
+        </Button>
+      </div>
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
   )
 }
 

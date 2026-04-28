@@ -6,12 +6,12 @@ import type {
   PassengerRecord,
   StaffDashboardData,
 } from "@/lib/queries"
+import type { AirportOption } from "@/lib/airports"
 import { db } from "@/lib/db"
 import { requireUser } from "@/lib/auth.server"
 import { isSuperadmin } from "@/lib/staff-permissions"
 import { customerFieldValidators } from "@/lib/schemas"
 import { getAirportOption } from "@/lib/airports"
-import type { AirportOption } from "@/lib/airports"
 
 const DEFAULT_STAFF_FLIGHT_WINDOW_DAYS = 30
 
@@ -779,6 +779,101 @@ export async function submitReviewInternal(data: {
   return { message: "Thanks — your rating is now part of the airline record." }
 }
 
+type FlightIdentityInput = {
+  airlineName: string
+  departureDatetime: string
+  flightNumber: string
+}
+
+type FlightEditableFieldInput = FlightIdentityInput &
+  (
+    | { field: "airplaneId"; value: string }
+    | { field: "arrivalAirportCode"; value: string }
+    | { field: "arrivalDatetime"; value: string }
+    | { field: "basePrice"; value: number }
+    | { field: "departureAirportCode"; value: string }
+    | { field: "status"; value: "on_time" | "delayed" }
+  )
+
+type FlightRowForMutation = {
+  airline_name: string
+  airplane_id: string
+  arrival_airport_code: string
+  arrival_datetime: string
+  base_price: number
+  departure_airport_code: string
+  departure_datetime: string
+  flight_number: string
+  status: "on_time" | "delayed"
+}
+
+function formatFlightDateForSql(value: string) {
+  return value.replace("T", " ")
+}
+
+async function getStaffFlightForMutation(
+  data: FlightIdentityInput
+): Promise<FlightRowForMutation | null> {
+  const user = await requireUser("staff")
+  if (user.airlineName !== data.airlineName) throw new Error("You can only edit your airline's flights.")
+
+  const rows = await db<Array<FlightRowForMutation>>`
+    select
+      airline_name,
+      flight_number,
+      departure_datetime,
+      departure_airport_code,
+      arrival_airport_code,
+      arrival_datetime,
+      base_price,
+      status,
+      airplane_id
+    from flight
+    where airline_name = ${user.airlineName}
+      and flight_number = ${data.flightNumber}
+      and departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+    limit 1
+  `
+
+  return rows.length ? rows[0] : null
+}
+
+async function assertAirportExists(code: string) {
+  const rows = await db<Array<{ code: string }>>`
+    select code
+    from airport
+    where code = ${code}
+    limit 1
+  `
+  if (!rows.length) throw new Error(`Airport ${code} does not exist.`)
+}
+
+async function assertAirplaneCanServeFlight(
+  airlineName: string,
+  airplaneId: string,
+  data: FlightIdentityInput
+) {
+  const rows = await db<Array<{ number_of_seats: number; ticket_count: number }>>`
+    select
+      airplane.number_of_seats,
+      count(ticket.ticket_id)::int as ticket_count
+    from airplane
+    left join ticket
+      on ticket.airline_name = ${airlineName}
+      and ticket.flight_number = ${data.flightNumber}
+      and ticket.departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+    where airplane.airline_name = ${airlineName}
+      and airplane.airplane_id = ${airplaneId}
+    group by airplane.number_of_seats
+    limit 1
+  `
+  if (!rows.length) throw new Error("Choose one of your airline's airplanes.")
+  const row = rows[0]
+  if (row.number_of_seats < row.ticket_count) {
+    throw new Error("That aircraft has fewer seats than this flight's sold tickets.")
+  }
+}
+
 export async function createFlightInternal(data: {
   airplaneId: string
   arrivalAirportCode: string
@@ -857,6 +952,124 @@ export async function updateFlightStatusInternal(data: {
   return {
     message: `Flight ${data.flightNumber} is now marked ${data.status.replaceAll("_", " ")}.`,
   }
+}
+
+export async function updateFlightFieldInternal(data: FlightEditableFieldInput) {
+  const flight = await getStaffFlightForMutation(data)
+  if (!flight) return { error: "Flight not found." }
+
+  if (data.field === "status") {
+    await db`
+      update flight
+      set status = ${data.value}
+      where airline_name = ${flight.airline_name}
+        and flight_number = ${flight.flight_number}
+        and departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+    `
+    return { message: `Flight ${data.flightNumber} status updated.` }
+  }
+
+  if (data.field === "basePrice") {
+    await db`
+      update flight
+      set base_price = ${data.value}
+      where airline_name = ${flight.airline_name}
+        and flight_number = ${flight.flight_number}
+        and departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+    `
+    return { message: `Flight ${data.flightNumber} price updated.` }
+  }
+
+  if (data.field === "airplaneId") {
+    await assertAirplaneCanServeFlight(flight.airline_name, data.value, data)
+    await db`
+      update flight
+      set airplane_id = ${data.value}
+      where airline_name = ${flight.airline_name}
+        and flight_number = ${flight.flight_number}
+        and departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+    `
+    return { message: `Flight ${data.flightNumber} aircraft updated.` }
+  }
+
+  if (data.field === "departureAirportCode") {
+    if (data.value === flight.arrival_airport_code) {
+      return { error: "Departure and arrival airports must be different." }
+    }
+    await assertAirportExists(data.value)
+    await db`
+      update flight
+      set departure_airport_code = ${data.value}
+      where airline_name = ${flight.airline_name}
+        and flight_number = ${flight.flight_number}
+        and departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+    `
+    return { message: `Flight ${data.flightNumber} departure airport updated.` }
+  }
+
+  if (data.field === "arrivalAirportCode") {
+    if (data.value === flight.departure_airport_code) {
+      return { error: "Departure and arrival airports must be different." }
+    }
+    await assertAirportExists(data.value)
+    await db`
+      update flight
+      set arrival_airport_code = ${data.value}
+      where airline_name = ${flight.airline_name}
+        and flight_number = ${flight.flight_number}
+        and departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+    `
+    return { message: `Flight ${data.flightNumber} arrival airport updated.` }
+  }
+
+  if (new Date(data.value) <= new Date(flight.departure_datetime)) {
+    return { error: "Arrival time must be after departure time." }
+  }
+
+  await db`
+    update flight
+    set arrival_datetime = ${data.value}
+    where airline_name = ${flight.airline_name}
+      and flight_number = ${flight.flight_number}
+      and departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+  `
+  return { message: `Flight ${data.flightNumber} arrival time updated.` }
+}
+
+export async function deleteFlightInternal(data: FlightIdentityInput) {
+  const flight = await getStaffFlightForMutation(data)
+  if (!flight) return { error: "Flight not found." }
+
+  const dependencyRows = await db<Array<{ review_count: number; ticket_count: number }>>`
+    select
+      count(distinct ticket.ticket_id)::int as ticket_count,
+      count(distinct review.customer_email)::int as review_count
+    from flight
+    left join ticket
+      on ticket.airline_name = flight.airline_name
+      and ticket.flight_number = flight.flight_number
+      and ticket.departure_datetime = flight.departure_datetime
+    left join review
+      on review.airline_name = flight.airline_name
+      and review.flight_number = flight.flight_number
+      and review.departure_datetime = flight.departure_datetime
+    where flight.airline_name = ${flight.airline_name}
+      and flight.flight_number = ${flight.flight_number}
+      and flight.departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+  `
+  const dependencyRow = dependencyRows[0]
+  if (dependencyRow.ticket_count > 0 || dependencyRow.review_count > 0) {
+    return { error: "Flights with tickets or reviews cannot be deleted." }
+  }
+
+  await db`
+    delete from flight
+    where airline_name = ${flight.airline_name}
+      and flight_number = ${flight.flight_number}
+      and departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+  `
+
+  return { message: `Flight ${data.flightNumber} deleted.` }
 }
 
 export async function addAirplaneInternal(data: {
@@ -1091,16 +1304,16 @@ export async function getCustomerProfileInternal() {
     from customer
     where email = ${user.email}
   `
-  const row = rows[0]
+  const row = rows.at(0)
   if (!row) throw new Error("Customer not found.")
   return {
     buildingNumber: row.building_number,
     city: row.city,
-    dateOfBirth: (row.date_of_birth as unknown) instanceof Date ? (row.date_of_birth as unknown as Date).toISOString().split("T")[0] : String(row.date_of_birth ?? ""),
+    dateOfBirth: (row.date_of_birth as unknown) instanceof Date ? (row.date_of_birth as unknown as Date).toISOString().split("T")[0] : String(row.date_of_birth),
     email: row.email,
     name: row.name,
     passportCountry: row.passport_country,
-    passportExpiration: (row.passport_expiration as unknown) instanceof Date ? (row.passport_expiration as unknown as Date).toISOString().split("T")[0] : String(row.passport_expiration ?? ""),
+    passportExpiration: (row.passport_expiration as unknown) instanceof Date ? (row.passport_expiration as unknown as Date).toISOString().split("T")[0] : String(row.passport_expiration),
     passportNumber: row.passport_number,
     phoneNumber: row.phone_number,
     state: row.state,
@@ -1108,7 +1321,7 @@ export async function getCustomerProfileInternal() {
   }
 }
 
-const EDITABLE_CUSTOMER_FIELDS: Record<string, { column: string; validate: (v: string) => string }> = {
+const EDITABLE_CUSTOMER_FIELDS: Partial<Record<string, { column: string; validate: (v: string) => string }>> = {
   buildingNumber: { column: "building_number", validate: (v) => { const r = customerFieldValidators.buildingNumber.safeParse(v); if (!r.success) throw new Error(r.error.issues[0].message); return r.data } },
   city: { column: "city", validate: (v) => { const r = customerFieldValidators.city.safeParse(v); if (!r.success) throw new Error(r.error.issues[0].message); return r.data } },
   name: { column: "name", validate: (v) => { const r = customerFieldValidators.name.safeParse(v); if (!r.success) throw new Error(r.error.issues[0].message); return r.data } },
@@ -1145,7 +1358,7 @@ export async function changePasswordInternal(data: {
   const rows = await db<Array<{ password: string }>>`
     select password from customer where email = ${user.email}
   `
-  const row = rows[0]
+  const row = rows.at(0)
   if (!row) throw new Error("Customer not found.")
   const valid = await bcrypt.compare(data.currentPassword, row.password)
   if (!valid) throw new Error("Current password is incorrect.")

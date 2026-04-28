@@ -11,6 +11,7 @@ import {
   deleteAirlineSchema,
   deleteAirportSchema,
   deleteCustomerSchema,
+  deleteFlightSchema,
   deleteStaffSchema,
   flightPassengersSchema,
   purchaseTicketSchema,
@@ -19,6 +20,7 @@ import {
   searchFlightsSchema,
   staffFlightFiltersSchema,
   updateCustomerFieldSchema,
+  updateFlightFieldSchema,
   updateStatusSchema,
 } from "@/lib/schemas"
 import {
@@ -30,6 +32,7 @@ import {
   deleteAirlineInternal,
   deleteAirportInternal,
   deleteCustomerInternal,
+  deleteFlightInternal,
   deleteStaffInternal,
   getCustomerDashboardInternal,
   getCustomerProfileInternal,
@@ -49,6 +52,7 @@ import {
   searchFlightsInternal,
   submitReviewInternal,
   updateCustomerFieldInternal,
+  updateFlightFieldInternal,
   updateFlightStatusInternal,
 } from "@/lib/queries.server"
 
@@ -176,6 +180,14 @@ export const createFlightFn = createServerFn({ method: "POST" })
 export const updateFlightStatusFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => updateStatusSchema.parse(data))
   .handler(async ({ data }) => updateFlightStatusInternal(data))
+
+export const updateFlightFieldFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => updateFlightFieldSchema.parse(data))
+  .handler(async ({ data }) => updateFlightFieldInternal(data))
+
+export const deleteFlightFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => deleteFlightSchema.parse(data))
+  .handler(async ({ data }) => deleteFlightInternal(data))
 
 export const addAirplaneFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => addAirplaneSchema.parse(data))
