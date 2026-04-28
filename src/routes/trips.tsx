@@ -149,7 +149,7 @@ function TripCard({
             </div>
           </div>
 
-          {/* Bottom row: price (muted) + review action */}
+          {/* Bottom row: price + ticket ID + review action */}
           <div className="flex items-center justify-between border-t border-border/50 pt-3">
             <span className="text-sm tabular-nums text-muted-foreground">
               ${flight.basePrice.toFixed(2)}
@@ -176,6 +176,10 @@ function TripCard({
                 )}
               </div>
             )}
+
+            <span className="text-xs tabular-nums text-muted-foreground/60">
+              {flight.ticketId}
+            </span>
           </div>
         </div>
       </CardContent>

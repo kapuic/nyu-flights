@@ -97,6 +97,7 @@ export type CustomerFlight = FlightOption & {
   comment: string | null;
   purchaseDatetime: string;
   rating: number | null;
+  ticketId: string;
 };
 
 export type CustomerDashboardData = {

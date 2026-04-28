@@ -371,11 +371,12 @@ export async function getCustomerDashboardInternal(filters: {
       purchase_datetime: string;
       rating: number | null;
       status: "on_time" | "delayed";
+      ticket_id: string;
     }>
   >`
     select
       f.airline_name,
-      f.flight_number,
+      ticket.ticket_id,
       f.departure_datetime,
       f.arrival_datetime,
       f.departure_airport_code,
@@ -423,6 +424,7 @@ export async function getCustomerDashboardInternal(filters: {
     rating: row.rating,
     reviewCount: row.rating ? 1 : 0,
     status: row.status,
+    ticketId: row.ticket_id,
   })) satisfies Array<CustomerFlight>;
 
   return {
