@@ -100,7 +100,12 @@ function getStatusLabel(status: FlightRow["status"]) {
 
 function getUniqueOptions(
   flights: Array<FlightRow>,
-  valueKey: "arrivalAirportCode" | "departureAirportCode" | "status"
+  valueKey:
+    | "airlineName"
+    | "airplaneId"
+    | "arrivalAirportCode"
+    | "departureAirportCode"
+    | "status"
 ): Array<DashboardDataTableFilterOption> {
   const options = new Map<string, string>()
   for (const flight of flights) {
@@ -113,10 +118,17 @@ function getUniqueOptions(
 }
 
 function getFilterOptionLabel(
-  valueKey: "arrivalAirportCode" | "departureAirportCode" | "status",
+  valueKey:
+    | "airlineName"
+    | "airplaneId"
+    | "arrivalAirportCode"
+    | "departureAirportCode"
+    | "status",
   value: string
 ) {
   if (valueKey === "status") return getStatusLabel(value as FlightRow["status"])
+  if (valueKey === "airlineName") return value
+  if (valueKey === "airplaneId") return `Aircraft ${value}`
   const airport = getAirportOption(value)
   return airport ? `${value} — ${airport.city}` : value
 }
@@ -336,6 +348,7 @@ function StaffFlightsPage() {
   const columns = useMemo<Array<ColumnDef<FlightRow>>>(() => {
     const airlineColumn: ColumnDef<FlightRow> = {
       accessorKey: "airlineName",
+      filterFn: "arrIncludesSome",
       header: ({ column }) => (
         <DashboardDataTableColumnHeader column={column} title="Airline" />
       ),
@@ -419,6 +432,7 @@ function StaffFlightsPage() {
       },
       {
         accessorKey: "airplaneId",
+        filterFn: "arrIncludesSome",
         header: ({ column }) => (
           <DashboardDataTableColumnHeader column={column} title="Aircraft" />
         ),
@@ -506,6 +520,15 @@ function StaffFlightsPage() {
   }, [showAirlineColumn])
 
   const filterOptions = [
+    ...(showAirlineColumn
+      ? [
+          {
+            columnId: "airlineName",
+            label: "Airline",
+            options: getUniqueOptions(data.flights, "airlineName"),
+          },
+        ]
+      : []),
     {
       columnId: "departureAirportCode",
       label: "From",
@@ -520,6 +543,11 @@ function StaffFlightsPage() {
       columnId: "status",
       label: "Status",
       options: getUniqueOptions(data.flights, "status"),
+    },
+    {
+      columnId: "airplaneId",
+      label: "Aircraft",
+      options: getUniqueOptions(data.flights, "airplaneId"),
     },
   ]
 
