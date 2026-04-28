@@ -268,7 +268,7 @@ function ManageCustomersPage() {
           <DashboardDataTableColumnHeader column={column} title="Date of Birth" />
         ),
         cell: ({ row }) => (
-          <span className="block min-w-28 text-sm">
+          <span className="block min-w-28 text-sm text-muted-foreground">
             {formatDisplayDate(row.original.date_of_birth)}
           </span>
         ),

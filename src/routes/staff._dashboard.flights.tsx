@@ -290,7 +290,7 @@ const AIRPORT_COMBOBOX_ITEM_VALUE = (airport: { city: string; code: string }) =>
   `${airport.code} ${airport.city}`;
 
 function AircraftCell({ airplaneId }: { airplaneId: string }) {
-  return <span className="font-mono text-sm text-muted-foreground">{airplaneId}</span>;
+  return <span className="font-mono text-sm">{airplaneId}</span>;
 }
 
 function AirplaneOptionCell(airplane: {
