@@ -181,7 +181,16 @@ export function DashboardDataTable<TData, TValue>({
   const handleSortingChange: OnChangeFn<SortingState> = (updater) => {
     const nextSorting =
       typeof updater === "function" ? updater(sorting) : updater
-    const next = nextSorting[0]
+    const [next] = nextSorting as Array<SortingState[number] | undefined>
+    if (!next) {
+      void setQuery({
+        [dirKey]: "asc",
+        [pageKey]: 1,
+        [sortKey]: "",
+      })
+      return
+    }
+
     void setQuery({
       [dirKey]: next.desc ? "desc" : "asc",
       [pageKey]: 1,
@@ -497,6 +506,7 @@ export function DashboardDataTableColumnHeader<TData, TValue>({
       column.clearSorting()
       return
     }
+
     column.toggleSorting(isSorted === "asc")
   }
 
