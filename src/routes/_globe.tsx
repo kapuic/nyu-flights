@@ -74,7 +74,7 @@ function GlobeLayout() {
         resultRoutes={resultRoutes.length > 0 ? resultRoutes : undefined}
       />
 
-      <div className="relative z-20">
+      <div className="sticky top-0 z-20">
         <AppNavbar activeTab="search" currentUser={currentUser} />
       </div>
 

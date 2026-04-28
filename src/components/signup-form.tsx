@@ -639,7 +639,7 @@ export function SignupFormFields({
             <Field>
               {step === 1 ? (
                 <Button
-                  className="bg-gradient-to-r from-slate-950 to-slate-800 hover:opacity-90"
+                  className="w-full"
                   type="submit"
                 >
                   Continue
@@ -669,7 +669,7 @@ export function SignupFormFields({
                     </Button>
                   </div>
                   <Button
-                    className="bg-gradient-to-r from-slate-950 to-slate-800 hover:opacity-90"
+                    className="w-full"
                     disabled={isSubmitting}
                     type="submit"
                   >
@@ -727,7 +727,7 @@ export function SignupForm({
           <div className="p-6 md:p-8">
             <SignupFormFields onSuccess={onSuccess} />
           </div>
-          <div className="relative hidden bg-slate-100 md:block">
+          <div className="relative hidden bg-muted md:block">
             <img
               alt="Traveler signup"
               className="absolute inset-0 h-full w-full object-cover"

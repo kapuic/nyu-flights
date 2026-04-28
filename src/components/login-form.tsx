@@ -185,7 +185,7 @@ export function LoginFormFields({
           {(isSubmitting) => (
             <Field>
               <Button
-                className="bg-gradient-to-r from-slate-950 to-slate-800 hover:opacity-90"
+                className="w-full"
                 disabled={isSubmitting}
                 type="submit"
               >
@@ -250,7 +250,7 @@ export function LoginForm({
           <div className="p-6 md:p-8">
             <LoginFormFields onSuccess={onSuccess} />
           </div>
-          <div className="relative hidden bg-slate-100 md:block">
+          <div className="relative hidden bg-muted md:block">
             <img
               alt="Traveler authentication"
               className="absolute inset-0 h-full w-full object-cover"
