@@ -103,6 +103,7 @@ function ManageAirportsPage() {
   const [selectedAirportCode, setSelectedAirportCode] = useState("");
   const [airportType, setAirportType] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [submissionAttempts, setSubmissionAttempts] = useState(0);
   const deleteConfirm = useDeleteConfirmation();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -111,10 +112,13 @@ function ManageAirportsPage() {
     () => getAirportOption(selectedAirportCode) ?? null,
     [selectedAirportCode],
   );
-  const fieldErrors = getAirportCreateFieldErrors({
-    airportType,
-    selectedAirport,
-  });
+  const showFieldErrors = submissionAttempts > 0;
+  const fieldErrors = showFieldErrors
+    ? getAirportCreateFieldErrors({
+        airportType,
+        selectedAirport,
+      })
+    : {};
 
   const globeMarkers = useMemo(() => {
     if (!selectedAirport) return [];
@@ -135,6 +139,7 @@ function ManageAirportsPage() {
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();
+    setSubmissionAttempts((attempts) => attempts + 1);
     setError(null);
     try {
       if (fieldErrors.airport || fieldErrors.type || !selectedAirport) return;
@@ -148,6 +153,7 @@ function ManageAirportsPage() {
         },
       });
       toast.success(result.message);
+      setSubmissionAttempts(0);
       setSelectedAirportCode("");
       setAirportType("");
       setCreateOpen(false);
@@ -317,6 +323,7 @@ function ManageAirportsPage() {
                   value={selectedAirportCode}
                   onChange={(value) => {
                     setError(null);
+                    if (submissionAttempts > 0) setSubmissionAttempts(0);
                     setSelectedAirportCode(value);
                   }}
                   placeholder="Search airports"
@@ -335,6 +342,7 @@ function ManageAirportsPage() {
                   value={airportType}
                   onValueChange={(value) => {
                     setError(null);
+                    if (submissionAttempts > 0) setSubmissionAttempts(0);
                     setAirportType(value ?? "");
                   }}
                 >
