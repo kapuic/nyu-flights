@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
 import {
   type Column,
   type ColumnDef,
@@ -81,6 +81,15 @@ type DashboardDataTableProps<TData, TValue> = {
   searchPlaceholder?: string
   queryPrefix?: string
 }
+
+type DashboardDataTableFilterContextValue = {
+  filtersByColumnId: Map<string, DashboardDataTableFilter>
+}
+
+const DashboardDataTableFilterContext =
+  createContext<DashboardDataTableFilterContextValue>({
+    filtersByColumnId: new Map(),
+  })
 
 function getQueryKey(prefix: string, key: string) {
   if (!prefix) return key
@@ -187,6 +196,11 @@ export function DashboardDataTable<TData, TValue>({
     [columns, enableRowSelection, selectColumn]
   )
 
+  const filtersByColumnId = useMemo(
+    () => new Map(filters.map((filter) => [filter.columnId, filter])),
+    [filters]
+  )
+
   const table = useReactTable({
     columns: tableColumns,
     data,
@@ -244,173 +258,154 @@ export function DashboardDataTable<TData, TValue>({
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative max-w-sm flex-1">
-          <SearchIcon className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="ps-8"
-            placeholder={searchPlaceholder}
-            value={search}
-            onChange={(event) => table.setGlobalFilter(event.target.value)}
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {filters.map((filter) => {
-            const column = table.getColumn(filter.columnId)
-            if (!column) return null
-            return (
-              <DashboardDataTableFacetedFilter
-                key={filter.columnId}
-                column={column}
-                label={filter.label}
-                options={filter.options}
-              />
-            )
-          })}
-          {hasFilters ? (
-            <Button variant="ghost" size="sm" onClick={clearFilters}>
-              <XIcon data-icon="inline-start" />
-              Clear
-            </Button>
-          ) : null}
-          <DropdownMenu>
-            <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
-              <Columns3Icon data-icon="inline-start" />
-              Columns
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>Visible columns</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {table
-                  .getAllLeafColumns()
-                  .filter((column) => column.getCanHide())
-                  .map((column) => (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(Boolean(value))
-                      }
-                    >
-                      {getColumnLabel(column)}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
-      {enableRowSelection && selectedRows.length > 0 ? (
-        <div className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm">
-          <span className="text-muted-foreground">
-            {selectedRows.length} of {table.getFilteredRowModel().rows.length} selected
-          </span>
-        <div className="flex items-center gap-2">
-          {bulkActions.map((action) => (
-            <Button
-              key={action.label}
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                await action.onSelect(selectedRows)
-                setRowSelection({})
-              }}
-            >
-              {action.label}
-            </Button>
-          ))}
-          <Button variant="ghost" size="sm" onClick={() => setRowSelection({})}>
-            Clear selection
-          </Button>
-        </div>
-        </div>
-      ) : null}
-
-      <div
-        ref={tableContainerRef}
-        className={cn(
-          "overflow-auto rounded-md border",
-          enableVirtualization && "max-h-[560px]"
-        )}
-      >
-        <Table>
-          <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur supports-[backdrop-filter]:bg-muted/75">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="hover:bg-transparent">
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} style={{ width: header.getSize() }}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
+    <DashboardDataTableFilterContext.Provider value={{ filtersByColumnId }}>
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative w-full lg:max-w-sm lg:flex-1">
+            <SearchIcon className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="ps-8"
+              placeholder={searchPlaceholder}
+              value={search}
+              onChange={(event) => table.setGlobalFilter(event.target.value)}
+            />
+          </div>
+          <div className="flex min-w-0 flex-wrap items-center gap-2 lg:justify-end">
+            {enableRowSelection && selectedRows.length > 0 ? (
+              <>
+                <span className="text-sm text-muted-foreground">
+                  {selectedRows.length} of {table.getFilteredRowModel().rows.length} selected
+                </span>
+                {bulkActions.map((action) => (
+                  <Button
+                    key={action.label}
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      await action.onSelect(selectedRows)
+                      setRowSelection({})
+                    }}
+                  >
+                    {action.label}
+                  </Button>
                 ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={visibleColumnCount}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  {data.length === 0 ? emptyMessage : "No rows match this search."}
-                </TableCell>
-              </TableRow>
-            ) : enableVirtualization ? (
-              <VirtualizedRows
-                rows={rows}
-                totalSize={virtualizer.getTotalSize()}
-                virtualRows={virtualRows}
-              />
-            ) : (
-              rows.map((row) => <DashboardDataTableRow key={row.id} row={row} />)
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                <Button variant="ghost" size="sm" onClick={() => setRowSelection({})}>
+                  Clear selection
+                </Button>
+              </>
+            ) : null}
+            {hasFilters ? (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                <XIcon data-icon="inline-start" />
+                Clear filters
+              </Button>
+            ) : null}
+            <DropdownMenu>
+              <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
+                <Columns3Icon data-icon="inline-start" />
+                Columns
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>Visible columns</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {table
+                    .getAllLeafColumns()
+                    .filter((column) => column.getCanHide())
+                    .map((column) => (
+                      <DropdownMenuCheckboxItem
+                        key={column.id}
+                        checked={column.getIsVisible()}
+                        onCheckedChange={(value) =>
+                          column.toggleVisibility(Boolean(value))
+                        }
+                      >
+                        {getColumnLabel(column)}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
 
-      <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        {enableVirtualization ? (
+        <div
+          ref={tableContainerRef}
+          className={cn(
+            "overflow-auto rounded-md border",
+            enableVirtualization && "max-h-[calc(100svh-13rem)] min-h-0"
+          )}
+        >
+          <Table>
+            <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur supports-[backdrop-filter]:bg-muted/75">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id} style={{ width: header.getSize() }}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {rows.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={visibleColumnCount}
+                    className="h-24 text-center text-muted-foreground"
+                  >
+                    {data.length === 0 ? emptyMessage : "No rows match this search."}
+                  </TableCell>
+                </TableRow>
+              ) : enableVirtualization ? (
+                <VirtualizedRows
+                  rows={rows}
+                  totalSize={virtualizer.getTotalSize()}
+                  virtualRows={virtualRows}
+                />
+              ) : (
+                rows.map((row) => <DashboardDataTableRow key={row.id} row={row} />)
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <div>
             Showing {rows.length} of {table.getFilteredRowModel().rows.length} rows
           </div>
-        ) : (
-          <div>
-            Showing {rows.length} of {table.getFilteredRowModel().rows.length} rows
-          </div>
-        )}
-        {!enableVirtualization ? (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!table.getCanPreviousPage()}
-              onClick={() => table.previousPage()}
-            >
-              Previous
-            </Button>
-            <span className="tabular-nums">
-              Page {table.getState().pagination.pageIndex + 1} of {Math.max(1, table.getPageCount())}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!table.getCanNextPage()}
-              onClick={() => table.nextPage()}
-            >
-              Next
-            </Button>
-          </div>
-        ) : null}
+          {!enableVirtualization ? (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!table.getCanPreviousPage()}
+                onClick={() => table.previousPage()}
+              >
+                Previous
+              </Button>
+              <span className="tabular-nums">
+                Page {table.getState().pagination.pageIndex + 1} of {Math.max(1, table.getPageCount())}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!table.getCanNextPage()}
+                onClick={() => table.nextPage()}
+              >
+                Next
+              </Button>
+            </div>
+          ) : null}
+        </div>
       </div>
-    </div>
+    </DashboardDataTableFilterContext.Provider>
   )
 }
 
@@ -425,32 +420,46 @@ export function DashboardDataTableColumnHeader<TData, TValue>({
   column,
   title,
 }: DashboardDataTableColumnHeaderProps<TData, TValue>) {
-  if (!column.getCanSort()) return <span className={className}>{title}</span>
-
+  const { filtersByColumnId } = useContext(DashboardDataTableFilterContext)
+  const filter = filtersByColumnId.get(column.id)
   const isSorted = column.getIsSorted()
 
+  function toggleSorting() {
+    if (isSorted === "desc") {
+      column.clearSorting()
+      return
+    }
+    column.toggleSorting(isSorted === "asc")
+  }
+
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className={cn("-ms-2 px-2", className)}
-      onClick={() => {
-        if (isSorted === "desc") {
-          column.clearSorting()
-          return
-        }
-        column.toggleSorting(isSorted === "asc")
-      }}
-    >
-      <span>{title}</span>
-      {isSorted === "desc" ? (
-        <ArrowDownIcon data-icon="inline-end" />
-      ) : isSorted === "asc" ? (
-        <ArrowUpIcon data-icon="inline-end" />
+    <div className={cn("flex items-center gap-1", className)}>
+      {column.getCanSort() ? (
+        <button
+          type="button"
+          className="-ms-2 inline-flex h-8 items-center gap-1 rounded-md px-2 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          onClick={toggleSorting}
+        >
+          <span>{title}</span>
+          {isSorted === "desc" ? (
+            <ArrowDownIcon className="size-4" />
+          ) : isSorted === "asc" ? (
+            <ArrowUpIcon className="size-4" />
+          ) : (
+            <ChevronsUpDownIcon className="size-4" />
+          )}
+        </button>
       ) : (
-        <ChevronsUpDownIcon data-icon="inline-end" />
+        <span>{title}</span>
       )}
-    </Button>
+      {filter ? (
+        <DashboardDataTableFacetedFilter
+          column={column}
+          label={filter.label}
+          options={filter.options}
+        />
+      ) : null}
+    </div>
   )
 }
 
@@ -539,14 +548,18 @@ function DashboardDataTableFacetedFilter<TData, TValue>({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
-        <FilterIcon data-icon="inline-start" />
-        {label}
-        {selectedValues.size > 0 ? (
-          <span className="ms-1 text-xs text-muted-foreground">
-            {selectedValues.size}
-          </span>
-        ) : null}
+      <DropdownMenuTrigger
+        render={
+          <Button
+            aria-label={`Filter ${label}`}
+            variant={selectedValues.size > 0 ? "secondary" : "ghost"}
+            size={selectedValues.size > 0 ? "xs" : "icon-xs"}
+            className="-my-1"
+          />
+        }
+      >
+        <FilterIcon className="size-3.5" />
+        {selectedValues.size > 0 ? <span>{selectedValues.size}</span> : null}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
         <DropdownMenuGroup>

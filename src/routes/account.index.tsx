@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { format } from "date-fns"
 import { getData as getCountries, getCode } from "country-list"
@@ -190,11 +190,34 @@ function InlineCountryField({
   const [error, setError] = useState("")
   const [saving, setSaving] = useState(false)
   const [inputText, setInputText] = useState("")
+  const [highlightedItem, setHighlightedItem] = useState<CountryOption | undefined>(undefined)
   const selectingRef = useRef(false)
   const code = countryToCode(value)
   const selected = COUNTRY_OPTIONS.find((c) => c.label === value || c.code === value || c.label.toLowerCase() === value.toLowerCase()) ?? null
 
-  const ghost = mode === "strict" ? ghostSuffix(inputText, COUNTRY_OPTIONS) : ""
+  // Ghost shows the completion for the currently highlighted item, not a static first-match
+  const ghost = useMemo(() => {
+    if (mode !== "strict" || !inputText || !highlightedItem) return ""
+    const label = highlightedItem.label
+    if (!label.toLowerCase().startsWith(inputText.toLowerCase())) return ""
+    return label.slice(inputText.length)
+  }, [mode, inputText, highlightedItem])
+  // Sort startsWith matches first so autoHighlight aligns with ghost text
+  const filteredCountries = useMemo(() => {
+    if (!inputText) return COUNTRY_OPTIONS
+    const lower = inputText.toLowerCase()
+    const starts: CountryOption[] = []
+    const contains: CountryOption[] = []
+    for (const c of COUNTRY_OPTIONS) {
+      if (c.label.toLowerCase().startsWith(lower)) {
+        starts.push(c)
+      } else if (`${c.label} ${c.code}`.toLowerCase().includes(lower)) {
+        contains.push(c)
+      }
+    }
+    return [...starts, ...contains]
+  }, [inputText])
+
 
   function cancel() {
     setEditing(false)
@@ -238,13 +261,14 @@ function InlineCountryField({
         <div className="flex items-center gap-1.5">
           <div className="flex-1">
             <Combobox
-              items={COUNTRY_OPTIONS}
+              items={filteredCountries}
               value={selected}
               defaultOpen
               autoHighlight={mode === "strict"}
               itemToStringValue={(c) => `${c.label} ${c.code}`}
               onValueChange={handleSelect}
               onInputValueChange={(text) => setInputText(text)}
+              onItemHighlighted={(item) => setHighlightedItem(item)}
               onOpenChange={(isOpen) => {
                 if (!isOpen) {
                   setTimeout(() => {
@@ -336,6 +360,21 @@ function InlineStateField({
   const selected = STATE_OPTIONS.find((s) => s.label.toLowerCase() === value.toLowerCase()) ?? null
 
   const ghost = mode === "strict" ? ghostSuffix(inputText, STATE_OPTIONS) : ""
+  const filteredStates = useMemo(() => {
+    if (!inputText) return STATE_OPTIONS
+    const lower = inputText.toLowerCase()
+    const starts: StateOption[] = []
+    const contains: StateOption[] = []
+    for (const s of STATE_OPTIONS) {
+      if (s.label.toLowerCase().startsWith(lower)) {
+        starts.push(s)
+      } else if (s.label.toLowerCase().includes(lower)) {
+        contains.push(s)
+      }
+    }
+    return [...starts, ...contains]
+  }, [inputText])
+
 
   function cancel() {
     setEditing(false)
@@ -379,7 +418,7 @@ function InlineStateField({
         <div className="flex items-center gap-1.5">
           <div className="flex-1">
             <Combobox
-              items={STATE_OPTIONS}
+              items={filteredStates}
               value={selected}
               defaultOpen
               autoHighlight={mode === "strict"}
