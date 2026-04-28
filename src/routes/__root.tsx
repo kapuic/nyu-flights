@@ -105,6 +105,14 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 function RootComponent() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return
+    if (import.meta.env.DEV) {
+      void navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const registration of registrations) {
+          void registration.unregister()
+        }
+      })
+      return
+    }
 
     let isRefreshing = false
     navigator.serviceWorker.addEventListener("controllerchange", () => {
