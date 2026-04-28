@@ -58,15 +58,6 @@ function countryToCode(name: string): string {
   return getCode(name) ?? COUNTRY_OPTIONS.find((c) => c.label.toLowerCase() === name.toLowerCase())?.code ?? ""
 }
 
-/** Compute inline ghost completion suffix for the first matching option. */
-function ghostSuffix(input: string, options: Array<{ label: string }>): string {
-  if (!input) return ""
-  const lower = input.toLowerCase()
-  const match = options.find((o) => o.label.toLowerCase().startsWith(lower))
-  if (!match || match.label.length === input.length) return ""
-  return match.label.slice(input.length)
-}
-
 type InlineControls = "internal" | "external"
 type InlineComboboxMode = "freeform" | "strict"
 
@@ -356,10 +347,16 @@ function InlineStateField({
   const [error, setError] = useState("")
   const [saving, setSaving] = useState(false)
   const [inputText, setInputText] = useState("")
+  const [highlightedItem, setHighlightedItem] = useState<StateOption | undefined>(undefined)
   const selectingRef = useRef(false)
   const selected = STATE_OPTIONS.find((s) => s.label.toLowerCase() === value.toLowerCase()) ?? null
 
-  const ghost = mode === "strict" ? ghostSuffix(inputText, STATE_OPTIONS) : ""
+  const ghost = useMemo(() => {
+    if (mode !== "strict" || !inputText || !highlightedItem) return ""
+    const label = highlightedItem.label
+    if (!label.toLowerCase().startsWith(inputText.toLowerCase())) return ""
+    return label.slice(inputText.length)
+  }, [mode, inputText, highlightedItem])
   const filteredStates = useMemo(() => {
     if (!inputText) return STATE_OPTIONS
     const lower = inputText.toLowerCase()
@@ -425,6 +422,7 @@ function InlineStateField({
               itemToStringValue={(s) => s.label}
               onValueChange={handleSelect}
               onInputValueChange={(text) => setInputText(text)}
+              onItemHighlighted={(item) => setHighlightedItem(item)}
               onOpenChange={(isOpen) => {
                 if (!isOpen) {
                   setTimeout(() => {
