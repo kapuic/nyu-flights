@@ -1,14 +1,16 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
-import type { ColumnDef } from "@tanstack/react-table"
-import { useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus } from "lucide-react"
+import type { ColumnDef } from "@tanstack/react-table"
 
+import type {DashboardDataTableFilterOption} from "@/components/dashboard-data-table";
 import { AirportComboboxField } from "@/components/combobox-fields"
 import {
   DashboardDataTable,
-  DashboardDataTableColumnHeader,
+  DashboardDataTableColumnHeader
+  
 } from "@/components/dashboard-data-table"
 import {
   DeleteConfirmation,
@@ -43,6 +45,20 @@ export const Route = createFileRoute("/staff/_dashboard/airports")({
   },
   component: ManageAirportsPage,
 })
+
+function getUniqueOptions(
+  airports: Array<AirportRow>,
+  valueKey: "airport_type" | "country"
+): Array<DashboardDataTableFilterOption> {
+  const options = new Map<string, string>()
+  for (const airport of airports) {
+    const value = airport[valueKey]
+    options.set(value, value)
+  }
+  return Array.from(options, ([value, label]) => ({ label, value })).sort(
+    (a, b) => a.label.localeCompare(b.label)
+  )
+}
 
 function ManageAirportsPage() {
   const { data: airports } = useSuspenseQuery(staffAirportsQueryOptions())
@@ -103,17 +119,40 @@ function ManageAirportsPage() {
     }
   }
 
-  async function handleDelete(airportCode: string) {
-    try {
-      const result = await deleteAirportFn({ data: { code: airportCode } })
-      toast.success(result.message)
-      await refreshAirports()
-    } catch {
-      toast.error("Failed to delete airport. It may have dependent flights.")
-    }
-  }
+  const deleteAirports = useCallback(
+    async (rows: Array<AirportRow>) => {
+      try {
+        const results = await Promise.all(
+          rows.map((airport) => deleteAirportFn({ data: { code: airport.code } }))
+        )
+        const failed = results.find((result) => "error" in result && result.error)
+        if (failed && "error" in failed) {
+          toast.error(String(failed.error))
+          return
+        }
 
-  const columns: Array<ColumnDef<AirportRow>> = [
+        toast.success(
+          `Deleted ${rows.length} airport${rows.length === 1 ? "" : "s"}.`
+        )
+        await refreshAirports()
+      } catch {
+        toast.error("Failed to delete airports. They may have dependent flights.")
+      }
+    },
+    [refreshAirports]
+  )
+
+  const requestDeleteAirports = useCallback(
+    (rows: Array<AirportRow>) => {
+      const label =
+        rows.length === 1 ? rows[0].code : `${rows.length} selected airports`
+      deleteConfirm.requestDelete(label, () => void deleteAirports(rows))
+    },
+    [deleteAirports, deleteConfirm]
+  )
+
+  const columns = useMemo<Array<ColumnDef<AirportRow>>>(
+    () => [
     {
       accessorKey: "code",
       header: ({ column }) => (
@@ -129,6 +168,7 @@ function ManageAirportsPage() {
     },
     {
       accessorKey: "country",
+      filterFn: "arrIncludesSome",
       header: ({ column }) => (
         <DashboardDataTableColumnHeader column={column} title="Country" />
       ),
@@ -138,6 +178,7 @@ function ManageAirportsPage() {
     },
     {
       accessorKey: "airport_type",
+      filterFn: "arrIncludesSome",
       header: ({ column }) => (
         <DashboardDataTableColumnHeader column={column} title="Type" />
       ),
@@ -147,29 +188,35 @@ function ManageAirportsPage() {
         </Badge>
       ),
     },
-    {
-      id: "actions",
-      enableHiding: false,
-      enableSorting: false,
-      header: () => <span className="sr-only">Actions</span>,
-      cell: ({ row }) => (
-        <div className="text-right">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Delete ${row.original.code}`}
-            onClick={() =>
-              deleteConfirm.requestDelete(row.original.code, () =>
-                handleDelete(row.original.code)
-              )
-            }
-          >
-            <Trash2 className="text-destructive" />
-          </Button>
-        </div>
-      ),
-    },
-  ]
+  ],
+    []
+  )
+
+  const filterOptions = useMemo(
+    () => [
+      {
+        columnId: "country",
+        label: "Country",
+        options: getUniqueOptions(airports, "country"),
+      },
+      {
+        columnId: "airport_type",
+        label: "Type",
+        options: getUniqueOptions(airports, "airport_type"),
+      },
+    ],
+    [airports]
+  )
+
+  const tableActions = useMemo(
+    () => [
+      {
+        label: "Delete airports",
+        onSelect: requestDeleteAirports,
+      },
+    ],
+    [requestDeleteAirports]
+  )
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -238,11 +285,15 @@ function ManageAirportsPage() {
       />
 
       <DashboardDataTable
+        bulkActions={tableActions}
         columns={columns}
         data={airports}
         emptyMessage="No airports."
+        enableRowSelection
+        filters={filterOptions}
         searchPlaceholder="Search airports..."
         queryPrefix="airports"
+        rowActions={tableActions}
       />
     </div>
   )
