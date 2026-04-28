@@ -22,29 +22,37 @@ type PhoneInputProps = Omit<
 > & {
   className?: string
   onChange?: (value: RPNInput.Value) => void
+  /** Ref that stays true while the country-picker popover is open. */
+  pickerOpenRef?: React.RefObject<boolean>
   value?: RPNInput.Value
 }
 
 const PhoneInput = React.forwardRef<
   React.ComponentRef<typeof RPNInput.default>,
   PhoneInputProps
->(({ className, onChange, value, ...props }, ref) => {
+>(({ className, onChange, pickerOpenRef, value, ...props }, ref) => {
   return (
-    <RPNInput.default
-      ref={ref}
-      className={cn("flex", className)}
-      flagComponent={FlagComponent}
-      countrySelectComponent={CountrySelect}
-      inputComponent={InputComponent}
-      smartCaret={false}
-      international
-      value={value || undefined}
-      onChange={(v) => onChange?.(v || ("" as RPNInput.Value))}
-      {...props}
-    />
+    <PickerRefContext.Provider value={pickerOpenRef ?? null}>
+      <RPNInput.default
+        ref={ref}
+        className={cn("flex", className)}
+        flagComponent={FlagComponent}
+        countrySelectComponent={CountrySelect}
+        inputComponent={InputComponent}
+        smartCaret={false}
+        international
+        value={value || undefined}
+        onChange={(v) => onChange?.(v || ("" as RPNInput.Value))}
+        {...props}
+      />
+    </PickerRefContext.Provider>
   )
 })
 PhoneInput.displayName = "PhoneInput"
+
+// Internal context to thread the ref down to CountrySelect
+// (react-phone-number-input doesn't let us pass custom props to countrySelectComponent)
+const PickerRefContext = React.createContext<React.RefObject<boolean> | null>(null)
 
 // ---------------------------------------------------------------------------
 // InputComponent — renders our shadcn Input inside react-phone-number-input
@@ -95,6 +103,13 @@ function CountrySelect({
 }: CountrySelectProps) {
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
+  const pickerOpenRef = React.useContext(PickerRefContext)
+
+  // Keep parent ref in sync with open state (synchronously via onOpenChange)
+  const handleOpenChange = React.useCallback((nextOpen: boolean) => {
+    setOpen(nextOpen)
+    if (pickerOpenRef) pickerOpenRef.current = nextOpen
+  }, [pickerOpenRef])
 
   const filtered = React.useMemo(() => {
     if (!search) return countryList
@@ -108,7 +123,7 @@ function CountrySelect({
   }, [countryList, search])
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         render={
           <Button

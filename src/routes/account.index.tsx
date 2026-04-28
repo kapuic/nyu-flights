@@ -90,6 +90,7 @@ function InlinePhoneField({
   const [error, setError] = useState("")
   const [saving, setSaving] = useState(false)
   const [draft, setDraft] = useState(value)
+  const pickerOpenRef = useRef(false)
 
   function cancel() {
     setDraft(value)
@@ -115,13 +116,28 @@ function InlinePhoneField({
   if (editing) {
     return (
       <InlineFieldWrapper label={label} error={error}>
-        <div className="flex items-center gap-1.5">
+        <div
+          className="flex items-center gap-1.5"
+          onBlur={(e) => {
+            const related = e.relatedTarget as HTMLElement | null
+            if (related?.dataset.inlineAction) return
+            if (e.currentTarget.contains(related)) return
+            // Defer check: onOpenChange sets pickerOpenRef synchronously,
+            // but it fires after blur. A microtask lets it run first.
+            requestAnimationFrame(() => {
+              if (pickerOpenRef.current) return
+              void save()
+            })
+          }}
+        >
           <div className="flex-1">
             <PhoneInput
               defaultCountry="US"
               value={draft as PhoneValue}
               onChange={(v: string) => setDraft(v ?? "")}
               placeholder="(555) 000-0000"
+              className="h-8 [&_button]:h-8 [&_input]:h-8"
+              pickerOpenRef={pickerOpenRef}
             />
           </div>
           {controls === "external" && (
