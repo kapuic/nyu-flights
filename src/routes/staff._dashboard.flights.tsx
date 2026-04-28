@@ -8,32 +8,26 @@ import { AlertTriangleIcon, CircleCheckIcon, Plus, Trash2Icon } from "lucide-rea
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
 
-import type {
-  DashboardDataTableFilterOption,
-  DashboardDataTableInlineSelectOption,
-} from "@/components/dashboard-data-table";
+import type { DashboardDataTableFilterOption } from "@/components/dashboard-data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CountryFlag } from "@/components/country-flag";
 import {
   DashboardDataTable,
   DashboardDataTableColumnHeader,
+  DashboardDataTableInlineComboboxCell,
   DashboardDataTableInlineDateTimeCell,
   DashboardDataTableInlineSelectCell,
   DashboardDataTableInlineTextCell,
 } from "@/components/dashboard-data-table";
 
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { AirplaneComboboxField, AirportComboboxField } from "@/components/combobox-fields";
+import {
+  AirlineComboboxField,
+  AirplaneComboboxField,
+  AirportComboboxField,
+} from "@/components/combobox-fields";
 import { DateTimePickerField } from "@/components/date-time-picker";
 import { DeleteConfirmation, useDeleteConfirmation } from "@/components/delete-confirmation";
 import { DialogGlobe } from "@/components/dialog-globe";
@@ -144,7 +138,7 @@ const flightFilterSearchParams = {
   source: parseAsString.withDefault(""),
   startDate: parseAsString.withDefault(""),
 };
-const flightStatusOptions: Array<DashboardDataTableInlineSelectOption<FlightRow["status"]>> = [
+const flightStatusOptions: Array<{ label: string; value: FlightRow["status"] }> = [
   { label: "On Time", value: "on_time" },
   { label: "Delayed", value: "delayed" },
 ];
@@ -174,6 +168,11 @@ function getStatusLabel(status: FlightRow["status"]) {
   return status === "on_time" ? "On Time" : "Delayed";
 }
 
+function getAirportDisplayLabel(value: string) {
+  const airport = getAirportOption(value);
+  return airport ? `${value} (${airport.city})` : value;
+}
+
 function getFlightRowId(flight: FlightRow) {
   return `${flight.airlineName}:${flight.flightNumber}:${flight.departureDatetime}`;
 }
@@ -199,17 +198,16 @@ function getFilterOptionLabel(
   if (valueKey === "status") return getStatusLabel(value as FlightRow["status"]);
   if (valueKey === "airlineName") return value;
   if (valueKey === "airplaneId") return `Aircraft ${value}`;
-  const airport = getAirportOption(value);
-  return airport ? `${value} — ${airport.city}` : value;
+  return getAirportDisplayLabel(value);
 }
 
 function AirportCell({ code }: { code: string }) {
   const airport = getAirportOption(code);
   return (
-    <div className="flex min-w-36 items-center gap-2">
+    <div className="flex min-w-52 items-center justify-start gap-2 text-left">
       {airport ? <CountryFlag countryCode={airport.countryCode} size={18} /> : null}
       <div className="min-w-0">
-        <div className="font-mono text-sm font-medium tracking-tight">{code}</div>
+        <div className="font-mono text-sm font-medium tracking-tight text-left">{code}</div>
         <div className="truncate text-xs text-muted-foreground">
           {airport?.name ?? airport?.city ?? "Unknown airport"}
         </div>
@@ -280,6 +278,31 @@ function FlightGlobe({
   );
 }
 
+const AIRPORT_COMBOBOX_ITEM_LABEL = (airport: { city: string; code: string }) =>
+  getAirportDisplayLabel(airport.code);
+const AIRPORT_COMBOBOX_ITEM_VALUE = (airport: { city: string; code: string }) =>
+  `${airport.code} ${airport.city}`;
+
+function AircraftCell({ airplaneId }: { airplaneId: string }) {
+  return <span className="font-mono text-sm text-muted-foreground">{airplaneId}</span>;
+}
+
+function AirplaneOptionCell(airplane: {
+  airplaneId: string;
+  manufacturingCompany?: string;
+  numberOfSeats: number;
+}) {
+  return (
+    <span className="flex min-w-0 flex-col gap-0.5">
+      <span className="truncate font-mono text-sm font-medium">{airplane.airplaneId}</span>
+      <span className="truncate text-xs text-muted-foreground">
+        {airplane.manufacturingCompany ? `${airplane.manufacturingCompany} · ` : ""}
+        {airplane.numberOfSeats} seats
+      </span>
+    </span>
+  );
+}
+
 function StaffFlightsPage() {
   const [flightFilters, setFlightFilters] = useQueryStates(flightFilterSearchParams, {
     history: "replace",
@@ -310,14 +333,6 @@ function StaffFlightsPage() {
   });
   const dbAirports = dbAirportsQuery.data ?? [];
   const airlineOptions = referenceDataQuery.data?.airlines ?? [];
-  const airportOptions = useMemo(
-    () =>
-      dbAirports.map((airport) => ({
-        label: `${airport.code} — ${airport.city}`,
-        value: airport.code,
-      })),
-    [dbAirports],
-  );
 
   const form = useForm({
     defaultValues: {
@@ -477,12 +492,19 @@ function StaffFlightsPage() {
         filterFn: "arrIncludesSome",
         header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="From" />,
         cell: ({ row }) => (
-          <DashboardDataTableInlineSelectCell
+          <DashboardDataTableInlineComboboxCell
             ariaLabel={`Update ${row.original.flightNumber} departure airport`}
+            className="min-w-56"
+            getItemKey={(airport) => airport.code}
+            itemToStringLabel={AIRPORT_COMBOBOX_ITEM_LABEL}
+            itemToStringValue={AIRPORT_COMBOBOX_ITEM_VALUE}
+            items={dbAirports}
             onSave={(code) => saveFlightField(row.original, "departureAirportCode", code)}
-            options={airportOptions}
+            placeholder="Search departure airport"
+            renderItem={(airport) => <AirportCell code={airport.code} />}
             renderValue={(code) => <AirportCell code={code} />}
             value={row.original.departureAirportCode}
+            valueFromItem={(airport) => airport.code}
           />
         ),
       },
@@ -491,12 +513,19 @@ function StaffFlightsPage() {
         filterFn: "arrIncludesSome",
         header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="To" />,
         cell: ({ row }) => (
-          <DashboardDataTableInlineSelectCell
+          <DashboardDataTableInlineComboboxCell
             ariaLabel={`Update ${row.original.flightNumber} arrival airport`}
+            className="min-w-56"
+            getItemKey={(airport) => airport.code}
+            itemToStringLabel={AIRPORT_COMBOBOX_ITEM_LABEL}
+            itemToStringValue={AIRPORT_COMBOBOX_ITEM_VALUE}
+            items={dbAirports}
             onSave={(code) => saveFlightField(row.original, "arrivalAirportCode", code)}
-            options={airportOptions}
+            placeholder="Search arrival airport"
+            renderItem={(airport) => <AirportCell code={airport.code} />}
             renderValue={(code) => <AirportCell code={code} />}
             value={row.original.arrivalAirportCode}
+            valueFromItem={(airport) => airport.code}
           />
         ),
       },
@@ -535,7 +564,7 @@ function StaffFlightsPage() {
             ariaLabel={`Update ${row.original.flightNumber} status`}
             onSave={(status) => saveFlightStatus(row.original, status)}
             options={flightStatusOptions}
-            renderValue={(status) => <FlightStatusBadge status={status} />}
+            renderValue={(status: FlightRow["status"]) => <FlightStatusBadge status={status} />}
             value={row.original.status}
           />
         ),
@@ -545,19 +574,24 @@ function StaffFlightsPage() {
         filterFn: "arrIncludesSome",
         header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Aircraft" />,
         cell: ({ row }) => (
-          <DashboardDataTableInlineSelectCell
+          <DashboardDataTableInlineComboboxCell
             ariaLabel={`Update ${row.original.flightNumber} aircraft`}
-            onSave={(airplaneId) => saveFlightField(row.original, "airplaneId", airplaneId)}
-            options={data.airplanes
-              .filter((airplane) => airplane.airlineName === row.original.airlineName)
-              .map((airplane) => ({
-                label: `${airplane.airplaneId} — ${airplane.numberOfSeats} seats`,
-                value: airplane.airplaneId,
-              }))}
-            renderValue={(airplaneId) => (
-              <span className="font-mono text-sm text-muted-foreground">{airplaneId}</span>
+            getItemKey={(airplane) => `${airplane.airlineName}:${airplane.airplaneId}`}
+            itemToStringLabel={(airplane) =>
+              `${airplane.airplaneId} (${airplane.manufacturingCompany}, ${airplane.numberOfSeats} seats)`
+            }
+            itemToStringValue={(airplane) =>
+              `${airplane.airplaneId} ${airplane.manufacturingCompany} ${airplane.numberOfSeats} seats`
+            }
+            items={data.airplanes.filter(
+              (airplane) => airplane.airlineName === row.original.airlineName,
             )}
+            onSave={(airplaneId) => saveFlightField(row.original, "airplaneId", airplaneId)}
+            placeholder="Search aircraft"
+            renderItem={AirplaneOptionCell}
+            renderValue={(airplaneId) => <AircraftCell airplaneId={airplaneId} />}
             value={row.original.airplaneId}
+            valueFromItem={(airplane) => airplane.airplaneId}
           />
         ),
       },
@@ -634,7 +668,6 @@ function StaffFlightsPage() {
     ];
   }, [
     data.airplanes,
-    airportOptions,
     handleStatusToggle,
     requestDeleteFlights,
     saveFlightField,
@@ -744,27 +777,16 @@ function StaffFlightsPage() {
                           {(field) => (
                             <Field>
                               <FieldLabel>Airline</FieldLabel>
-                              <Select
+                              <AirlineComboboxField
+                                items={airlineOptions}
                                 value={field.state.value}
-                                onValueChange={(value) => {
-                                  if (value === null) return;
+                                onBlur={field.handleBlur}
+                                onChange={(value) => {
                                   field.handleChange(value);
                                   form.setFieldValue("airplaneId", "");
                                 }}
-                              >
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Choose airline" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectGroup>
-                                    {airlineOptions.map((airline) => (
-                                      <SelectItem key={airline} value={airline}>
-                                        {airline}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectGroup>
-                                </SelectContent>
-                              </Select>
+                                placeholder="Search airlines"
+                              />
                             </Field>
                           )}
                         </form.Field>

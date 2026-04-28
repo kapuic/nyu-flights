@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { getData as getCountries } from "country-list"
+import { getData as getCountries } from "country-list";
 
 import {
   Combobox,
@@ -9,24 +9,69 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
-} from "@/components/ui/combobox"
-import { CountryFlag } from "@/components/country-flag"
-import {
-  getAirportDisplayValue,
-  getAirportSearchValue,
-} from "@/lib/airports"
-import type { AirportOption } from "@/lib/airports"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/combobox";
+import { CountryFlag } from "@/components/country-flag";
+import { getAirportDisplayValue, getAirportSearchValue } from "@/lib/airports";
+import type { AirportOption } from "@/lib/airports";
+import { cn } from "@/lib/utils";
+
+type AirlineComboboxItem = {
+  name: string;
+};
+
+type AirlineComboboxFieldProps = {
+  items: Array<string>;
+  onBlur?: () => void;
+  onChange: (value: string, airline: AirlineComboboxItem | null) => void;
+  placeholder?: string;
+  value: string;
+};
+
+export function AirlineComboboxField({
+  items,
+  onBlur,
+  onChange,
+  placeholder = "Search airlines",
+  value,
+}: AirlineComboboxFieldProps) {
+  const airlineItems = items.map((name) => ({ name }));
+  const selectedAirline = airlineItems.find((airline) => airline.name === value) ?? null;
+
+  return (
+    <Combobox
+      items={airlineItems}
+      value={selectedAirline}
+      itemToStringLabel={(airline) => airline.name}
+      itemToStringValue={(airline) => airline.name}
+      onValueChange={(airline) => {
+        onChange(airline?.name ?? "", airline ?? null);
+        onBlur?.();
+      }}
+    >
+      <ComboboxInput placeholder={placeholder} showClear className="w-full" />
+      <ComboboxContent>
+        <ComboboxEmpty>No airlines found.</ComboboxEmpty>
+        <ComboboxList>
+          {(airline) => (
+            <ComboboxItem key={airline.name} value={airline}>
+              <span className="truncate">{airline.name}</span>
+            </ComboboxItem>
+          )}
+        </ComboboxList>
+      </ComboboxContent>
+    </Combobox>
+  );
+}
 
 type AirportComboboxFieldProps = {
-  className?: string
-  inputClassName?: string
-  items: Array<AirportOption>
-  onBlur?: () => void
-  onChange: (value: string, airport: AirportOption | null) => void
-  placeholder?: string
-  value: string
-}
+  className?: string;
+  inputClassName?: string;
+  items: Array<AirportOption>;
+  onBlur?: () => void;
+  onChange: (value: string, airport: AirportOption | null) => void;
+  placeholder?: string;
+  value: string;
+};
 
 export function AirportComboboxField({
   className,
@@ -38,7 +83,7 @@ export function AirportComboboxField({
   value,
 }: AirportComboboxFieldProps) {
   const selectedAirport =
-    items.find((airport) => airport.code === value.trim().toUpperCase()) ?? null
+    items.find((airport) => airport.code === value.trim().toUpperCase()) ?? null;
 
   return (
     <Combobox
@@ -47,15 +92,11 @@ export function AirportComboboxField({
       itemToStringLabel={getAirportDisplayValue}
       itemToStringValue={getAirportSearchValue}
       onValueChange={(airport) => {
-        onChange(airport?.code ?? "", airport ?? null)
-        onBlur?.()
+        onChange(airport?.code ?? "", airport ?? null);
+        onBlur?.();
       }}
     >
-      <ComboboxInput
-        placeholder={placeholder}
-        showClear
-        className={cn("w-full", inputClassName)}
-      />
+      <ComboboxInput placeholder={placeholder} showClear className={cn("w-full", inputClassName)} />
       <ComboboxContent className={className}>
         <ComboboxEmpty>No airports found.</ComboboxEmpty>
         <ComboboxList>
@@ -63,9 +104,7 @@ export function AirportComboboxField({
             <ComboboxItem key={airport.code} value={airport}>
               <CountryFlag countryCode={airport.countryCode} size={16} />
               <span className="flex min-w-0 flex-col gap-0.5">
-                <span className="truncate font-medium">
-                  {getAirportDisplayValue(airport)}
-                </span>
+                <span className="truncate font-medium">{getAirportDisplayValue(airport)}</span>
                 <span className="truncate text-xs text-muted-foreground">
                   {airport.name} · {airport.country}
                 </span>
@@ -75,22 +114,22 @@ export function AirportComboboxField({
         </ComboboxList>
       </ComboboxContent>
     </Combobox>
-  )
+  );
 }
 
 type AirplaneComboboxItem = {
-  airplaneId: string
-  manufacturingCompany?: string
-  numberOfSeats: number
-}
+  airplaneId: string;
+  manufacturingCompany?: string;
+  numberOfSeats: number;
+};
 
 type AirplaneComboboxFieldProps = {
-  items: Array<AirplaneComboboxItem>
-  onBlur?: () => void
-  onChange: (value: string, airplane: AirplaneComboboxItem | null) => void
-  placeholder?: string
-  value: string
-}
+  items: Array<AirplaneComboboxItem>;
+  onBlur?: () => void;
+  onChange: (value: string, airplane: AirplaneComboboxItem | null) => void;
+  placeholder?: string;
+  value: string;
+};
 
 export function AirplaneComboboxField({
   items,
@@ -99,8 +138,7 @@ export function AirplaneComboboxField({
   placeholder = "Search airplanes",
   value,
 }: AirplaneComboboxFieldProps) {
-  const selectedAirplane =
-    items.find((airplane) => airplane.airplaneId === value) ?? null
+  const selectedAirplane = items.find((airplane) => airplane.airplaneId === value) ?? null;
 
   return (
     <Combobox
@@ -113,8 +151,8 @@ export function AirplaneComboboxField({
         `${airplane.airplaneId} ${airplane.manufacturingCompany ?? ""} ${airplane.numberOfSeats} seats`
       }
       onValueChange={(airplane) => {
-        onChange(airplane?.airplaneId ?? "", airplane ?? null)
-        onBlur?.()
+        onChange(airplane?.airplaneId ?? "", airplane ?? null);
+        onBlur?.();
       }}
     >
       <ComboboxInput placeholder={placeholder} showClear className="w-full" />
@@ -124,13 +162,9 @@ export function AirplaneComboboxField({
           {(airplane) => (
             <ComboboxItem key={airplane.airplaneId} value={airplane}>
               <span className="flex min-w-0 flex-col gap-0.5">
-                <span className="truncate font-medium">
-                  {airplane.airplaneId}
-                </span>
+                <span className="truncate font-medium">{airplane.airplaneId}</span>
                 <span className="truncate text-xs text-muted-foreground">
-                  {airplane.manufacturingCompany
-                    ? `${airplane.manufacturingCompany} · `
-                    : ""}
+                  {airplane.manufacturingCompany ? `${airplane.manufacturingCompany} · ` : ""}
                   {airplane.numberOfSeats} seats
                 </span>
               </span>
@@ -139,27 +173,27 @@ export function AirplaneComboboxField({
         </ComboboxList>
       </ComboboxContent>
     </Combobox>
-  )
+  );
 }
 
 type CountryOption = {
-  code: string
-  label: string
-}
+  code: string;
+  label: string;
+};
 
 const COUNTRY_OPTIONS: Array<CountryOption> = getCountries()
   .map((country) => ({
     code: country.code,
     label: country.name,
   }))
-  .sort((left, right) => left.label.localeCompare(right.label))
+  .sort((left, right) => left.label.localeCompare(right.label));
 
 type CountryComboboxFieldProps = {
-  onBlur?: () => void
-  onChange: (value: string, country: CountryOption | null) => void
-  placeholder?: string
-  value: string
-}
+  onBlur?: () => void;
+  onChange: (value: string, country: CountryOption | null) => void;
+  placeholder?: string;
+  value: string;
+};
 
 export function CountryComboboxField({
   onBlur,
@@ -168,9 +202,7 @@ export function CountryComboboxField({
   value,
 }: CountryComboboxFieldProps) {
   const selectedCountry =
-    COUNTRY_OPTIONS.find(
-      (country) => country.label === value || country.code === value
-    ) ?? null
+    COUNTRY_OPTIONS.find((country) => country.label === value || country.code === value) ?? null;
 
   return (
     <Combobox
@@ -179,8 +211,8 @@ export function CountryComboboxField({
       itemToStringLabel={(country) => country.label}
       itemToStringValue={(country) => `${country.label} ${country.code}`}
       onValueChange={(country) => {
-        onChange(country?.label ?? "", country ?? null)
-        onBlur?.()
+        onChange(country?.label ?? "", country ?? null);
+        onBlur?.();
       }}
     >
       <ComboboxInput placeholder={placeholder} showClear className="w-full" />
@@ -191,13 +223,11 @@ export function CountryComboboxField({
             <ComboboxItem key={country.code} value={country}>
               <CountryFlag countryCode={country.code} size={16} />
               <span className="truncate">{country.label}</span>
-              <span className="text-xs text-muted-foreground">
-                {country.code}
-              </span>
+              <span className="text-xs text-muted-foreground">{country.code}</span>
             </ComboboxItem>
           )}
         </ComboboxList>
       </ComboboxContent>
     </Combobox>
-  )
+  );
 }

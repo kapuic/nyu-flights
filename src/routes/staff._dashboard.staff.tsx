@@ -6,14 +6,21 @@ import type { ColumnDef } from "@tanstack/react-table";
 
 import type { DashboardDataTableFilterOption } from "@/components/dashboard-data-table";
 import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
+import {
   DashboardDataTable,
   DashboardDataTableColumnHeader,
-  DashboardDataTableInlineSelectCell,
   DashboardDataTableInlineTextCell,
 } from "@/components/dashboard-data-table";
 import { Badge } from "@/components/ui/badge";
 import { DeleteConfirmation, useDeleteConfirmation } from "@/components/delete-confirmation";
-import { deleteStaffFn, updateStaffFieldFn } from "@/lib/queries";
+import { deleteStaffFn, listAllAirlinesFn, updateStaffFieldFn } from "@/lib/queries";
 import { staffMembersQueryOptions } from "@/lib/staff-queries";
 import { getStaffPermission } from "@/lib/staff-permissions";
 
@@ -56,15 +63,58 @@ function getRoleLabel(role: string) {
   if (role === "admin") return "Admin";
   return "Staff";
 }
-function getAirlineOptions(staff: Array<StaffRow>) {
-  return getUniqueOptions(staff, "airline_name").map((option) => ({
-    label: option.label,
-    value: option.value,
-  }));
+function StaffAirlineComboboxCell({
+  airlines,
+  ariaLabel,
+  onSave,
+  value,
+}: {
+  airlines: Array<string>;
+  ariaLabel: string;
+  onSave: (value: string) => Promise<void>;
+  value: string;
+}) {
+  const airlineItems = useMemo(() => airlines.map((name) => ({ name })), [airlines]);
+  const selectedAirline = airlineItems.find((airline) => airline.name === value) ?? null;
+
+  return (
+    <Combobox
+      items={airlineItems}
+      value={selectedAirline}
+      itemToStringLabel={(airline) => airline.name}
+      itemToStringValue={(airline) => airline.name}
+      onValueChange={(airline) => {
+        if (!airline || airline.name === value) return;
+        void onSave(airline.name);
+      }}
+    >
+      <ComboboxInput
+        aria-label={ariaLabel}
+        placeholder="Search airlines"
+        showClear
+        className="h-8 min-w-36"
+      />
+      <ComboboxContent>
+        <ComboboxEmpty>No airlines found.</ComboboxEmpty>
+        <ComboboxList>
+          {(airline) => (
+            <ComboboxItem key={airline.name} value={airline}>
+              <span className="truncate">{airline.name}</span>
+            </ComboboxItem>
+          )}
+        </ComboboxList>
+      </ComboboxContent>
+    </Combobox>
+  );
 }
 
 function ManageStaffPage() {
   const { data: staff } = useSuspenseQuery(staffMembersQueryOptions());
+  const { data: airlines } = useSuspenseQuery({
+    queryKey: ["staff-airlines"],
+    queryFn: () => listAllAirlinesFn(),
+    staleTime: 30_000,
+  });
   const deleteConfirm = useDeleteConfirmation();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -150,10 +200,10 @@ function ManageStaffPage() {
         filterFn: "arrIncludesSome",
         header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Airline" />,
         cell: ({ row }) => (
-          <DashboardDataTableInlineSelectCell
+          <StaffAirlineComboboxCell
             ariaLabel={`Update ${row.original.username} airline`}
+            airlines={airlines.map((airline) => airline.name)}
             onSave={(value) => saveStaffField(row.original, "airlineName", value)}
-            options={getAirlineOptions(staff)}
             value={row.original.airline_name}
           />
         ),
@@ -187,7 +237,7 @@ function ManageStaffPage() {
         },
       },
     ],
-    [saveStaffField, staff],
+    [airlines, saveStaffField],
   );
 
   const filterOptions = useMemo(

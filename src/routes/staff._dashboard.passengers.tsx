@@ -5,16 +5,18 @@ import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
+
+import {
   DashboardDataTable,
   DashboardDataTableColumnHeader,
 } from "@/components/dashboard-data-table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { staffDashboardQueryOptions, staffPassengersQueryOptions } from "@/lib/staff-queries";
 
 type PassengerRow = {
@@ -60,6 +62,27 @@ function getFlightSelectionKey(flight: {
 }) {
   return `${flight.airlineName}::${flight.flightNumber}::${flight.departureDatetime}`;
 }
+
+function getFlightSelectionLabel(flight: {
+  airlineName: string;
+  arrivalAirportCode: string;
+  departureAirportCode: string;
+  departureDatetime: string;
+  flightNumber: string;
+}) {
+  return `${flight.airlineName} · ${flight.flightNumber} — ${flight.departureAirportCode} → ${flight.arrivalAirportCode} (${formatDateShort(flight.departureDatetime)})`;
+}
+
+function getFlightSelectionSearchValue(flight: {
+  airlineName: string;
+  arrivalAirportCode: string;
+  departureAirportCode: string;
+  departureDatetime: string;
+  flightNumber: string;
+}) {
+  return `${flight.airlineName} ${flight.flightNumber} ${flight.departureAirportCode} ${flight.arrivalAirportCode} ${formatDateShort(flight.departureDatetime)}`;
+}
+
 function StaffPassengersPage() {
   const { data } = useSuspenseQuery(staffDashboardQueryOptions(passengerFlightFilters));
   const [{ flight: selectedFlightKey }, setSearchParams] = useQueryStates(passengerSearchParams);
@@ -130,27 +153,27 @@ function StaffPassengersPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="max-w-sm flex-1">
           <label className="mb-1.5 block text-sm font-medium">Flight</label>
-          <Select
-            value={selectedFlightKey}
-            onValueChange={(value) => {
-              void setSearchParams({ flight: value ?? "" });
+          <Combobox
+            items={data.flights}
+            value={selectedFlight ?? null}
+            itemToStringLabel={getFlightSelectionLabel}
+            itemToStringValue={getFlightSelectionSearchValue}
+            onValueChange={(flight) => {
+              void setSearchParams({ flight: flight ? getFlightSelectionKey(flight) : "" });
             }}
           >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a flight" />
-            </SelectTrigger>
-            <SelectContent>
-              {data.flights.map((flight) => {
-                const key = getFlightSelectionKey(flight);
-                return (
-                  <SelectItem key={key} value={key}>
-                    {flight.airlineName} · {flight.flightNumber} — {flight.departureAirportCode} →{" "}
-                    {flight.arrivalAirportCode} ({formatDateShort(flight.departureDatetime)})
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
+            <ComboboxInput placeholder="Search flights" showClear className="w-full" />
+            <ComboboxContent>
+              <ComboboxEmpty>No flights found.</ComboboxEmpty>
+              <ComboboxList>
+                {(flight) => (
+                  <ComboboxItem key={getFlightSelectionKey(flight)} value={flight}>
+                    <span className="truncate">{getFlightSelectionLabel(flight)}</span>
+                  </ComboboxItem>
+                )}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
         </div>
       </div>
 

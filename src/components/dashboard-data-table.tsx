@@ -40,6 +40,14 @@ import type {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@/components/ui/combobox";
+import {
   Select,
   SelectContent,
   SelectGroup,
@@ -76,6 +84,21 @@ export type DashboardDataTableFilterOption = {
 export type DashboardDataTableInlineSelectOption<TValue extends string> = {
   label: string;
   value: TValue;
+};
+type DashboardDataTableInlineComboboxCellProps<TItem, TValue extends string> = {
+  ariaLabel: string;
+  className?: string;
+  disabled?: boolean;
+  getItemKey: (item: TItem) => string;
+  itemToStringLabel: (item: TItem) => string;
+  itemToStringValue: (item: TItem) => string;
+  items: Array<TItem>;
+  onSave: (value: TValue, item: TItem) => Promise<void> | void;
+  placeholder?: string;
+  renderItem?: (item: TItem) => ReactNode;
+  renderValue?: (value: TValue) => ReactNode;
+  value: TValue;
+  valueFromItem: (item: TItem) => TValue;
 };
 type DashboardDataTableInlineTextCellProps = {
   ariaLabel: string;
@@ -791,6 +814,98 @@ type DashboardDataTableInlineSelectCellProps<TValue extends string> = {
   renderValue?: (value: TValue) => ReactNode;
   value: TValue;
 };
+export function DashboardDataTableInlineComboboxCell<TItem, TValue extends string>({
+  ariaLabel,
+  className,
+  disabled = false,
+  getItemKey,
+  itemToStringLabel,
+  itemToStringValue,
+  items,
+  onSave,
+  placeholder = "Search",
+  renderItem,
+  renderValue,
+  value,
+  valueFromItem,
+}: DashboardDataTableInlineComboboxCellProps<TItem, TValue>) {
+  const selectedItem = items.find((item) => valueFromItem(item) === value) ?? null;
+  const [error, setError] = useState("");
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  async function handleValueChange(item: TItem | Array<TItem> | null) {
+    if (!item || Array.isArray(item)) return;
+    const nextValue = valueFromItem(item);
+    if (nextValue === value) {
+      setOpen(false);
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    try {
+      await onSave(nextValue, item);
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className={cn("flex min-w-40 flex-col items-start gap-1", className)}>
+      {open ? (
+        <Combobox
+          items={items}
+          open={open}
+          value={selectedItem}
+          itemToStringLabel={itemToStringLabel}
+          itemToStringValue={itemToStringValue}
+          onOpenChange={setOpen}
+          onValueChange={handleValueChange}
+        >
+          <ComboboxInput
+            aria-label={ariaLabel}
+            autoFocus
+            disabled={disabled || saving}
+            placeholder={placeholder}
+            showClear
+            className="h-8 w-full"
+          />
+          <ComboboxContent>
+            <ComboboxEmpty>No matches found.</ComboboxEmpty>
+            <ComboboxList>
+              {(item) => (
+                <ComboboxItem key={getItemKey(item)} value={item}>
+                  {renderItem ? renderItem(item) : itemToStringLabel(item)}
+                </ComboboxItem>
+              )}
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
+      ) : (
+        <Button
+          aria-label={ariaLabel}
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={disabled || saving}
+          className={cn(
+            "h-8 w-full justify-start px-1.5 font-normal text-left [&_span]:min-w-0",
+            className,
+          )}
+          onClick={() => setOpen(true)}
+        >
+          {saving ? <Loader2Icon className="animate-spin" /> : null}
+          {renderValue ? renderValue(value) : value}
+        </Button>
+      )}
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
+  );
+}
 
 export function DashboardDataTableInlineSelectCell<TValue extends string>({
   ariaLabel,

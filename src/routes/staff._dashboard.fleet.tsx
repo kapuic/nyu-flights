@@ -17,16 +17,9 @@ import {
   DashboardDataTableInlineTextCell,
 } from "@/components/dashboard-data-table";
 import { Button } from "@/components/ui/button";
+import { AirlineComboboxField } from "@/components/combobox-fields";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ResponsiveModal } from "@/components/responsive-modal";
 import {
   addAirplaneFn,
@@ -409,32 +402,13 @@ function StaffFleetPage() {
                             )}
                           >
                             <FieldLabel>Airline</FieldLabel>
-                            <Select
+                            <AirlineComboboxField
+                              items={airlineOptions}
                               value={field.state.value}
-                              onValueChange={(value) => {
-                                if (value === null) return;
-                                field.handleChange(value);
-                              }}
-                            >
-                              <SelectTrigger
-                                aria-invalid={shouldShowFieldError(
-                                  field.state.meta,
-                                  submissionAttempts,
-                                )}
-                                className="w-full"
-                              >
-                                <SelectValue placeholder="Choose airline" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectGroup>
-                                  {airlineOptions.map((airline) => (
-                                    <SelectItem key={airline} value={airline}>
-                                      {airline}
-                                    </SelectItem>
-                                  ))}
-                                </SelectGroup>
-                              </SelectContent>
-                            </Select>
+                              onBlur={field.handleBlur}
+                              onChange={(value) => field.handleChange(value)}
+                              placeholder="Search airlines"
+                            />
                             {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
                               <FieldError
                                 errors={[
