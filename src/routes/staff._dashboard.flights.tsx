@@ -1,23 +1,26 @@
+import { createFileRoute, getRouteApi, useRouter } from "@tanstack/react-router"
 import {
-  createFileRoute,
-  getRouteApi,
-  useRouter,
-} from "@tanstack/react-router"
-import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query"
 import { useForm } from "@tanstack/react-form"
 import { useMemo, useState } from "react"
 import { AlertTriangleIcon, CircleCheckIcon, Plus } from "lucide-react"
 import { toast } from "sonner"
 import type { ColumnDef } from "@tanstack/react-table"
 
-import type {DashboardDataTableFilterOption} from "@/components/dashboard-data-table";
+import type {
+  DashboardDataTableFilterOption,
+  DashboardDataTableInlineSelectOption,
+} from "@/components/dashboard-data-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { CountryFlag } from "@/components/country-flag"
 import {
   DashboardDataTable,
-  DashboardDataTableColumnHeader
-  
+  DashboardDataTableColumnHeader,
+  DashboardDataTableInlineSelectCell,
 } from "@/components/dashboard-data-table"
 
 import { Input } from "@/components/ui/input"
@@ -63,6 +66,12 @@ export const Route = createFileRoute("/staff/_dashboard/flights")({
 })
 
 const staffDashboardRoute = getRouteApi("/staff/_dashboard")
+const flightStatusOptions: Array<
+  DashboardDataTableInlineSelectOption<FlightRow["status"]>
+> = [
+  { label: "On Time", value: "on_time" },
+  { label: "Delayed", value: "delayed" },
+]
 
 function formatDateShort(iso: string) {
   const d = new Date(iso)
@@ -85,6 +94,9 @@ function formatRating(value: number | null) {
   if (value === null) return "—"
   return value.toFixed(1)
 }
+function getStatusLabel(status: FlightRow["status"]) {
+  return status === "on_time" ? "On Time" : "Delayed"
+}
 
 function getUniqueOptions(
   flights: Array<FlightRow>,
@@ -104,7 +116,7 @@ function getFilterOptionLabel(
   valueKey: "arrivalAirportCode" | "departureAirportCode" | "status",
   value: string
 ) {
-  if (valueKey === "status") return value === "on_time" ? "On Time" : "Delayed"
+  if (valueKey === "status") return getStatusLabel(value as FlightRow["status"])
   const airport = getAirportOption(value)
   return airport ? `${value} — ${airport.city}` : value
 }
@@ -117,7 +129,9 @@ function AirportCell({ code }: { code: string }) {
         <CountryFlag countryCode={airport.countryCode} size={18} />
       ) : null}
       <div className="min-w-0">
-        <div className="font-mono text-sm font-medium tracking-tight">{code}</div>
+        <div className="font-mono text-sm font-medium tracking-tight">
+          {code}
+        </div>
         <div className="truncate text-xs text-muted-foreground">
           {airport?.name ?? airport?.city ?? "Unknown airport"}
         </div>
@@ -148,7 +162,12 @@ function FlightGlobe({
   const arrAirport = getAirportOption(arrivalCode)
 
   const globeMarkers = useMemo(() => {
-    const m: Array<{ id: string; countryCode: string; label: string; location: [number, number] }> = []
+    const m: Array<{
+      id: string
+      countryCode: string
+      label: string
+      location: [number, number]
+    }> = []
     if (depAirport)
       m.push({
         id: `dep-${depAirport.code.toLowerCase()}`,
@@ -188,7 +207,9 @@ function StaffFlightsPage() {
   const { currentUser } = staffDashboardRoute.useLoaderData()
   const queryClient = useQueryClient()
   const router = useRouter()
-  const showAirlineColumn = isAdminOrAbove(currentUser.staffPermission ?? "staff")
+  const showAirlineColumn = isAdminOrAbove(
+    currentUser.staffPermission ?? "staff"
+  )
   const [createOpen, setCreateOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const dbAirportsQuery = useQuery({
@@ -235,6 +256,29 @@ function StaffFlightsPage() {
       setError(err instanceof Error ? err.message : "Failed to create flight.")
     }
   }
+  async function saveFlightStatus(
+    flight: Pick<
+      FlightRow,
+      "airlineName" | "departureDatetime" | "flightNumber" | "status"
+    >,
+    status: FlightRow["status"]
+  ) {
+    if (flight.status === status) return
+
+    const result = await updateFlightStatusFn({
+      data: {
+        airlineName: flight.airlineName,
+        departureDatetime: flight.departureDatetime,
+        flightNumber: flight.flightNumber,
+        status,
+      },
+    })
+    if ("error" in result && result.error) throw new Error(result.error)
+
+    toast.success(result.message)
+    await queryClient.invalidateQueries({ queryKey: ["staff-dashboard"] })
+    await router.invalidate()
+  }
 
   async function handleStatusToggle(flight: {
     airlineName: string
@@ -244,21 +288,7 @@ function StaffFlightsPage() {
   }) {
     try {
       const newStatus = flight.status === "on_time" ? "delayed" : "on_time"
-      const result = await updateFlightStatusFn({
-        data: {
-          airlineName: flight.airlineName,
-          departureDatetime: flight.departureDatetime,
-          flightNumber: flight.flightNumber,
-          status: newStatus,
-        },
-      })
-      if ("error" in result && result.error) {
-        toast.error(result.error)
-        return
-      }
-      toast.success(result.message)
-      await queryClient.invalidateQueries({ queryKey: ["staff-dashboard"] })
-      await router.invalidate()
+      await saveFlightStatus(flight, newStatus)
     } catch {
       toast.error("Failed to update flight status.")
     }
@@ -377,7 +407,15 @@ function StaffFlightsPage() {
         header: ({ column }) => (
           <DashboardDataTableColumnHeader column={column} title="Status" />
         ),
-        cell: ({ row }) => <FlightStatusBadge status={row.original.status} />,
+        cell: ({ row }) => (
+          <DashboardDataTableInlineSelectCell
+            ariaLabel={`Update ${row.original.flightNumber} status`}
+            onSave={(status) => saveFlightStatus(row.original, status)}
+            options={flightStatusOptions}
+            renderValue={(status) => <FlightStatusBadge status={status} />}
+            value={row.original.status}
+          />
+        ),
       },
       {
         accessorKey: "airplaneId",
@@ -501,7 +539,6 @@ function StaffFlightsPage() {
     []
   )
 
-
   return (
     <div className="flex min-w-0 flex-col gap-6 overflow-hidden p-4 md:p-6">
       <div className="flex items-center justify-between">
@@ -547,9 +584,7 @@ function StaffFlightsPage() {
                             placeholder="SK100"
                             required
                             value={field.state.value}
-                            onChange={(e) =>
-                              field.handleChange(e.target.value)
-                            }
+                            onChange={(e) => field.handleChange(e.target.value)}
                           />
                         </Field>
                       )}
@@ -629,9 +664,7 @@ function StaffFlightsPage() {
                           required
                           placeholder="199.00"
                           value={field.state.value}
-                          onChange={(e) =>
-                            field.handleChange(e.target.value)
-                          }
+                          onChange={(e) => field.handleChange(e.target.value)}
                         />
                       </Field>
                     )}
