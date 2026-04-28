@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-router"
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
 import { useHotkey } from "@tanstack/react-hotkeys"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   BarChart3,
   Building2,
@@ -114,6 +114,18 @@ function getAdminNavItems(permission: StaffPermission): Array<NavItem> {
 function permissionLabel(permission: StaffPermission) {
   if (permission === "superadmin") return "Superadmin"
   if (permission === "admin") return "Admin"
+  return null
+}
+
+function getPrivilegedBannerStorageKey(username: string) {
+  return `staff-privileged-banner-hidden:${username}`
+}
+
+function getPrivilegedBannerCopy(permission: StaffPermission) {
+  if (permission === "superadmin")
+    return "Signed in as a privileged Superadmin. You can view and edit airlines, airports, staff, customers, flights, fleet, passengers, and reports."
+  if (permission === "admin")
+    return "Signed in as a privileged Admin. You can view and edit cross-airline operations including flights, fleet, passengers, and reports."
   return null
 }
 
@@ -240,6 +252,9 @@ function StaffDashboardLayout() {
       .slice(0, 12)
   }, [commandItems, commandSearch])
   const badge = permissionLabel(permission)
+  const bannerCopy = getPrivilegedBannerCopy(permission)
+  const bannerStorageKey = getPrivilegedBannerStorageKey(currentUser.id)
+  const [bannerHidden, setBannerHidden] = useState(false)
 
   const initials = currentUser.displayName
     .split(" ")
@@ -247,6 +262,16 @@ function StaffDashboardLayout() {
     .join("")
     .toUpperCase()
     .slice(0, 2)
+
+  useEffect(() => {
+    if (!bannerCopy) return
+    setBannerHidden(sessionStorage.getItem(bannerStorageKey) === "true")
+  }, [bannerCopy, bannerStorageKey])
+
+  function hidePrivilegedBanner() {
+    sessionStorage.setItem(bannerStorageKey, "true")
+    setBannerHidden(true)
+  }
 
   async function handleLogout() {
     const result = await logoutFn()
@@ -416,6 +441,28 @@ function StaffDashboardLayout() {
         <SidebarRail />
       </Sidebar>
       <SidebarInset>
+        {bannerCopy && !bannerHidden ? (
+          <div
+            className={
+              isSuperadmin(permission)
+                ? "flex flex-col gap-2 border-b bg-primary px-4 py-3 text-primary-foreground md:flex-row md:items-center md:justify-between md:px-6"
+                : "flex flex-col gap-2 border-b bg-muted px-4 py-3 text-foreground md:flex-row md:items-center md:justify-between md:px-6"
+            }
+          >
+            <p className="text-sm font-medium">{bannerCopy}</p>
+            <button
+              type="button"
+              className={
+                isSuperadmin(permission)
+                  ? "w-fit shrink-0 text-sm font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-primary-foreground/60 focus-visible:outline-none"
+                  : "w-fit shrink-0 text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+              }
+              onClick={hidePrivilegedBanner}
+            >
+              Hide until sign out
+            </button>
+          </div>
+        ) : null}
         <Outlet />
       </SidebarInset>
     </SidebarProvider>
