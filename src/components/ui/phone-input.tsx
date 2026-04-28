@@ -145,8 +145,8 @@ function CountrySelect({
           )}
         />
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0" align="start">
-        <div className="p-2">
+      <PopoverContent className="w-[300px] gap-0 p-0" align="start">
+        <div className="p-1 pb-0">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
