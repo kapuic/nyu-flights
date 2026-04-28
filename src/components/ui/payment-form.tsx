@@ -3,8 +3,8 @@
 import { useCallback, useId, useMemo, useState } from "react"
 import { IMaskInput } from "react-imask"
 
+import type { CardBrand } from "@/components/ui/credit-card"
 import {
-  type CardBrand,
   CardBrandLogo,
   CreditCardVisual,
   detectCardBrand,
@@ -163,7 +163,7 @@ export function PaymentCardForm({
             cvv={values.cvv}
             brand={brand}
             flipped={flipped}
-            className="shrink-0"
+            className="h-auto w-full max-w-[390px] shrink-0"
           />
         </div>
       ) : null}
