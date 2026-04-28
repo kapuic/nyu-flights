@@ -1,69 +1,86 @@
 "use client"
 
 import { useMemo } from "react"
+import valid from "card-validator"
+import { PaymentIcon } from "react-svg-credit-card-payment-icons"
+import type { PaymentType } from "react-svg-credit-card-payment-icons"
+
 import { cn } from "@/lib/utils"
 
 // ---------------------------------------------------------------------------
-// Card brand detection
+// Card brand detection (powered by card-validator)
 // ---------------------------------------------------------------------------
 
+/**
+ * Brand strings produced by card-validator's `number()`.
+ * `unknown` is used when no brand could be determined yet.
+ */
 export type CardBrand =
   | "visa"
   | "mastercard"
-  | "amex"
+  | "american-express"
   | "discover"
-  | "diners"
+  | "diners-club"
   | "jcb"
   | "unionpay"
+  | "maestro"
+  | "mir"
+  | "elo"
+  | "hiper"
+  | "hipercard"
   | "unknown"
 
-const BRAND_PATTERNS: Array<{ brand: CardBrand; pattern: RegExp }> = [
-  { brand: "visa", pattern: /^4/ },
-  // Mastercard: 51-55 and 2221-2720
-  {
-    brand: "mastercard",
-    pattern: /^(5[1-5]|222[1-9]|22[3-9]|2[3-6]|27[01]|2720)/,
-  },
-  { brand: "amex", pattern: /^3[47]/ },
-  { brand: "discover", pattern: /^(6011|65|64[4-9])/ },
-  { brand: "diners", pattern: /^(36|38|30[0-5])/ },
-  { brand: "jcb", pattern: /^35(2[89]|[3-8])/ },
-  { brand: "unionpay", pattern: /^62/ },
+const KNOWN_BRANDS: ReadonlyArray<Exclude<CardBrand, "unknown">> = [
+  "visa",
+  "mastercard",
+  "american-express",
+  "discover",
+  "diners-club",
+  "jcb",
+  "unionpay",
+  "maestro",
+  "mir",
+  "elo",
+  "hiper",
+  "hipercard",
 ]
 
+function isKnownBrand(value: string): value is Exclude<CardBrand, "unknown"> {
+  return (KNOWN_BRANDS as ReadonlyArray<string>).includes(value)
+}
+
 export function detectCardBrand(cardNumber: string): CardBrand {
-  const digits = cardNumber.replace(/\D/g, "")
-  if (digits.length < 2) return "unknown"
-  for (const { brand, pattern } of BRAND_PATTERNS) {
-    if (pattern.test(digits)) return brand
-  }
+  const result = valid.number(cardNumber)
+  const type = result.card?.type
+  if (type && isKnownBrand(type)) return type
   return "unknown"
 }
 
 export function isValidLuhn(cardNumber: string): boolean {
-  const digits = cardNumber.replace(/\D/g, "")
-  if (digits.length < 12) return false
-
-  let sum = 0
-  let alternate = false
-  for (let i = digits.length - 1; i >= 0; i--) {
-    let n = Number.parseInt(digits[i], 10)
-    if (alternate) {
-      n *= 2
-      if (n > 9) n -= 9
-    }
-    sum += n
-    alternate = !alternate
-  }
-  return sum % 10 === 0
+  return valid.number(cardNumber).isValid
 }
 
+/**
+ * Build an iMask pattern for the brand's longest length using card-validator
+ * gaps. Falls back to a generic 16-digit pattern when the brand is unknown.
+ */
 export function getCardMask(brand: CardBrand): string {
-  return brand === "amex" ? "0000 000000 00000" : "0000 0000 0000 0000"
+  if (brand === "unknown") return "0000 0000 0000 0000"
+  const card = valid.creditCardType.getTypeInfo(brand)
+
+  const length = card.lengths[card.lengths.length - 1]
+  const gaps = card.gaps
+  const out: Array<string> = []
+  for (let i = 0; i < length; i++) {
+    if (gaps.includes(i) && i !== 0) out.push(" ")
+    out.push("0")
+  }
+  return out.join("")
 }
 
 export function getCvvLength(brand: CardBrand): number {
-  return brand === "amex" ? 4 : 3
+  if (brand === "unknown") return 3
+  return valid.creditCardType.getTypeInfo(brand).code.size
 }
 
 // ---------------------------------------------------------------------------
@@ -72,154 +89,104 @@ export function getCvvLength(brand: CardBrand): number {
 
 type BrandTheme = {
   animatedGradient: string
-  logo: string
   textColor: string
 }
 
-const BRAND_THEMES: Record<CardBrand, BrandTheme> = {
+const DEFAULT_THEME: BrandTheme = {
+  animatedGradient:
+    "linear-gradient(135deg, #2a2a2e 0%, #3a3a40 25%, #48484f 50%, #3a3a40 75%, #2a2a2e 100%)",
+  textColor: "text-white/80",
+}
+
+const BRAND_THEMES: Record<Exclude<CardBrand, "unknown">, BrandTheme> = {
   visa: {
     animatedGradient:
       "linear-gradient(135deg, #1a1f71 0%, #2b3a9e 25%, #1565c0 50%, #2b3a9e 75%, #1a1f71 100%)",
-    logo: "VISA",
     textColor: "text-white",
   },
   mastercard: {
     animatedGradient:
       "linear-gradient(135deg, #1a1a2e 0%, #16213e 25%, #eb001b 50%, #ff5f00 75%, #1a1a2e 100%)",
-    logo: "MC",
     textColor: "text-white",
   },
-  amex: {
+  "american-express": {
     animatedGradient:
       "linear-gradient(135deg, #006fcf 0%, #0080e5 25%, #00aeef 50%, #0080e5 75%, #006fcf 100%)",
-    logo: "AMEX",
     textColor: "text-white",
   },
   discover: {
     animatedGradient:
       "linear-gradient(135deg, #1a1a1a 0%, #333 25%, #ff6000 50%, #333 75%, #1a1a1a 100%)",
-    logo: "DISC",
     textColor: "text-white",
   },
-  diners: {
+  "diners-club": {
     animatedGradient:
       "linear-gradient(135deg, #0079be 0%, #006ba6 25%, #0079be 50%, #006ba6 75%, #0079be 100%)",
-    logo: "DC",
     textColor: "text-white",
   },
   jcb: {
     animatedGradient:
       "linear-gradient(135deg, #003087 0%, #0054a6 25%, #009b3a 50%, #0054a6 75%, #003087 100%)",
-    logo: "JCB",
     textColor: "text-white",
   },
   unionpay: {
     animatedGradient:
       "linear-gradient(135deg, #e21836 0%, #00447c 25%, #007b84 50%, #00447c 75%, #e21836 100%)",
-    logo: "UP",
     textColor: "text-white",
   },
-  unknown: {
+  maestro: {
     animatedGradient:
-      "linear-gradient(135deg, #2a2a2e 0%, #3a3a40 25%, #48484f 50%, #3a3a40 75%, #2a2a2e 100%)",
-    logo: "",
-    textColor: "text-white/80",
+      "linear-gradient(135deg, #0066cc 0%, #003a75 25%, #cc0000 50%, #f47b30 75%, #0066cc 100%)",
+    textColor: "text-white",
+  },
+  mir: {
+    animatedGradient:
+      "linear-gradient(135deg, #0f754e 0%, #136c47 25%, #1d8a5b 50%, #136c47 75%, #0f754e 100%)",
+    textColor: "text-white",
+  },
+  elo: {
+    animatedGradient:
+      "linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 25%, #ffcb05 50%, #ee2e26 75%, #1a1a1a 100%)",
+    textColor: "text-white",
+  },
+  hiper: {
+    animatedGradient:
+      "linear-gradient(135deg, #ec5d2a 0%, #a82d12 25%, #ec5d2a 50%, #a82d12 75%, #ec5d2a 100%)",
+    textColor: "text-white",
+  },
+  hipercard: {
+    animatedGradient:
+      "linear-gradient(135deg, #b00000 0%, #6b0000 25%, #b00000 50%, #6b0000 75%, #b00000 100%)",
+    textColor: "text-white",
   },
 }
 
+function themeFor(brand: CardBrand): BrandTheme {
+  if (brand === "unknown") return DEFAULT_THEME
+  return BRAND_THEMES[brand]
+}
+
 // ---------------------------------------------------------------------------
-// Brand logo SVGs
+// Brand logos (from react-svg-credit-card-payment-icons)
 // ---------------------------------------------------------------------------
 
-function VisaLogo({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 780 500" fill="none">
-      <path
-        d="M293.2 348.7l33.4-195.8h53.3l-33.4 195.8h-53.3zm246.8-191c-10.5-4-27.1-8.4-47.7-8.4-52.6 0-89.7 26.6-89.9 64.7-.3 28.2 26.5 43.9 46.7 53.3 20.8 9.6 27.8 15.7 27.7 24.3-.1 13.1-16.6 19.1-32 19.1-21.4 0-32.7-3-50.3-10.2l-6.9-3.1-7.5 44c12.5 5.5 35.5 10.2 59.4 10.5 56 0 92.3-26.3 92.7-67 .2-22.3-14-39.3-44.8-53.3-18.6-9.1-30-15.1-29.9-24.3 0-8.1 9.7-16.8 30.5-16.8 17.4-.3 30 3.5 39.8 7.5l4.8 2.3 7.2-42.6zm137.3-4.8h-41.1c-12.7 0-22.3 3.5-27.8 16.2l-79 179.4h55.9s9.1-24.1 11.2-29.4h68.3c1.6 6.9 6.5 29.4 6.5 29.4h49.4l-43.4-195.6zm-65.7 126.3c4.4-11.3 21.3-54.7 21.3-54.7-.3.5 4.4-11.4 7.1-18.8l3.6 17s10.2 46.9 12.4 56.5h-44.4zM247.1 152.9L195 308l-5.6-27.3c-9.7-31.2-39.8-65.1-73.6-82l47.7 150h56.4l83.9-195.8h-56.8z"
-        fill="#fff"
-      />
-      <path
-        d="M146.9 152.9H60.6l-.7 3.5c66.9 16.3 111.2 55.5 129.6 102.7l-18.7-90.1c-3.2-12.3-12.6-15.7-23.9-16.1z"
-        fill="#f7b600"
-      />
-    </svg>
-  )
-}
-
-function MastercardLogo({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 780 500" fill="none">
-      <circle cx="310" cy="250" r="140" fill="#eb001b" />
-      <circle cx="470" cy="250" r="140" fill="#f79e1b" />
-      <path
-        d="M390 140.8c35.3 28 57.9 71 57.9 119.2s-22.6 91.2-57.9 119.2c-35.3-28-57.9-71-57.9-119.2s22.6-91.2 57.9-119.2z"
-        fill="#ff5f00"
-      />
-    </svg>
-  )
-}
-
-function AmexLogo({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 780 500" fill="none">
-      <path d="M0 0h780v500H0z" fill="#2557D6" />
-      <path
-        d="M723.8 249.8L780 186.5h-65.4l-27.8 30.8-26.9-30.8h-213v127h210.1l28.6-31.6 27.4 31.6h66.1l-55.3-63.7zm-167.5 45.3H460V269h89.2v-27.7H460v-27.2h99.3l41.2 45.5-43.2 35.5zm116.5 3.1l-46.2-48.4 46.2-47.3v95.7z"
-        fill="#fff"
-      />
-      <path
-        d="M360.4 186.5h-156l-27 62.3-27.9-62.3H78.7v11.3L110 284.4l-36.3 29.1h63.5l10.3-25.4h23.4l10.4 25.4h70v-20l6.3 20h36.4l6.3-20.5v20.5h175.4l22-23.5 20.6 23.5h72.3l-55.5-63.5 55.5-63.5h-70.8l-21.3 23-20-23h-158zm11.7 100.4h-25.3v-72l-35.7 72h-21.7l-35.8-72.1v72.1h-50.1l-10.3-25.5h-55.8l-10.4 25.5h-28.5l47.6-110.6h36.7l45.2 104.8V176.3h40.3l32.3 62.3 29.6-62.3h40.9v110.6zm-222.8-49.2l-18.1-44.4-18 44.4h36.1z"
-        fill="#fff"
-      />
-    </svg>
-  )
-}
-
-function DiscoverLogo({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 780 500" fill="none">
-      <path d="M0 0h780v500H0z" fill="#fff" />
-      <path d="M0 462h780v38H0z" fill="#F48120" />
-      <circle cx="397" cy="250" r="80" fill="#F48120" />
-      <text x="390" y="468" textAnchor="middle" fill="#231F20" fontSize="60" fontWeight="700" fontFamily="system-ui, sans-serif">DISCOVER</text>
-    </svg>
-  )
-}
-
-function DinersLogo({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 780 500" fill="none">
-      <rect width="780" height="500" rx="40" fill="#0079BE" />
-      <circle cx="352" cy="250" r="145" fill="#fff" />
-      <path d="M280 160c-49.6 28.7-83 82.3-83 143.5s33.4 114.8 83 143.5V160zm144 287c49.6-28.7 83-82.3 83-143.5S473.6 188.7 424 160v287z" fill="#0079BE" />
-    </svg>
-  )
-}
-
-function JcbLogo({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 780 500" fill="none">
-      <rect width="780" height="500" rx="40" fill="#fff" />
-      <rect x="410" y="50" width="170" height="400" rx="30" fill="#047AB1" />
-      <rect x="250" y="50" width="170" height="400" rx="30" fill="#C4151C" />
-      <rect x="90" y="50" width="170" height="400" rx="30" fill="#4FA951" />
-      <text x="165" y="320" textAnchor="middle" fill="#fff" fontSize="85" fontWeight="800" fontFamily="system-ui, sans-serif">J</text>
-      <text x="325" y="320" textAnchor="middle" fill="#fff" fontSize="85" fontWeight="800" fontFamily="system-ui, sans-serif">C</text>
-      <text x="490" y="320" textAnchor="middle" fill="#fff" fontSize="85" fontWeight="800" fontFamily="system-ui, sans-serif">B</text>
-    </svg>
-  )
-}
-
-function UnionPayLogo({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 780 500" fill="none">
-      <rect width="780" height="500" rx="40" fill="#034A68" />
-      <path d="M150 50h160c20 0 30 10 25 30L265 430c-5 20-25 30-45 30H60c-20 0-30-10-25-30L105 80c5-20 25-30 45-30z" fill="#E21836" />
-      <path d="M300 50h180c20 0 30 10 25 30L435 430c-5 20-25 30-45 30H210c-20 0-30-10-25-30L255 80c5-20 25-30 45-30z" fill="#00447C" />
-      <path d="M470 50h180c20 0 30 10 25 30L605 430c-5 20-25 30-45 30H380c-20 0-30-10-25-30L425 80c5-20 25-30 45-30z" fill="#007B84" />
-      <text x="390" y="300" textAnchor="middle" fill="#fff" fontSize="75" fontWeight="700" fontFamily="system-ui, sans-serif">UnionPay</text>
-    </svg>
-  )
+/**
+ * Map our internal brand string to the icon library's `type` prop.
+ * Anything unknown falls back to the generic chip.
+ */
+const ICON_TYPE_BY_BRAND: Record<Exclude<CardBrand, "unknown">, PaymentType> = {
+  visa: "Visa",
+  mastercard: "Mastercard",
+  "american-express": "AmericanExpress",
+  discover: "Discover",
+  "diners-club": "DinersClub",
+  jcb: "Jcb",
+  unionpay: "Unionpay",
+  maestro: "Maestro",
+  mir: "Mir",
+  elo: "Elo",
+  hiper: "Hiper",
+  hipercard: "Hipercard",
 }
 
 export function CardBrandLogo({
@@ -229,24 +196,13 @@ export function CardBrandLogo({
   brand: CardBrand
   className?: string
 }) {
-  switch (brand) {
-    case "visa":
-      return <VisaLogo className={className} />
-    case "mastercard":
-      return <MastercardLogo className={className} />
-    case "amex":
-      return <AmexLogo className={className} />
-    case "discover":
-      return <DiscoverLogo className={className} />
-    case "diners":
-      return <DinersLogo className={className} />
-    case "jcb":
-      return <JcbLogo className={className} />
-    case "unionpay":
-      return <UnionPayLogo className={className} />
-    case "unknown":
-      return null
-  }
+  if (brand === "unknown") return null
+  const type = ICON_TYPE_BY_BRAND[brand]
+  return (
+    <span className={cn("inline-flex items-center justify-center", className)}>
+      <PaymentIcon type={type} format="flatRounded" width="100%" />
+    </span>
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -307,14 +263,14 @@ function CardFaceBackground({ gradient }: { gradient: string }) {
 function formatDisplayNumber(raw: string, brand: CardBrand): string {
   const digits = raw.replace(/\D/g, "")
 
-  if (brand === "amex") {
+  if (brand === "american-express") {
     const padded = digits.padEnd(15, "•")
     return `${padded.slice(0, 4)} ${padded.slice(4, 10)} ${padded.slice(10, 15)}`
   }
 
   const maxLen = Math.max(16, digits.length)
   const padded = digits.padEnd(maxLen, "•")
-  const groups: string[] = []
+  const groups: Array<string> = []
   for (let i = 0; i < padded.length; i += 4) {
     groups.push(padded.slice(i, i + 4))
   }
@@ -345,7 +301,7 @@ export function CreditCardVisual({
   className,
 }: CreditCardProps) {
   const brand = brandOverride ?? detectCardBrand(cardNumber)
-  const theme = BRAND_THEMES[brand]
+  const theme = themeFor(brand)
 
   const displayNumber = useMemo(
     () => formatDisplayNumber(cardNumber, brand),

@@ -177,7 +177,7 @@ export function PaymentCardForm({
           <IMaskInput
             id={`${id}-num`}
             mask={cardMask}
-            placeholder={brand === "amex" ? "0000 000000 00000" : "0000 0000 0000 0000"}
+            placeholder={brand === "american-express" ? "0000 000000 00000" : "0000 0000 0000 0000"}
             value={values.cardNumber}
             onAccept={(value) => update("cardNumber", String(value))}
             onBlur={handleBlur("cardNumber")}
@@ -244,8 +244,8 @@ export function PaymentCardForm({
           </label>
           <IMaskInput
             id={`${id}-cvv`}
-            mask={brand === "amex" ? "0000" : "000"}
-            placeholder={brand === "amex" ? "0000" : "000"}
+            mask={brand === "american-express" ? "0000" : "000"}
+            placeholder={brand === "american-express" ? "0000" : "000"}
             value={values.cvv}
             onAccept={(value) => update("cvv", String(value))}
             onFocus={() => setCvvFocused(true)}

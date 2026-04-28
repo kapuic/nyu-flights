@@ -126,7 +126,7 @@ function generateRandomCard(): PaymentCardValues {
 
   // Format with spaces
   let formatted: string
-  if (brand === "amex") {
+  if (brand === "american-express") {
     formatted = `${rawNumber.slice(0, 4)} ${rawNumber.slice(4, 10)} ${rawNumber.slice(10)}`
   } else {
     const groups: Array<string> = []
