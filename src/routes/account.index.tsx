@@ -4,7 +4,7 @@ import { useRef, useState } from "react"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { format } from "date-fns"
 import { getData as getCountries, getCode } from "country-list"
-import { Pencil, X } from "lucide-react"
+import { Check, Pencil, X } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { InlineField, type InlineFieldVariant } from "@/components/ui/inline-field"
@@ -58,7 +58,17 @@ function countryToCode(name: string): string {
   return getCode(name) ?? COUNTRY_OPTIONS.find((c) => c.label.toLowerCase() === name.toLowerCase())?.code ?? ""
 }
 
+/** Compute inline ghost completion suffix for the first matching option. */
+function ghostSuffix(input: string, options: Array<{ label: string }>): string {
+  if (!input) return ""
+  const lower = input.toLowerCase()
+  const match = options.find((o) => o.label.toLowerCase().startsWith(lower))
+  if (!match || match.label.length === input.length) return ""
+  return match.label.slice(input.length)
+}
+
 type InlineControls = "internal" | "external"
+type InlineComboboxMode = "freeform" | "strict"
 
 function InlineFieldWrapper({ children, error, label }: { children: React.ReactNode; error?: string; label: string }) {
   return (
@@ -66,6 +76,17 @@ function InlineFieldWrapper({ children, error, label }: { children: React.ReactN
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
       {children}
       {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
+  )
+}
+
+/** Ghost text overlay — renders inside ComboboxInput children (within InputGroup which is relative). */
+function GhostOverlay({ input, suffix }: { input: string; suffix: string }) {
+  if (!suffix) return null
+  return (
+    <div className="pointer-events-none absolute inset-y-0 left-0 right-0 flex items-center overflow-hidden px-2.5 text-base md:text-sm">
+      <span className="invisible whitespace-pre">{input}</span>
+      <span className="whitespace-pre text-muted-foreground/40">{suffix}</span>
     </div>
   )
 }
@@ -153,12 +174,14 @@ function InlineDateField({
 function InlineCountryField({
   controls,
   label,
+  mode,
   onSave,
   value,
   variant,
 }: {
   controls: InlineControls
   label: string
+  mode: InlineComboboxMode
   onSave: (v: string) => Promise<void>
   value: string
   variant: InlineFieldVariant
@@ -166,9 +189,12 @@ function InlineCountryField({
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState("")
   const [saving, setSaving] = useState(false)
+  const [inputText, setInputText] = useState("")
   const selectingRef = useRef(false)
   const code = countryToCode(value)
   const selected = COUNTRY_OPTIONS.find((c) => c.label === value || c.code === value || c.label.toLowerCase() === value.toLowerCase()) ?? null
+
+  const ghost = mode === "strict" ? ghostSuffix(inputText, COUNTRY_OPTIONS) : ""
 
   function cancel() {
     setEditing(false)
@@ -191,6 +217,21 @@ function InlineCountryField({
     }
   }
 
+  async function saveFreeform() {
+    const trimmed = inputText.trim()
+    if (!trimmed || trimmed === value) { cancel(); return }
+    setSaving(true)
+    setError("")
+    try {
+      await onSave(trimmed)
+      setEditing(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (editing) {
     return (
       <InlineFieldWrapper label={label} error={error}>
@@ -200,13 +241,20 @@ function InlineCountryField({
               items={COUNTRY_OPTIONS}
               value={selected}
               defaultOpen
+              autoHighlight={mode === "strict"}
               itemToStringValue={(c) => `${c.label} ${c.code}`}
               onValueChange={handleSelect}
+              onInputValueChange={(text) => setInputText(text)}
               onOpenChange={(isOpen) => {
                 if (!isOpen) {
-                  // Let onValueChange fire first (it sets selectingRef)
                   setTimeout(() => {
-                    if (!selectingRef.current) cancel()
+                    if (!selectingRef.current) {
+                      if (mode === "freeform") {
+                        void saveFreeform()
+                      } else {
+                        cancel()
+                      }
+                    }
                     selectingRef.current = false
                   }, 0)
                 }
@@ -221,7 +269,9 @@ function InlineCountryField({
                   variant === "outline" && "dark:!bg-transparent !shadow-none",
                 )}
                 autoFocus
-              />
+              >
+                {mode === "strict" && <GhostOverlay input={inputText} suffix={ghost} />}
+              </ComboboxInput>
               <ComboboxContent>
                 <ComboboxEmpty>No countries found.</ComboboxEmpty>
                 <ComboboxList>
@@ -237,9 +287,16 @@ function InlineCountryField({
             </Combobox>
           </div>
           {controls === "external" && (
-            <button type="button" onClick={cancel} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-              <X className="size-3.5" />
-            </button>
+            <>
+              {mode === "freeform" && (
+                <button type="button" data-inline-action="save" onClick={() => void saveFreeform()} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                  <Check className="size-3.5" />
+                </button>
+              )}
+              <button type="button" data-inline-action="cancel" onClick={cancel} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                <X className="size-3.5" />
+              </button>
+            </>
           )}
         </div>
       </InlineFieldWrapper>
@@ -259,12 +316,14 @@ function InlineCountryField({
 function InlineStateField({
   controls,
   label,
+  mode,
   onSave,
   value,
   variant,
 }: {
   controls: InlineControls
   label: string
+  mode: InlineComboboxMode
   onSave: (v: string) => Promise<void>
   value: string
   variant: InlineFieldVariant
@@ -272,8 +331,11 @@ function InlineStateField({
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState("")
   const [saving, setSaving] = useState(false)
+  const [inputText, setInputText] = useState("")
   const selectingRef = useRef(false)
   const selected = STATE_OPTIONS.find((s) => s.label.toLowerCase() === value.toLowerCase()) ?? null
+
+  const ghost = mode === "strict" ? ghostSuffix(inputText, STATE_OPTIONS) : ""
 
   function cancel() {
     setEditing(false)
@@ -296,6 +358,21 @@ function InlineStateField({
     }
   }
 
+  async function saveFreeform() {
+    const trimmed = inputText.trim()
+    if (!trimmed || trimmed === value) { cancel(); return }
+    setSaving(true)
+    setError("")
+    try {
+      await onSave(trimmed)
+      setEditing(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (editing) {
     return (
       <InlineFieldWrapper label={label} error={error}>
@@ -305,12 +382,20 @@ function InlineStateField({
               items={STATE_OPTIONS}
               value={selected}
               defaultOpen
+              autoHighlight={mode === "strict"}
               itemToStringValue={(s) => s.label}
               onValueChange={handleSelect}
+              onInputValueChange={(text) => setInputText(text)}
               onOpenChange={(isOpen) => {
                 if (!isOpen) {
                   setTimeout(() => {
-                    if (!selectingRef.current) cancel()
+                    if (!selectingRef.current) {
+                      if (mode === "freeform") {
+                        void saveFreeform()
+                      } else {
+                        cancel()
+                      }
+                    }
                     selectingRef.current = false
                   }, 0)
                 }
@@ -325,7 +410,9 @@ function InlineStateField({
                   variant === "outline" && "dark:!bg-transparent !shadow-none",
                 )}
                 autoFocus
-              />
+              >
+                {mode === "strict" && <GhostOverlay input={inputText} suffix={ghost} />}
+              </ComboboxInput>
               <ComboboxContent>
                 <ComboboxEmpty>No states found.</ComboboxEmpty>
                 <ComboboxList>
@@ -339,9 +426,16 @@ function InlineStateField({
             </Combobox>
           </div>
           {controls === "external" && (
-            <button type="button" onClick={cancel} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-              <X className="size-3.5" />
-            </button>
+            <>
+              {mode === "freeform" && (
+                <button type="button" data-inline-action="save" onClick={() => void saveFreeform()} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                  <Check className="size-3.5" />
+                </button>
+              )}
+              <button type="button" data-inline-action="cancel" onClick={cancel} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                <X className="size-3.5" />
+              </button>
+            </>
           )}
         </div>
       </InlineFieldWrapper>
@@ -365,6 +459,7 @@ function ProfilePage() {
 
   const V: InlineFieldVariant = "filled"
   const C: InlineControls = "external"
+  const M: InlineComboboxMode = "strict"
 
   return (
     <div className="space-y-6">
@@ -387,7 +482,7 @@ function ProfilePage() {
           <InlineField variant={V} label="Building Number" value={profile.buildingNumber} onSave={(v) => save("buildingNumber", v)} />
           <InlineField variant={V} label="Street" value={profile.street} onSave={(v) => save("street", v)} />
           <InlineField variant={V} label="City" value={profile.city} onSave={(v) => save("city", v)} />
-          <InlineStateField variant={V} controls={C} label="State" value={profile.state} onSave={(v) => save("state", v)} />
+          <InlineStateField variant={V} controls={C} mode={M} label="State" value={profile.state} onSave={(v) => save("state", v)} />
         </CardContent>
       </Card>
       <Card>
@@ -395,7 +490,7 @@ function ProfilePage() {
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <InlineField variant={V} label="Passport Number" value={profile.passportNumber} onSave={(v) => save("passportNumber", v)} />
           <InlineDateField variant={V} controls={C} label="Expiration" value={profile.passportExpiration} onSave={(v) => save("passportExpiration", v)} />
-          <InlineCountryField variant={V} controls={C} label="Country" value={profile.passportCountry} onSave={(v) => save("passportCountry", v)} />
+          <InlineCountryField variant={V} controls={C} mode={M} label="Country" value={profile.passportCountry} onSave={(v) => save("passportCountry", v)} />
         </CardContent>
       </Card>
     </div>

@@ -2,17 +2,21 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import type { ColumnDef } from "@tanstack/react-table"
 import {
+  AlertTriangleIcon,
+  CircleCheckIcon,
   PlaneTakeoff,
   Clock,
-  AlertTriangle,
   Ticket,
 } from "lucide-react"
 
+import { CountryFlag } from "@/components/country-flag"
 import {
   DashboardDataTable,
+  type DashboardDataTableFilterOption,
   DashboardDataTableColumnHeader,
 } from "@/components/dashboard-data-table"
 import { Badge } from "@/components/ui/badge"
+import { getAirportOption } from "@/lib/airports"
 import { staffDashboardQueryOptions } from "@/lib/staff-queries"
 
 type DashboardFlightRow = {
@@ -43,6 +47,58 @@ function formatDateShort(iso: string) {
   })
 }
 
+function getUniqueOptions(
+  flights: Array<DashboardFlightRow>,
+  valueKey: "arrivalAirportCode" | "departureAirportCode" | "status"
+): Array<DashboardDataTableFilterOption> {
+  const options = new Map<string, string>()
+  for (const flight of flights) {
+    const value = flight[valueKey]
+    options.set(value, getFilterOptionLabel(valueKey, value))
+  }
+  return Array.from(options, ([value, label]) => ({ label, value })).sort(
+    (a, b) => a.label.localeCompare(b.label)
+  )
+}
+
+function getFilterOptionLabel(
+  valueKey: "arrivalAirportCode" | "departureAirportCode" | "status",
+  value: string
+) {
+  if (valueKey === "status") return value === "on_time" ? "On Time" : "Delayed"
+  const airport = getAirportOption(value)
+  return airport ? `${value} — ${airport.city}` : value
+}
+
+function AirportCell({ code }: { code: string }) {
+  const airport = getAirportOption(code)
+  return (
+    <div className="flex min-w-36 items-center gap-2">
+      {airport ? (
+        <CountryFlag countryCode={airport.countryCode} size={18} />
+      ) : null}
+      <div className="min-w-0">
+        <div className="font-mono text-sm font-medium tracking-tight">{code}</div>
+        <div className="truncate text-xs text-muted-foreground">
+          {airport?.name ?? airport?.city ?? "Unknown airport"}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function FlightStatusBadge({ status }: { status: DashboardFlightRow["status"] }) {
+  const isOnTime = status === "on_time"
+  const Icon = isOnTime ? CircleCheckIcon : AlertTriangleIcon
+  return (
+    <Badge variant={isOnTime ? "secondary" : "destructive"} className="text-xs">
+      <Icon data-icon="inline-start" />
+      {isOnTime ? "On Time" : "Delayed"}
+    </Badge>
+  )
+}
+
+
 function StaffDashboardPage() {
   const { data } = useSuspenseQuery(staffDashboardQueryOptions())
 
@@ -53,21 +109,26 @@ function StaffDashboardPage() {
         <DashboardDataTableColumnHeader column={column} title="Flight" />
       ),
       cell: ({ row }) => (
-        <span className="font-medium">{row.original.flightNumber}</span>
+        <span className="font-mono text-sm font-medium tracking-tight">
+          {row.original.flightNumber}
+        </span>
       ),
     },
     {
-      id: "route",
-      accessorFn: (row) =>
-        `${row.departureAirportCode} ${row.arrivalAirportCode} ${row.departureCity} ${row.arrivalCity}`,
+      accessorKey: "departureAirportCode",
+      filterFn: "arrIncludesSome",
       header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Route" />
+        <DashboardDataTableColumnHeader column={column} title="From" />
       ),
-      cell: ({ row }) => (
-        <span className="text-xs">
-          {row.original.departureAirportCode} → {row.original.arrivalAirportCode}
-        </span>
+      cell: ({ row }) => <AirportCell code={row.original.departureAirportCode} />,
+    },
+    {
+      accessorKey: "arrivalAirportCode",
+      filterFn: "arrIncludesSome",
+      header: ({ column }) => (
+        <DashboardDataTableColumnHeader column={column} title="To" />
       ),
+      cell: ({ row }) => <AirportCell code={row.original.arrivalAirportCode} />,
     },
     {
       accessorKey: "departureDatetime",
@@ -93,17 +154,11 @@ function StaffDashboardPage() {
     },
     {
       accessorKey: "status",
+      filterFn: "arrIncludesSome",
       header: ({ column }) => (
         <DashboardDataTableColumnHeader column={column} title="Status" />
       ),
-      cell: ({ row }) => (
-        <Badge
-          variant={row.original.status === "on_time" ? "secondary" : "destructive"}
-          className="text-xs"
-        >
-          {row.original.status === "on_time" ? "On Time" : "Delayed"}
-        </Badge>
-      ),
+      cell: ({ row }) => <FlightStatusBadge status={row.original.status} />,
     },
     {
       accessorKey: "ticketCount",
@@ -117,6 +172,24 @@ function StaffDashboardPage() {
       cell: ({ row }) => (
         <div className="text-right tabular-nums">{row.original.ticketCount}</div>
       ),
+    },
+  ]
+
+  const filterOptions = [
+    {
+      columnId: "departureAirportCode",
+      label: "From",
+      options: getUniqueOptions(data.flights, "departureAirportCode"),
+    },
+    {
+      columnId: "arrivalAirportCode",
+      label: "To",
+      options: getUniqueOptions(data.flights, "arrivalAirportCode"),
+    },
+    {
+      columnId: "status",
+      label: "Status",
+      options: getUniqueOptions(data.flights, "status"),
     },
   ]
 
@@ -147,7 +220,7 @@ function StaffDashboardPage() {
         <StatCard
           label="Delayed"
           value={delayedCount}
-          icon={<AlertTriangle className="size-4 text-muted-foreground" />}
+          icon={<AlertTriangleIcon className="size-4 text-muted-foreground" />}
         />
         <StatCard
           label="Tickets Sold"
@@ -160,6 +233,8 @@ function StaffDashboardPage() {
         columns={columns}
         data={data.flights}
         emptyMessage="No flights found."
+        enableVirtualization
+        filters={filterOptions}
         searchPlaceholder="Search flights..."
         queryPrefix="dashboard"
       />
