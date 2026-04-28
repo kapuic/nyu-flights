@@ -159,11 +159,13 @@ function PublicHomePage() {
       returnDate: "",
       tripType: "one-way" as "one-way" | "round-trip",
     } satisfies SearchFormValues,
-    onSubmit: async () => {
-      if (searchFrom || searchTo) {
-        if (getRouteError(searchFrom, searchTo)) return
-        setHasSearched(true)
-      }
+    onSubmit: async ({ value }) => {
+      const source = value.source.trim()
+      const destination = value.destination.trim()
+      if (!searchFrom && !searchTo && !source && !destination) return
+
+      if (getRouteError(searchFrom, searchTo)) return
+      setHasSearched(true)
     },
   })
 
@@ -342,6 +344,15 @@ function PublicHomePage() {
     setSearch({ searchTo: null })
     if (!searchFrom) setHasSearched(false)
   }, [searchFrom, setSearch])
+
+  const handleClearSearch = useCallback(() => {
+    setPickingReturn(null)
+    setHasSearched(false)
+    setResultRoutes([])
+    setSearch({ searchFrom: null, searchTo: null })
+    form.setFieldValue("source", "")
+    form.setFieldValue("destination", "")
+  }, [form, setResultRoutes, setSearch])
 
   const showResults = hasSearched && (!!results || isLoading || !!searchError)
 
@@ -722,10 +733,7 @@ function PublicHomePage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    setHasSearched(false)
-                    setSearch({ searchFrom: null, searchTo: null })
-                  }}
+                  onClick={handleClearSearch}
                   className="rounded-full border border-white/10 px-4 py-1.5 text-sm text-white/50 transition-colors hover:bg-white/[0.06] hover:text-white/70"
                 >
                   Clear search
