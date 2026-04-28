@@ -376,6 +376,7 @@ export async function getCustomerDashboardInternal(filters: {
   >`
     select
       f.airline_name,
+      f.flight_number,
       ticket.ticket_id,
       f.departure_datetime,
       f.arrival_datetime,
