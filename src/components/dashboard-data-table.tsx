@@ -18,6 +18,7 @@ import {
   CheckIcon,
   ChevronsUpDownIcon,
   Columns3Icon,
+  DownloadIcon,
   FilterIcon,
   Loader2Icon,
   SearchIcon,
@@ -136,6 +137,10 @@ type DashboardDataTableFilter = {
   label: string;
   options: Array<DashboardDataTableFilterOption>;
 };
+type DashboardDataTableExportOptions<TData> = {
+  filename: string;
+  getValue?: (row: TData, columnId: string) => string | number | null | undefined;
+};
 
 type DashboardDataTableProps<TData, TValue> = {
   bulkActions?: Array<DashboardDataTableBulkAction<TData>>;
@@ -144,6 +149,7 @@ type DashboardDataTableProps<TData, TValue> = {
   emptyMessage: string;
   enableRowSelection?: boolean;
   enableVirtualization?: boolean;
+  exportOptions?: DashboardDataTableExportOptions<TData>;
   filters?: Array<DashboardDataTableFilter>;
   globalFilterFn?: "auto" | "includesString";
   queryPrefix?: string;
@@ -172,6 +178,7 @@ export function DashboardDataTable<TData, TValue>({
   emptyMessage,
   enableRowSelection = false,
   enableVirtualization = false,
+  exportOptions,
   filters = [],
   getRowId,
   globalFilterFn = "includesString",
@@ -348,6 +355,11 @@ export function DashboardDataTable<TData, TValue>({
   const virtualRows = enableVirtualization ? virtualizer.getVirtualItems() : [];
   const selectedRows = table.getFilteredSelectedRowModel().rows.map((row) => row.original);
   const hasFilters = columnFilters.length > 0 || search.length > 0;
+  const exportRows =
+    selectedRows.length > 0
+      ? selectedRows
+      : table.getFilteredRowModel().rows.map((row) => row.original);
+  const canExport = Boolean(exportOptions && exportRows.length > 0);
 
   function getContextRows(row: Row<TData>) {
     if (enableRowSelection && row.getIsSelected()) return selectedRows;
@@ -362,6 +374,19 @@ export function DashboardDataTable<TData, TValue>({
   function clearFilters() {
     setColumnFilters([]);
     void setQuery({ [pageKey]: 1, [qKey]: "" });
+  }
+  function exportCsv() {
+    if (!exportOptions) return;
+    const exportColumns = table
+      .getVisibleLeafColumns()
+      .filter((column) => column.id !== "select" && column.id !== "actions");
+    const csv = buildCsv(
+      exportColumns.map((column) => getColumnLabel(column)),
+      exportRows.map((row) =>
+        exportColumns.map((column) => getExportCellValue(row, column, exportOptions)),
+      ),
+    );
+    downloadCsv(exportOptions.filename, csv);
   }
 
   return (
@@ -405,6 +430,12 @@ export function DashboardDataTable<TData, TValue>({
               <Button variant="ghost" size="sm" onClick={clearFilters}>
                 <XIcon data-icon="inline-start" />
                 Clear filters
+              </Button>
+            ) : null}
+            {exportOptions ? (
+              <Button variant="outline" size="sm" disabled={!canExport} onClick={exportCsv}>
+                <DownloadIcon data-icon="inline-start" />
+                {selectedRows.length > 0 ? "Export selected" : "Export CSV"}
               </Button>
             ) : null}
             <DropdownMenu>
@@ -584,6 +615,38 @@ function getColumnLabel<TData, TValue>(column: Column<TData, TValue>) {
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .replace(/[_-]+/g, " ")
     .replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function getExportCellValue<TData, TValue>(
+  row: TData,
+  column: Column<TData, TValue>,
+  exportOptions: DashboardDataTableExportOptions<TData>,
+) {
+  const customValue = exportOptions.getValue?.(row, column.id);
+  if (customValue !== undefined) return customValue ?? "";
+  const value = column.accessorFn?.(row, 0);
+  if (value === null || value === undefined) return "";
+  return value;
+}
+
+function escapeCsvCell(value: unknown) {
+  const text = String(value);
+  if (!/[",\n\r]/.test(text)) return text;
+  return `"${text.replaceAll('"', '""')}"`;
+}
+
+function buildCsv(headers: Array<string>, rows: Array<Array<unknown>>) {
+  return [headers, ...rows].map((row) => row.map(escapeCsvCell).join(",")).join("\n");
+}
+
+function downloadCsv(filename: string, csv: string) {
+  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function DashboardDataTableRow<TData>({
