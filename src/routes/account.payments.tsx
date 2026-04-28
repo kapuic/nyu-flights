@@ -28,8 +28,7 @@ function SavedPaymentCard({
   nameOnCard: string
 }) {
   const brand = detectCardBrand(cardNumber)
-  const lastFour = cardNumber.slice(-4)
-  const masked = `${"•".repeat(Math.max(0, cardNumber.length - 4))}${lastFour}`
+  const lastFour = cardNumber.replace(/\D/g, "").slice(-4)
 
   return (
     <div className="w-full max-w-[390px] rounded-xl border border-border bg-card p-3 shadow-sm">
@@ -44,7 +43,7 @@ function SavedPaymentCard({
       />
       <div className="mt-3 flex items-center justify-between gap-4 px-1 text-sm text-muted-foreground">
         <span className="truncate">
-          {cardType === "credit" ? "Credit" : "Debit"} · {masked}
+          {cardType === "credit" ? "Credit" : "Debit"} ending in {lastFour}
         </span>
         <span className="shrink-0">Exp {expiration}</span>
       </div>
@@ -78,7 +77,7 @@ function PaymentsPage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid max-w-[840px] gap-6 sm:grid-cols-2">
             {cards.map(
               (card: {
                 card_number: string
