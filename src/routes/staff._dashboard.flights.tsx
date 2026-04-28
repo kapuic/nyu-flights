@@ -1,11 +1,11 @@
 import { createFileRoute, getRouteApi, useRouter } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
-import { z } from "zod";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useCallback, useMemo, useState } from "react";
 import { AlertTriangleIcon, CircleCheckIcon, Plus, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
+import type { z } from "zod";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import type { DashboardDataTableFilterOption } from "@/components/dashboard-data-table";
@@ -20,7 +20,6 @@ import {
   DashboardDataTableInlineSelectCell,
   DashboardDataTableInlineTextCell,
 } from "@/components/dashboard-data-table";
-
 import { Input } from "@/components/ui/input";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
@@ -34,6 +33,7 @@ import { DialogGlobe } from "@/components/dialog-globe";
 import { ResponsiveModal } from "@/components/responsive-modal";
 import { isAdminOrAbove } from "@/lib/staff-permissions";
 import { createFlightSchema } from "@/lib/schemas";
+import { formatDateTimeShort as formatTemporalDateTimeShort } from "@/lib/temporal";
 import { staffDashboardQueryOptions } from "@/lib/staff-queries";
 import { getAirportOption } from "@/lib/airports";
 import {
@@ -43,6 +43,7 @@ import {
   listReferenceDataFn,
   updateFlightFieldFn,
 } from "@/lib/queries";
+
 
 type EditableFlightField =
   | "airplaneId"
@@ -113,7 +114,7 @@ function getMutationError(result: unknown) {
 
 function getFieldErrorMessage(errors: Array<unknown>) {
   return errors
-    .map((error) => (typeof error === "string" ? error : (error as { message?: string })?.message))
+    .map((error) => (typeof error === "string" ? error : (error as { message: string }).message))
     .find(Boolean);
 }
 
@@ -144,13 +145,7 @@ const flightStatusOptions: Array<{ label: string; value: FlightRow["status"] }> 
 ];
 
 function formatDateShort(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return formatTemporalDateTimeShort(iso);
 }
 
 function formatCurrency(value: number) {

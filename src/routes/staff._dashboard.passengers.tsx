@@ -12,12 +12,12 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "@/components/ui/combobox";
-
 import {
   DashboardDataTable,
   DashboardDataTableColumnHeader,
 } from "@/components/dashboard-data-table";
 import { staffDashboardQueryOptions, staffPassengersQueryOptions } from "@/lib/staff-queries";
+import { formatDateTimeShort as formatTemporalDateTimeShort } from "@/lib/temporal";
 
 type PassengerRow = {
   customerEmail: string;
@@ -46,13 +46,7 @@ export const Route = createFileRoute("/staff/_dashboard/passengers")({
 });
 
 function formatDateShort(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return formatTemporalDateTimeShort(iso);
 }
 
 function getFlightSelectionKey(flight: {
@@ -202,9 +196,7 @@ function StaffPassengersPage() {
             emptyMessage="No passengers on this flight."
             enableVirtualization
             exportOptions={{
-              filename: selectedFlight
-                ? `passengers-${selectedFlight.flightNumber}.csv`
-                : "passengers.csv",
+              filename: `passengers-${selectedFlight.flightNumber}.csv`,
               getValue: getPassengerExportValue,
             }}
             getRowId={getPassengerRowId}

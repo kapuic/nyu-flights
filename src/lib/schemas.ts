@@ -2,6 +2,8 @@ import { parsePhoneNumberFromString } from "libphonenumber-js/max";
 import { getNames as getCountryNames } from "country-list";
 import { z } from "zod";
 
+import { toPlainDate, todayString } from "@/lib/temporal";
+
 // ---------------------------------------------------------------------------
 // Shared constants
 // ---------------------------------------------------------------------------
@@ -68,11 +70,15 @@ const COUNTRY_NAMES_SET = new Set(getCountryNames());
 // Reusable field-level validators
 // ---------------------------------------------------------------------------
 
-/** Parse a YYYY-MM-DD string into a Date, or return undefined. */
-function parseDate(value: string): Date | undefined {
-  if (!value) return undefined;
-  const d = new Date(value.includes("T") ? value : `${value}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? undefined : d;
+function parseDate(value: string): string | undefined {
+  const normalized = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return undefined;
+  const pd = toPlainDate(normalized);
+  return pd ? pd.toString() : undefined;
+}
+
+function getLocalDateValue() {
+  return todayString();
 }
 export function normalizePhoneNumber(value: string): string | null {
   const parsed = parsePhoneNumberFromString(value.trim(), {
@@ -136,8 +142,8 @@ export const customerFieldValidators = {
     .min(1, "Date of birth is required.")
     .refine((v) => parseDate(v) !== undefined, "Invalid date format.")
     .refine((v) => {
-      const d = parseDate(v);
-      return d ? d < new Date() : false;
+      const date = parseDate(v);
+      return date ? date < getLocalDateValue() : false;
     }, "Date of birth must be in the past."),
   name: z.string().trim().min(1, "Name is required."),
   passportCountry: z
@@ -149,8 +155,8 @@ export const customerFieldValidators = {
     .min(1, "Passport expiration is required.")
     .refine((v) => parseDate(v) !== undefined, "Invalid date format.")
     .refine((v) => {
-      const d = parseDate(v);
-      return d ? d > new Date() : false;
+      const date = parseDate(v);
+      return date ? date >= getLocalDateValue() : false;
     }, "Passport must not be expired."),
   passportNumber: z.string().trim().min(1, "Passport # is required."),
   phoneNumber: phoneNumberSchema("Phone number is required."),
@@ -173,7 +179,7 @@ const baseFlightFiltersSchema = z.object({
 });
 
 function isChronologicalRange(startDate: string, endDate: string) {
-  return new Date(startDate) <= new Date(endDate);
+  return startDate <= endDate;
 }
 
 function addFieldIssue(
@@ -442,9 +448,8 @@ export const addAirplaneSchema = z
     numberOfSeats: z.coerce.number().int().positive("Seat count must be positive."),
   })
   .superRefine((value, context) => {
-    const today = new Date();
     const manufacturingDate = parseDate(value.manufacturingDate);
-    if (manufacturingDate && manufacturingDate > today) {
+    if (manufacturingDate && manufacturingDate > getLocalDateValue()) {
       addFieldIssue(context, ["manufacturingDate"], "Manufacturing date cannot be in the future.");
     }
   });

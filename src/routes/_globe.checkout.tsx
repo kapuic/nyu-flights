@@ -20,6 +20,7 @@ import { PaymentCardForm, validatePaymentCard } from "@/components/ui/payment-fo
 import { useBookingStore } from "@/lib/booking-store"
 import { formatCurrency } from "@/lib/format"
 import { purchaseTicketFn } from "@/lib/queries"
+import { formatShortDate, formatTime, getFlightDuration } from "@/lib/temporal"
 import { cn, getErrorMessage } from "@/lib/utils"
 import { detectCardBrand } from "@/components/ui/credit-card"
 
@@ -27,31 +28,12 @@ export const Route = createFileRoute("/_globe/checkout")({
   component: CheckoutPage,
 })
 
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatTime(datetime: string) {
-  return new Date(datetime).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  })
-}
-
-function formatDate(datetime: string) {
-  return new Date(datetime).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  })
-}
-
 function formatDuration(departure: string, arrival: string) {
-  const diff = new Date(arrival).getTime() - new Date(departure).getTime()
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-  return `${hours}h ${minutes}m`
+  const dur = getFlightDuration(departure, arrival)
+  return `${dur.hours}h ${dur.minutes}m`
 }
 
 /**
@@ -450,7 +432,7 @@ function FlightSummaryCard({
           {label}
         </span>
         <span className="text-xs text-white/30">
-          {formatDate(flight.departureDatetime)}
+          {formatShortDate(flight.departureDatetime)}
         </span>
       </div>
 
@@ -566,7 +548,7 @@ function ConfirmationView({
 
             <div className="mt-3 flex items-center justify-between text-xs text-white/30">
               <span>
-                {flight.flightNumber} · {formatDate(flight.departureDatetime)}
+                {flight.flightNumber} · {formatShortDate(flight.departureDatetime)}
               </span>
               <span>{formatCurrency(flight.basePrice)}</span>
             </div>

@@ -2,28 +2,12 @@ import { ArrowRight, Clock, Plane, Star } from "lucide-react"
 
 import type { FlightOption } from "@/lib/queries"
 import { formatCurrency } from "@/lib/format"
+import { formatShortDate, formatTime, getFlightDuration } from "@/lib/temporal"
 import { cn } from "@/lib/utils"
 
-function formatTime(datetime: string) {
-  return new Date(datetime).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  })
-}
-
 function formatDuration(departure: string, arrival: string) {
-  const diff = new Date(arrival).getTime() - new Date(departure).getTime()
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-  return `${hours}h ${minutes}m`
-}
-function formatShortDate(datetime: string) {
-  return new Date(datetime).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  })
+  const dur = getFlightDuration(departure, arrival)
+  return `${dur.hours}h ${dur.minutes}m`
 }
 
 type FlightResultCardProps = {

@@ -11,9 +11,9 @@ export const Route = createFileRoute("/account/payments")({
 })
 
 function formatExpiry(dateStr: string) {
-  const d = new Date(dateStr)
-  if (Number.isNaN(d.getTime())) return dateStr
-  return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(-2)}`
+  const parts = dateStr.split("-")
+  if (parts.length < 2) return dateStr
+  return `${parts[1]}/${parts[0].slice(-2)}`
 }
 
 function SavedPaymentCard({

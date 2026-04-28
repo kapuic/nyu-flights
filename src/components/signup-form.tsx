@@ -10,13 +10,14 @@ import {
   UserRoundPlus,
 } from "lucide-react"
 import {
-  type ComponentProps,
-  type FormEvent,
-  type ReactNode,
+  
+  
+  
   useId,
   useMemo,
-  useState,
+  useState
 } from "react"
+import type {ComponentProps, FormEvent, ReactNode} from "react";
 
 import { Button } from "@/components/ui/button"
 import { CountryFlag } from "@/components/country-flag"
@@ -47,8 +48,10 @@ import {
 import { APP_NAME } from "@/lib/app-config"
 import { registerCustomerFn } from "@/lib/auth"
 import { TRAVELER_AUTH_IMAGE_URLS } from "@/lib/auth-images"
-import { customerRegistrationSchema, US_STATES } from "@/lib/schemas"
+import { US_STATES, customerRegistrationSchema } from "@/lib/schemas"
 import { cn, getErrorMessage } from "@/lib/utils"
+
+import { jsDateToPlainDateString, plainDateToJsDate } from "@/lib/temporal"
 
 type RegionOption = {
   code: string
@@ -62,13 +65,12 @@ const US_STATE_OPTIONS: Array<RegionOption> = US_STATES.map((state) => ({
 
 function parseDateValue(value: string) {
   if (!value) return undefined
-  const parsed = new Date(`${value}T00:00:00`)
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed
+  return plainDateToJsDate(value)
 }
 
 function formatDateValue(date: Date | undefined) {
   if (!date) return ""
-  return format(date, "yyyy-MM-dd")
+  return jsDateToPlainDateString(date)
 }
 
 function DatePickerField({
@@ -493,13 +495,14 @@ export function SignupFormFields({
                         id={`${formId}-phone`}
                         defaultCountry="US"
                         onChange={(value: string) =>
-                          field.handleChange(value ?? "")
+                          field.handleChange(value)
                         }
                         onBlur={field.handleBlur}
                         placeholder="(555) 000-0000"
                         value={
-                          field.state
-                            .value as import("react-phone-number-input").Value
+                          field.state.value as React.ComponentProps<
+                            typeof PhoneInput
+                          >["value"]
                         }
                       />
                       {field.state.meta.isTouched &&

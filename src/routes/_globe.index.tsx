@@ -10,8 +10,22 @@ import {
   Search,
 } from "lucide-react"
 
-import { listDbAirportsFn, searchFlightsFn } from "@/lib/queries"
 import type { FlightOption, FlightSearchResponse } from "@/lib/queries"
+import type { AirportSelection } from "@/lib/booking-store"
+import { listDbAirportsFn, searchFlightsFn } from "@/lib/queries"
+import { useBookingStore } from "@/lib/booking-store"
+import { AirportCombobox } from "@/components/airport-combobox"
+import { FlightResultCard } from "@/components/flight-result-card"
+import { formatCurrency } from "@/lib/format"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { cn } from "@/lib/utils"
+import { compareDateTimes, formatTime, getFlightDuration, jsDateToPlainDateString, plainDateToJsDate, todayJsDate } from "@/lib/temporal"
+
 type SortKey = "price" | "duration" | "departure" | "arrival"
 type SortDir = "asc" | "desc"
 type SortState = { key: SortKey; dir: SortDir }
@@ -30,7 +44,7 @@ const SORT_LABELS: Record<SortKey, { asc: string; desc: string }> = {
   arrival: { asc: "earliest arrival", desc: "latest arrival" },
 }
 
-function sortFlights(flights: FlightOption[], sort: SortState): FlightOption[] {
+function sortFlights(flights: Array<FlightOption>, sort: SortState): Array<FlightOption> {
   const sorted = [...flights].sort((a, b) => {
     let cmp = 0
     switch (sort.key) {
@@ -38,42 +52,30 @@ function sortFlights(flights: FlightOption[], sort: SortState): FlightOption[] {
         cmp = a.basePrice - b.basePrice
         break
       case "duration": {
-        const dA =
-          new Date(a.arrivalDatetime).getTime() -
-          new Date(a.departureDatetime).getTime()
-        const dB =
-          new Date(b.arrivalDatetime).getTime() -
-          new Date(b.departureDatetime).getTime()
-        cmp = dA - dB
+        const da = getFlightDuration(a.departureDatetime, a.arrivalDatetime)
+        const db = getFlightDuration(b.departureDatetime, b.arrivalDatetime)
+        cmp = (da.hours * 60 + da.minutes) - (db.hours * 60 + db.minutes)
         break
       }
       case "departure":
-        cmp =
-          new Date(a.departureDatetime).getTime() -
-          new Date(b.departureDatetime).getTime()
+        cmp = compareDateTimes(a.departureDatetime, b.departureDatetime)
         break
       case "arrival":
-        cmp =
-          new Date(a.arrivalDatetime).getTime() -
-          new Date(b.arrivalDatetime).getTime()
+        cmp = compareDateTimes(a.arrivalDatetime, b.arrivalDatetime)
         break
     }
     return sort.dir === "asc" ? cmp : -cmp
   })
   return sorted
 }
-import { useBookingStore } from "@/lib/booking-store"
-import type { AirportSelection } from "@/lib/booking-store"
-import { AirportCombobox } from "@/components/airport-combobox"
-import { FlightResultCard } from "@/components/flight-result-card"
-import { formatCurrency } from "@/lib/format"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { cn } from "@/lib/utils"
+
+function formatDateKey(d: Date | undefined) {
+  return d ? jsDateToPlainDateString(d) : ""
+}
+
+function parseDateKey(s: string): Date | undefined {
+  return plainDateToJsDate(s)
+}
 
 export const Route = createFileRoute("/_globe/")({
   component: PublicHomePage,
@@ -93,25 +95,6 @@ function getRouteError(
   return searchFrom && searchTo && searchFrom.code === searchTo.code
     ? "Origin and destination must differ."
     : null
-}
-
-function formatDateKey(d: Date | undefined) {
-  if (!d) return ""
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
-}
-
-function parseDateKey(s: string): Date | undefined {
-  if (!s) return undefined
-  const d = new Date(s + "T00:00:00")
-  return isNaN(d.getTime()) ? undefined : d
-}
-
-function formatTime(datetime: string) {
-  return new Date(datetime).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  })
 }
 
 function PublicHomePage() {
@@ -159,7 +142,7 @@ function PublicHomePage() {
       returnDate: "",
       tripType: "one-way" as "one-way" | "round-trip",
     } satisfies SearchFormValues,
-    onSubmit: async ({ value }) => {
+    onSubmit: ({ value }) => {
       const source = value.source.trim()
       const destination = value.destination.trim()
       if (!searchFrom && !searchTo && !source && !destination) return
@@ -181,7 +164,7 @@ function PublicHomePage() {
     if ((searchFrom || searchTo) && !hasSearched) {
       setHasSearched(true)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [])
 
   // Search query
@@ -243,10 +226,8 @@ function PublicHomePage() {
   const eligibleReturns = useMemo(() => {
     if (!results || tripTypeValue !== "round-trip") return []
     if (!pickingReturn) return results.returnOptions
-    // Filter returns that depart after the selected outbound arrives
-    const outboundArrival = new Date(pickingReturn.arrivalDatetime).getTime()
     return results.returnOptions.filter(
-      (r) => new Date(r.departureDatetime).getTime() > outboundArrival
+      (r) => compareDateTimes(r.departureDatetime, pickingReturn.arrivalDatetime) > 0
     )
   }, [results, tripTypeValue, pickingReturn])
 
@@ -254,9 +235,8 @@ function PublicHomePage() {
   const getReturnPreview = useCallback(
     (outbound: FlightOption) => {
       if (!results || tripTypeValue !== "round-trip") return null
-      const arrivalTime = new Date(outbound.arrivalDatetime).getTime()
       const eligible = results.returnOptions.filter(
-        (r) => new Date(r.departureDatetime).getTime() > arrivalTime
+        (r) => compareDateTimes(r.departureDatetime, outbound.arrivalDatetime) > 0
       )
       if (eligible.length === 0) return null
       const cheapest = Math.min(...eligible.map((r) => r.basePrice))
@@ -456,7 +436,7 @@ function PublicHomePage() {
                       }
                     }}
                     placeholder="Select date"
-                    minDate={new Date()}
+                    minDate={todayJsDate()}
                   />
                 )}
               </form.Field>
@@ -481,7 +461,7 @@ function PublicHomePage() {
                           placeholder="Any date"
                           minDate={
                             parseDateKey(form.getFieldValue("departureDate")) ??
-                            new Date()
+                            todayJsDate()
                           }
                         />
                       )}
@@ -791,7 +771,7 @@ function DatePickerField({
             onChange(d)
             setOpen(false)
           }}
-          disabled={{ before: minDate ?? new Date() }}
+          disabled={{ before: minDate ?? todayJsDate() }}
           className="text-white [--cell-size:--spacing(9)]"
         />
       </PopoverContent>

@@ -1,7 +1,10 @@
-import { type FormEvent, useState } from "react"
+import {  useState } from "react"
 import { useRouter } from "@tanstack/react-router"
 import { ArrowRight, Star } from "lucide-react"
 import { toast } from "sonner"
+import type {FormEvent} from "react";
+
+import type { CustomerFlight } from "@/lib/queries"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -21,8 +24,8 @@ import {
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useIsMobile } from "@/hooks/use-mobile"
-import type { CustomerFlight } from "@/lib/queries"
 import { submitReviewFn } from "@/lib/queries"
+import { formatPlainDate } from "@/lib/temporal"
 import { getErrorMessage } from "@/lib/utils"
 
 type ReviewDialogProps = {
@@ -85,7 +88,7 @@ function ReviewFormContent({
     setSubmitting(true)
     setError("")
     try {
-      await submitReviewFn({
+      const result = await submitReviewFn({
         data: {
           airlineName: flight.airlineName,
           comment,
@@ -94,6 +97,10 @@ function ReviewFormContent({
           rating,
         },
       })
+      if ("error" in result && result.error) {
+        setError(result.error)
+        return
+      }
       await router.invalidate()
       toast.success("Review submitted!")
       onClose()
@@ -104,7 +111,10 @@ function ReviewFormContent({
     }
   }
 
-  const departureDate = new Date(flight.departureDatetime)
+  const departureDateDisplay = (() => {
+    const [datePart] = flight.departureDatetime.split("T")
+    return formatPlainDate(datePart)
+  })()
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -120,11 +130,7 @@ function ReviewFormContent({
         <span>Flight {flight.flightNumber}</span>
         <span className="mx-1">·</span>
         <span>
-          {departureDate.toLocaleDateString("en-US", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-          })}
+          {departureDateDisplay}
         </span>
       </div>
 

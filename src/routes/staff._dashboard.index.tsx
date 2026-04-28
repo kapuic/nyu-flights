@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { getAirportOption } from "@/lib/airports";
 import { staffDashboardQueryOptions } from "@/lib/staff-queries";
+import { formatDateTimeShort as formatTemporalDateTimeShort } from "@/lib/temporal";
 
 type DashboardFlightRow = {
   airlineName: string;
@@ -38,13 +39,7 @@ export const Route = createFileRoute("/staff/_dashboard/")({
 });
 
 function formatDateShort(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return formatTemporalDateTimeShort(iso);
 }
 
 function getUniqueOptions(

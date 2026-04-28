@@ -2,18 +2,19 @@
 
 import { useMemo, useRef, useState } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { format } from "date-fns";
-import { getData as getCountries, getCode } from "country-list";
+
+import { getCode, getData as getCountries } from "country-list";
 import { Check, Pencil, X } from "lucide-react";
 
+import type {InlineComboboxMode, InlineControls, InlineFieldVariant} from "@/components/ui/inline-field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  
+  
   InlineField,
+  
   InlinePhoneField,
-  InlineStateField,
-  type InlineComboboxMode,
-  type InlineControls,
-  type InlineFieldVariant,
+  InlineStateField
 } from "@/components/ui/inline-field";
 import {
   Combobox,
@@ -27,6 +28,8 @@ import { CountryFlag } from "@/components/country-flag";
 import { DatePickerField } from "@/components/date-time-picker";
 import { getCustomerProfileFn, updateCustomerFieldFn } from "@/lib/queries";
 import { cn } from "@/lib/utils";
+
+import { formatPlainDate } from "@/lib/temporal"
 
 export const Route = createFileRoute("/account/")({
   loader: () => getCustomerProfileFn(),
@@ -44,8 +47,7 @@ async function saveField(field: string, value: string) {
 
 function formatDisplayDate(value: string) {
   if (!value) return "";
-  const d = new Date(value.includes("T") ? value : `${value}T00:00:00`);
-  return Number.isNaN(d.getTime()) ? value : format(d, "PPP");
+  return formatPlainDate(value);
 }
 
 function countryToCode(name: string): string {
@@ -216,16 +218,16 @@ function InlineCountryField({
   // Ghost shows the completion for the currently highlighted item, not a static first-match
   const ghost = useMemo(() => {
     if (mode !== "strict" || !inputText || !highlightedItem) return "";
-    const label = highlightedItem.label;
-    if (!label.toLowerCase().startsWith(inputText.toLowerCase())) return "";
-    return label.slice(inputText.length);
+    const countryLabel = highlightedItem.label;
+    if (!countryLabel.toLowerCase().startsWith(inputText.toLowerCase())) return "";
+    return countryLabel.slice(inputText.length);
   }, [mode, inputText, highlightedItem]);
   // Sort startsWith matches first so autoHighlight aligns with ghost text
   const filteredCountries = useMemo(() => {
     if (!inputText) return COUNTRY_OPTIONS;
     const lower = inputText.toLowerCase();
-    const starts: CountryOption[] = [];
-    const contains: CountryOption[] = [];
+    const starts: Array<CountryOption> = [];
+    const contains: Array<CountryOption> = [];
     for (const c of COUNTRY_OPTIONS) {
       if (c.label.toLowerCase().startsWith(lower)) {
         starts.push(c);

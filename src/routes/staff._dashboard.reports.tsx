@@ -62,7 +62,7 @@ function StaffReportsPage() {
     event.preventDefault();
     setReportError(null);
     if (startDate && endDate) {
-      if (new Date(startDate) > new Date(endDate)) {
+      if (startDate > endDate) {
         setReportError("Start date must be on or before end date.");
         setQueryRange(null);
         return;

@@ -19,27 +19,22 @@ import {
 import { customerFieldValidators } from "@/lib/schemas";
 import { getAirportOption } from "@/lib/airports";
 
+import {
+  compareDateTimes,
+  isDateTimePast,
+  normalizeTimestampForSql,
+  serializeDateOnly,
+  serializeTimestamp,
+} from "@/lib/temporal";
+
 const DEFAULT_STAFF_FLIGHT_WINDOW_DAYS = 30;
-
-function serializeTimestamp(value: Date | string) {
-  if (value instanceof Date) {
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, "0");
-    const day = String(value.getDate()).padStart(2, "0");
-    const hours = String(value.getHours()).padStart(2, "0");
-    const minutes = String(value.getMinutes()).padStart(2, "0");
-    const seconds = String(value.getSeconds()).padStart(2, "0");
-    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-  }
-
-  return value.replace(" ", "T").replace(/\.\d+Z?$/, "");
-}
 
 function normalizeQueryValue(value: string | undefined) {
   const normalized = value?.trim().toLowerCase();
   if (!normalized) return null;
   return `%${normalized}%`;
 }
+
 
 export async function listGlobeRoutesInternal() {
   const routes = await db<
@@ -168,7 +163,7 @@ export async function searchFlightsInternal(input: {
     left join ticket on ticket.airline_name = f.airline_name and ticket.flight_number = f.flight_number and ticket.departure_datetime = f.departure_datetime
     left join review on review.airline_name = f.airline_name and review.flight_number = f.flight_number and review.departure_datetime = f.departure_datetime
     where f.departure_datetime >= now()
-      and (${departureDate}::text is null or f.departure_datetime::date = ${departureDate}::date)
+      and (${departureDate}::text is null or (f.departure_datetime >= ${departureDate}::date and f.departure_datetime < ${departureDate}::date + interval '1 day'))
       and (${sourceQuery}::text is null or lower(departure_airport.city) like ${sourceQuery} or lower(departure_airport.code) like ${sourceQuery})
       and (${destinationQuery}::text is null or lower(arrival_airport.city) like ${destinationQuery} or lower(arrival_airport.code) like ${destinationQuery})
     group by
@@ -232,7 +227,7 @@ export async function searchFlightsInternal(input: {
       left join ticket on ticket.airline_name = f.airline_name and ticket.flight_number = f.flight_number and ticket.departure_datetime = f.departure_datetime
       left join review on review.airline_name = f.airline_name and review.flight_number = f.flight_number and review.departure_datetime = f.departure_datetime
       where f.departure_datetime >= now()
-        and (${returnDate}::text is null or f.departure_datetime::date = ${returnDate}::date)
+        and (${returnDate}::text is null or (f.departure_datetime >= ${returnDate}::date and f.departure_datetime < ${returnDate}::date + interval '1 day'))
         and (lower(departure_airport.city) like ${destinationQuery} or lower(departure_airport.code) like ${destinationQuery})
         and (lower(arrival_airport.city) like ${sourceQuery} or lower(arrival_airport.code) like ${sourceQuery})
       group by
@@ -397,8 +392,8 @@ export async function getCustomerDashboardInternal(filters: {
     join airport arrival_airport on arrival_airport.code = f.arrival_airport_code
     left join review on review.customer_email = ticket.customer_email and review.airline_name = ticket.airline_name and review.flight_number = ticket.flight_number and review.departure_datetime = ticket.departure_datetime
     where ticket.customer_email = ${user.email}
-      and (${startDate}::text is null or f.departure_datetime::date >= ${startDate}::date)
-      and (${endDate}::text is null or f.departure_datetime::date <= ${endDate}::date)
+      and (${startDate}::text is null or f.departure_datetime >= ${startDate}::date)
+      and (${endDate}::text is null or f.departure_datetime < ${endDate}::date + interval '1 day')
       and (${sourceQuery}::text is null or lower(departure_airport.city) like ${sourceQuery} or lower(departure_airport.code) like ${sourceQuery})
       and (${destinationQuery}::text is null or lower(arrival_airport.city) like ${destinationQuery} or lower(arrival_airport.code) like ${destinationQuery})
     order by f.departure_datetime desc
@@ -414,7 +409,7 @@ export async function getCustomerDashboardInternal(filters: {
     availableSeats: 0,
     basePrice: Number(row.base_price),
     canReview:
-      new Date(serializeTimestamp(row.arrival_datetime)) < new Date() && row.rating === null,
+      isDateTimePast(serializeTimestamp(row.arrival_datetime)) && row.rating === null,
     comment: row.comment,
     departureAirportCode: row.departure_airport_code,
     departureAirportName: row.departure_airport_name,
@@ -433,9 +428,9 @@ export async function getCustomerDashboardInternal(filters: {
       displayName: user.displayName,
       email: user.email,
     },
-    pastFlights: mappedFlights.filter((flight) => new Date(flight.arrivalDatetime) < new Date()),
+    pastFlights: mappedFlights.filter((flight) => isDateTimePast(flight.arrivalDatetime)),
     upcomingFlights: mappedFlights.filter(
-      (flight) => new Date(flight.arrivalDatetime) >= new Date(),
+      (flight) => !isDateTimePast(flight.arrivalDatetime),
     ),
   } satisfies CustomerDashboardData;
 }
@@ -501,9 +496,9 @@ export async function getStaffDashboardInternal(filters: {
     where (${airlineScope}::text is null or f.airline_name = ${airlineScope})
       and (
         (${startDate}::text is null and ${endDate}::text is null and f.departure_datetime between now() and now() + make_interval(days => ${DEFAULT_STAFF_FLIGHT_WINDOW_DAYS}))
-        or (${startDate}::text is not null and f.departure_datetime::date >= ${startDate}::date)
+        or (${startDate}::text is not null and f.departure_datetime >= ${startDate}::date)
       )
-      and (${endDate}::text is null or f.departure_datetime::date <= ${endDate}::date)
+      and (${endDate}::text is null or f.departure_datetime < ${endDate}::date + interval '1 day')
       and (${sourceQuery}::text is null or lower(departure_airport.city) like ${sourceQuery} or lower(departure_airport.code) like ${sourceQuery})
       and (${destinationQuery}::text is null or lower(arrival_airport.city) like ${destinationQuery} or lower(arrival_airport.code) like ${destinationQuery})
     group by
@@ -533,7 +528,7 @@ export async function getStaffDashboardInternal(filters: {
       number_of_seats: number;
     }>
   >`
-    select airline_name, airplane_id, manufacturing_company, manufacturing_date, number_of_seats
+    select airline_name, airplane_id, manufacturing_company, manufacturing_date::text as manufacturing_date, number_of_seats
     from airplane
     where (${airlineScope}::text is null or airline_name = ${airlineScope})
     order by airline_name asc, airplane_id asc
@@ -619,7 +614,7 @@ export async function getStaffDashboardInternal(filters: {
       airlineName: row.airline_name,
       airplaneId: row.airplane_id,
       manufacturingCompany: row.manufacturing_company,
-      manufacturingDate: serializeTimestamp(row.manufacturing_date),
+      manufacturingDate: serializeDateOnly(row.manufacturing_date),
       numberOfSeats: row.number_of_seats,
     })),
     airports,
@@ -677,19 +672,21 @@ export async function purchaseTicketInternal(data: {
     const flightRows = await transaction<
       Array<{
         base_price: string;
+        departure_datetime: string;
         is_future: boolean;
         number_of_seats: number;
       }>
     >`
       select
         f.base_price,
+        f.departure_datetime,
         f.departure_datetime > now() as is_future,
         airplane.number_of_seats
       from flight f
       join airplane on airplane.airline_name = f.airline_name and airplane.airplane_id = f.airplane_id
       where f.airline_name = ${data.airlineName}
         and f.flight_number = ${data.flightNumber}
-        and f.departure_datetime::text = replace(${data.departureDatetime}, 'T', ' ')
+        and date_trunc('minute', f.departure_datetime) = date_trunc('minute', ${normalizeTimestampForSql(data.departureDatetime)}::timestamp)
       for update
     `;
     if (!flightRows.length) throw new Error("That flight could not be found anymore.");
@@ -702,7 +699,7 @@ export async function purchaseTicketInternal(data: {
       from ticket
       where airline_name = ${data.airlineName}
         and flight_number = ${data.flightNumber}
-        and departure_datetime::text = replace(${data.departureDatetime}, 'T', ' ')
+        and departure_datetime = ${flight.departure_datetime}
     `;
     const ticketCount = ticketCountRows[0].ticket_count;
 
@@ -728,7 +725,7 @@ export async function purchaseTicketInternal(data: {
         ${user.email},
         ${data.airlineName},
         ${data.flightNumber},
-        replace(${data.departureDatetime}, 'T', ' ')::timestamp,
+        ${flight.departure_datetime},
         now(),
         ${data.cardType},
         ${data.cardNumber},
@@ -759,23 +756,25 @@ export async function submitReviewInternal(data: {
 }) {
   const user = await requireUser("customer");
 
-  const eligibleFlightRecords = await db<Array<{ eligible: boolean }>>`
-    select exists (
-      select 1
-      from ticket
-      join flight on flight.airline_name = ticket.airline_name and flight.flight_number = ticket.flight_number and flight.departure_datetime = ticket.departure_datetime
-      where ticket.customer_email = ${user.email}
-        and ticket.airline_name = ${data.airlineName}
-        and ticket.flight_number = ${data.flightNumber}
-        and ticket.departure_datetime::text = replace(${data.departureDatetime}, 'T', ' ')
-        and flight.arrival_datetime < now()
-    ) as eligible
+  const eligibleFlightRecords = await db<
+    Array<{ departure_datetime: string }>
+  >`
+    select ticket.departure_datetime
+    from ticket
+    join flight on flight.airline_name = ticket.airline_name and flight.flight_number = ticket.flight_number and flight.departure_datetime = ticket.departure_datetime
+    where ticket.customer_email = ${user.email}
+      and ticket.airline_name = ${data.airlineName}
+      and ticket.flight_number = ${data.flightNumber}
+      and date_trunc('minute', ticket.departure_datetime) = date_trunc('minute', ${normalizeTimestampForSql(data.departureDatetime)}::timestamp)
+      and flight.arrival_datetime < now()
+    limit 1
   `;
-  if (!eligibleFlightRecords.length || !eligibleFlightRecords[0].eligible) {
+  if (!eligibleFlightRecords.length) {
     return {
       error: "Only completed flights that you purchased can be reviewed.",
     };
   }
+  const eligibleFlight = eligibleFlightRecords[0];
 
   const existingReviewRecords = await db<Array<{ exists: boolean }>>`
     select exists (
@@ -784,7 +783,7 @@ export async function submitReviewInternal(data: {
       where customer_email = ${user.email}
         and airline_name = ${data.airlineName}
         and flight_number = ${data.flightNumber}
-        and departure_datetime::text = replace(${data.departureDatetime}, 'T', ' ')
+        and departure_datetime = ${eligibleFlight.departure_datetime}
     ) as exists
   `;
   if (existingReviewRecords[0].exists) {
@@ -805,7 +804,7 @@ export async function submitReviewInternal(data: {
       ${user.email},
       ${data.airlineName},
       ${data.flightNumber},
-      ${data.departureDatetime},
+      ${eligibleFlight.departure_datetime},
       ${data.rating},
       ${data.comment || null},
       now()
@@ -843,11 +842,9 @@ type FlightRowForMutation = {
   flight_number: string;
   status: "on_time" | "delayed";
 };
-
 function formatFlightDateForSql(value: string) {
-  return value.replace("T", " ");
+  return normalizeTimestampForSql(value);
 }
-
 async function getStaffFlightForMutation(
   data: FlightIdentityInput,
 ): Promise<FlightRowForMutation | null> {
@@ -869,7 +866,7 @@ async function getStaffFlightForMutation(
     from flight
     where airline_name = ${data.airlineName}
       and flight_number = ${data.flightNumber}
-      and departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+      and date_trunc('minute', departure_datetime) = date_trunc('minute', ${formatFlightDateForSql(data.departureDatetime)}::timestamp)
     limit 1
   `;
 
@@ -899,7 +896,7 @@ async function assertAirplaneCanServeFlight(
     left join ticket
       on ticket.airline_name = ${airlineName}
       and ticket.flight_number = ${data.flightNumber}
-      and ticket.departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+      and date_trunc('minute', ticket.departure_datetime) = date_trunc('minute', ${formatFlightDateForSql(data.departureDatetime)}::timestamp)
     where airplane.airline_name = ${airlineName}
       and airplane.airplane_id = ${airplaneId}
     group by airplane.number_of_seats
@@ -929,7 +926,7 @@ export async function createFlightInternal(data: {
   if (data.departureAirportCode === data.arrivalAirportCode)
     throw new Error("Departure and arrival airports must be different.");
 
-  if (new Date(data.arrivalDatetime) <= new Date(data.departureDatetime))
+  if (compareDateTimes(data.arrivalDatetime, data.departureDatetime) <= 0)
     throw new Error("Arrival time must be after departure time.");
 
   const airplaneRows = await db<Array<{ airplane_id: string }>>`
@@ -956,10 +953,10 @@ export async function createFlightInternal(data: {
     values (
       ${airlineName},
       ${data.flightNumber},
-      ${data.departureDatetime},
+      ${normalizeTimestampForSql(data.departureDatetime)}::timestamp,
       ${data.departureAirportCode},
       ${data.arrivalAirportCode},
-      ${data.arrivalDatetime},
+      ${normalizeTimestampForSql(data.arrivalDatetime)}::timestamp,
       ${data.basePrice},
       'on_time',
       ${data.airplaneId}
@@ -975,16 +972,15 @@ export async function updateFlightStatusInternal(data: {
   flightNumber: string;
   status: "on_time" | "delayed";
 }) {
-  const user = await requireUser("staff");
-  if (!canStaffManageOperationalAirline(user, data.airlineName))
-    return { error: "You can only edit flights you are allowed to manage." };
+  const flight = await getStaffFlightForMutation(data);
+  if (!flight) return { error: "Flight not found." };
 
   await db`
     update flight
     set status = ${data.status}
-    where airline_name = ${data.airlineName}
-      and flight_number = ${data.flightNumber}
-      and departure_datetime::text = replace(${data.departureDatetime}, 'T', ' ')
+    where airline_name = ${flight.airline_name}
+      and flight_number = ${flight.flight_number}
+      and departure_datetime = ${flight.departure_datetime}
   `;
 
   return {
@@ -1002,7 +998,7 @@ export async function updateFlightFieldInternal(data: FlightEditableFieldInput) 
       set status = ${data.value}
       where airline_name = ${flight.airline_name}
         and flight_number = ${flight.flight_number}
-        and departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+        and departure_datetime = ${flight.departure_datetime}
     `;
     return { message: `Flight ${data.flightNumber} status updated.` };
   }
@@ -1013,7 +1009,7 @@ export async function updateFlightFieldInternal(data: FlightEditableFieldInput) 
       set base_price = ${data.value}
       where airline_name = ${flight.airline_name}
         and flight_number = ${flight.flight_number}
-        and departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+        and departure_datetime = ${flight.departure_datetime}
     `;
     return { message: `Flight ${data.flightNumber} price updated.` };
   }
@@ -1025,7 +1021,7 @@ export async function updateFlightFieldInternal(data: FlightEditableFieldInput) 
       set airplane_id = ${data.value}
       where airline_name = ${flight.airline_name}
         and flight_number = ${flight.flight_number}
-        and departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+        and departure_datetime = ${flight.departure_datetime}
     `;
     return { message: `Flight ${data.flightNumber} aircraft updated.` };
   }
@@ -1040,7 +1036,7 @@ export async function updateFlightFieldInternal(data: FlightEditableFieldInput) 
       set departure_airport_code = ${data.value}
       where airline_name = ${flight.airline_name}
         and flight_number = ${flight.flight_number}
-        and departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+        and departure_datetime = ${flight.departure_datetime}
     `;
     return { message: `Flight ${data.flightNumber} departure airport updated.` };
   }
@@ -1055,13 +1051,13 @@ export async function updateFlightFieldInternal(data: FlightEditableFieldInput) 
       set arrival_airport_code = ${data.value}
       where airline_name = ${flight.airline_name}
         and flight_number = ${flight.flight_number}
-        and departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+        and departure_datetime = ${flight.departure_datetime}
     `;
     return { message: `Flight ${data.flightNumber} arrival airport updated.` };
   }
 
   if (data.field === "departureDatetime") {
-    if (new Date(flight.arrival_datetime) <= new Date(data.value)) {
+    if (compareDateTimes(flight.arrival_datetime, data.value) <= 0) {
       return { error: "Departure time must be before arrival time." };
     }
 
@@ -1070,12 +1066,12 @@ export async function updateFlightFieldInternal(data: FlightEditableFieldInput) 
       set departure_datetime = ${data.value}
       where airline_name = ${flight.airline_name}
         and flight_number = ${flight.flight_number}
-        and departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+        and departure_datetime = ${flight.departure_datetime}
     `;
     return { message: `Flight ${data.flightNumber} departure time updated.` };
   }
 
-  if (new Date(data.value) <= new Date(flight.departure_datetime)) {
+  if (compareDateTimes(data.value, flight.departure_datetime) <= 0) {
     return { error: "Arrival time must be after departure time." };
   }
 
@@ -1084,7 +1080,7 @@ export async function updateFlightFieldInternal(data: FlightEditableFieldInput) 
     set arrival_datetime = ${data.value}
     where airline_name = ${flight.airline_name}
       and flight_number = ${flight.flight_number}
-      and departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+      and departure_datetime = ${flight.departure_datetime}
   `;
   return { message: `Flight ${data.flightNumber} arrival time updated.` };
 }
@@ -1108,7 +1104,7 @@ export async function deleteFlightInternal(data: FlightIdentityInput) {
       and review.departure_datetime = flight.departure_datetime
     where flight.airline_name = ${flight.airline_name}
       and flight.flight_number = ${flight.flight_number}
-      and flight.departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+      and flight.departure_datetime = ${flight.departure_datetime}
   `;
   const dependencyRow = dependencyRows[0];
   if (dependencyRow.ticket_count > 0 || dependencyRow.review_count > 0) {
@@ -1119,7 +1115,7 @@ export async function deleteFlightInternal(data: FlightIdentityInput) {
     delete from flight
     where airline_name = ${flight.airline_name}
       and flight_number = ${flight.flight_number}
-      and departure_datetime::text = ${formatFlightDateForSql(data.departureDatetime)}
+      and departure_datetime = ${flight.departure_datetime}
   `;
 
   return { message: `Flight ${data.flightNumber} deleted.` };
@@ -1275,7 +1271,7 @@ export async function getFlightPassengersInternal(data: {
     join customer on customer.email = ticket.customer_email
     where ticket.airline_name = ${data.airlineName}
       and ticket.flight_number = ${data.flightNumber}
-      and ticket.departure_datetime::text = replace(${data.departureDatetime}, 'T', ' ')
+      and date_trunc('minute', ticket.departure_datetime) = date_trunc('minute', ${normalizeTimestampForSql(data.departureDatetime)}::timestamp)
     order by ticket.purchase_datetime asc
   `;
 
@@ -1291,7 +1287,7 @@ export async function getStaffReportInternal(data: { endDate: string; startDate:
   const user = await requireUser("staff");
   const airlineScope = getStaffOperationalAirlineScope(user);
 
-  if (new Date(data.startDate) > new Date(data.endDate)) {
+  if (data.startDate > data.endDate) {
     return {
       endDate: data.endDate,
       error: "Start date must be on or before end date.",
@@ -1304,7 +1300,8 @@ export async function getStaffReportInternal(data: { endDate: string; startDate:
     select count(*)::int as tickets_sold
     from ticket
     where (${airlineScope}::text is null or airline_name = ${airlineScope})
-      and purchase_datetime::date between ${data.startDate}::date and ${data.endDate}::date
+      and purchase_datetime >= ${data.startDate}::date
+      and purchase_datetime < ${data.endDate}::date + interval '1 day'
   `;
   return {
     endDate: data.endDate,
@@ -1667,7 +1664,7 @@ export async function getCustomerProfileInternal() {
     }>
   >`
     select email, name, phone_number, building_number, street, city, state,
-           passport_number, passport_expiration, passport_country, date_of_birth
+           passport_number, passport_expiration::text as passport_expiration, passport_country, date_of_birth::text as date_of_birth
     from customer
     where email = ${user.email}
   `;
@@ -1676,17 +1673,11 @@ export async function getCustomerProfileInternal() {
   return {
     buildingNumber: row.building_number,
     city: row.city,
-    dateOfBirth:
-      (row.date_of_birth as unknown) instanceof Date
-        ? (row.date_of_birth as unknown as Date).toISOString().split("T")[0]
-        : String(row.date_of_birth),
+    dateOfBirth: row.date_of_birth,
     email: row.email,
     name: row.name,
     passportCountry: row.passport_country,
-    passportExpiration:
-      (row.passport_expiration as unknown) instanceof Date
-        ? (row.passport_expiration as unknown as Date).toISOString().split("T")[0]
-        : String(row.passport_expiration),
+    passportExpiration: row.passport_expiration,
     passportNumber: row.passport_number,
     phoneNumber: row.phone_number,
     state: row.state,

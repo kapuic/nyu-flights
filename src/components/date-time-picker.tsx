@@ -19,11 +19,11 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
+import { jsDateToPlainDateString, plainDateToJsDate } from "@/lib/temporal"
+
 function parseDateValue(value: string) {
   if (!value) return undefined
-
-  const parsed = new Date(`${value}T00:00:00`)
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed
+  return plainDateToJsDate(value)
 }
 
 function parseDateTimeValue(value: string) {
@@ -35,7 +35,7 @@ function parseDateTimeValue(value: string) {
 
 function formatDateValue(date: Date | undefined) {
   if (!date) return ""
-  return format(date, "yyyy-MM-dd")
+  return jsDateToPlainDateString(date)
 }
 
 function formatDateTimeValue(date: Date | undefined) {

@@ -19,6 +19,8 @@ import { cn } from "@/lib/utils"
 // Types
 // ---------------------------------------------------------------------------
 
+import { todayDate } from "@/lib/temporal"
+
 export type PaymentCardValues = {
   cardNumber: string
   nameOnCard: string
@@ -61,9 +63,9 @@ export function validatePaymentCard(values: PaymentCardValues): PaymentCardField
     if (month < 1 || month > 12) {
       errors.cardExpiration = "Invalid month."
     } else {
-      const now = new Date()
-      const currentMonth = now.getMonth() + 1
-      const currentYear = now.getFullYear() % 100
+      const today = todayDate()
+      const currentMonth = today.month
+      const currentYear = today.year % 100
       if (year < currentYear || (year === currentYear && month < currentMonth)) {
         errors.cardExpiration = "Card has expired."
       }

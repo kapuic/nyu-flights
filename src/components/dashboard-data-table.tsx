@@ -66,7 +66,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { DateTimePickerField } from "@/components/date-time-picker";
+import { DatePickerField, DateTimePickerField } from "@/components/date-time-picker";
 import {
   Table,
   TableBody,
@@ -113,7 +113,7 @@ type DashboardDataTableInlineTextCellProps = {
   value: string;
 };
 
-type DashboardDataTableInlineDateTimeCellProps = {
+type DashboardDataTableInlineDateCellProps = {
   ariaLabel: string;
   className?: string;
   disabled?: boolean;
@@ -121,6 +121,8 @@ type DashboardDataTableInlineDateTimeCellProps = {
   onSave: (value: string) => Promise<void> | void;
   value: string;
 };
+
+type DashboardDataTableInlineDateTimeCellProps = DashboardDataTableInlineDateCellProps;
 
 type DashboardDataTableBulkAction<TData> = {
   disabled?: (rows: Array<TData>) => boolean;
@@ -784,6 +786,92 @@ export function DashboardDataTableInlineTextCell({
   );
 }
 
+export function DashboardDataTableInlineDateCell({
+  ariaLabel,
+  className,
+  disabled = false,
+  formatValue,
+  onSave,
+  value,
+}: DashboardDataTableInlineDateCellProps) {
+  const [draft, setDraft] = useState(value);
+  const [error, setError] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!editing) setDraft(value);
+  }, [editing, value]);
+
+  async function save() {
+    if (draft === value) {
+      setEditing(false);
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    try {
+      await onSave(draft);
+      setEditing(false);
+    } catch (err) {
+      setDraft(value);
+      setError(err instanceof Error ? err.message : "Failed to save.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!editing) {
+    return (
+      <div className={cn("flex min-w-40 flex-col items-start gap-1", className)}>
+        <Button
+          aria-label={ariaLabel}
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled={disabled || saving}
+          className="h-8 justify-start px-1.5 font-normal text-muted-foreground"
+          onClick={() => setEditing(true)}
+        >
+          {saving ? <Loader2Icon className="animate-spin" /> : null}
+          {formatValue ? formatValue(value) : value}
+        </Button>
+        {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn("flex min-w-44 flex-col items-start gap-1", className)}>
+      <DatePickerField
+        value={draft}
+        onChange={setDraft}
+        onBlur={() => void save()}
+        placeholder="Pick date"
+      />
+      <div className="flex items-center gap-1">
+        <Button type="button" size="xs" disabled={disabled || saving} onClick={() => void save()}>
+          Save
+        </Button>
+        <Button
+          type="button"
+          size="xs"
+          variant="ghost"
+          disabled={saving}
+          onClick={() => {
+            setDraft(value);
+            setEditing(false);
+          }}
+        >
+          Cancel
+        </Button>
+      </div>
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
+  );
+}
+
 export function DashboardDataTableInlineDateTimeCell({
   ariaLabel,
   className,
@@ -846,7 +934,7 @@ export function DashboardDataTableInlineDateTimeCell({
         value={draft}
         onChange={setDraft}
         onBlur={() => void save()}
-        placeholder="Pick arrival time"
+        placeholder="Pick date and time"
       />
       <div className="flex items-center gap-1">
         <Button type="button" size="xs" disabled={disabled || saving} onClick={() => void save()}>

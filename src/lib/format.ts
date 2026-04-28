@@ -1,3 +1,5 @@
+import { formatDateTimeMedium, formatPlainDate } from "@/lib/temporal"
+
 export function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-US", {
     currency: "USD",
@@ -5,17 +7,12 @@ export function formatCurrency(value: number) {
   }).format(value)
 }
 
-export function formatDateTime(value: string | Date) {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value))
+export function formatDateTime(value: string) {
+  return formatDateTimeMedium(value)
 }
 
-export function formatDate(value: string | Date) {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-  }).format(new Date(value))
+export function formatDate(value: string) {
+  return formatPlainDate(value)
 }
 
 export function titleCaseStatus(status: string) {

@@ -17,6 +17,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { getCurrentUserFn } from "@/lib/auth"
 import { getCustomerDashboardFn } from "@/lib/queries"
+import { formatPlainDate, formatTime } from "@/lib/temporal"
 
 export const Route = createFileRoute("/trips")({
   loader: async () => {
@@ -32,17 +33,15 @@ export const Route = createFileRoute("/trips")({
   component: TripsPage,
 })
 
-function formatDate(iso: string) {
-  const d = new Date(iso)
-  return {
-    day: d.getDate(),
-    month: d.toLocaleDateString("en-US", { month: "short" }).toUpperCase(),
-    year: d.getFullYear(),
 
-    time: d.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-    }),
+function formatDate(iso: string) {
+  const [datePart] = iso.split("T")
+  const [year, , day] = datePart.split("-").map(Number)
+  return {
+    day,
+    month: formatPlainDate(datePart).split(" ")[0]!.toUpperCase(),
+    year,
+    time: formatTime(iso),
   }
 }
 

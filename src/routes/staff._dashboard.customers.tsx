@@ -5,8 +5,9 @@ import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { HTMLInputTypeAttribute } from "react";
-
 import type { DashboardDataTableFilterOption } from "@/components/dashboard-data-table";
+import { formatPlainDate } from "@/lib/temporal";
+
 import {
   DashboardDataTable,
   DashboardDataTableColumnHeader,
@@ -53,10 +54,11 @@ type EditableCustomerField =
 function getCustomerRowId(customer: CustomerRow) {
   return customer.email;
 }
+
+
 function formatDisplayDate(value: string) {
   if (!value) return "";
-  const date = new Date(value.includes("T") ? value : `${value}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
+  return formatPlainDate(value);
 }
 
 function getEditablePhoneNumber(value: string) {

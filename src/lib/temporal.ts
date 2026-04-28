@@ -1,0 +1,192 @@
+import { Temporal } from "temporal-polyfill"
+
+// ---------------------------------------------------------------------------
+// Date-only helpers (DOB, passport expiration, manufacturing date, card exp)
+// ---------------------------------------------------------------------------
+
+/** Parse a YYYY-MM-DD string into a PlainDate, or return undefined. */
+export function toPlainDate(value: string): Temporal.PlainDate | undefined {
+  try {
+    return Temporal.PlainDate.from(value)
+  } catch {
+    return undefined
+  }
+}
+
+/** Today as a PlainDate. */
+export function todayDate(): Temporal.PlainDate {
+  return Temporal.Now.plainDateISO()
+}
+
+/** Today as a YYYY-MM-DD string. */
+export function todayString(): string {
+  return todayDate().toString()
+}
+
+/** Format a YYYY-MM-DD string for display (e.g. "Jan 15, 2026"). */
+export function formatPlainDate(value: string): string {
+  const pd = toPlainDate(value)
+  if (!pd) return value
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+  }).format(new Date(pd.year, pd.month - 1, pd.day))
+}
+
+// ---------------------------------------------------------------------------
+// DateTime helpers (flight departure/arrival, purchase time)
+// ---------------------------------------------------------------------------
+
+/** Parse a datetime string into PlainDateTime. */
+export function toPlainDateTime(
+  value: string,
+): Temporal.PlainDateTime | undefined {
+  try {
+    const normalized = value.replace(" ", "T").replace(/\.\d+$/, "")
+    return Temporal.PlainDateTime.from(normalized)
+  } catch {
+    return undefined
+  }
+}
+
+/** Current local PlainDateTime. */
+export function nowDateTime(): Temporal.PlainDateTime {
+  return Temporal.Now.plainDateTimeISO()
+}
+
+/** Compare two datetime strings. Returns <0, 0, or >0. */
+export function compareDateTimes(a: string, b: string): number {
+  return Temporal.PlainDateTime.compare(
+    Temporal.PlainDateTime.from(a.replace(" ", "T").replace(/\.\d+$/, "")),
+    Temporal.PlainDateTime.from(b.replace(" ", "T").replace(/\.\d+$/, "")),
+  )
+}
+
+/** Check if a datetime string is in the past. */
+export function isDateTimePast(value: string): boolean {
+  const pdt = toPlainDateTime(value)
+  if (!pdt) return false
+  return Temporal.PlainDateTime.compare(pdt, nowDateTime()) < 0
+}
+
+/** Duration between two datetime strings as { hours, minutes }. */
+export function getFlightDuration(
+  departure: string,
+  arrival: string,
+): { hours: number; minutes: number } {
+  const dep = toPlainDateTime(departure)
+  const arr = toPlainDateTime(arrival)
+  if (!dep || !arr) return { hours: 0, minutes: 0 }
+  const dur = dep.until(arr, { largestUnit: "hour" })
+  return { hours: dur.hours, minutes: dur.minutes }
+}
+
+/** Format a datetime string as time (e.g. "6:04 PM"). */
+export function formatTime(value: string): string {
+  const pdt = toPlainDateTime(value)
+  if (!pdt) return value
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(new Date(pdt.year, pdt.month - 1, pdt.day, pdt.hour, pdt.minute))
+}
+
+/** Format a datetime as short date+time (e.g. "Apr 25, 6:04 PM"). */
+export function formatDateTimeShort(value: string): string {
+  const pdt = toPlainDateTime(value)
+  if (!pdt) return value
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(pdt.year, pdt.month - 1, pdt.day, pdt.hour, pdt.minute))
+}
+
+/** Format a datetime as medium date+time (e.g. "Apr 25, 2026, 6:04 PM"). */
+export function formatDateTimeMedium(value: string): string {
+  const pdt = toPlainDateTime(value)
+  if (!pdt) return value
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(pdt.year, pdt.month - 1, pdt.day, pdt.hour, pdt.minute))
+}
+
+/** Format a datetime as "Mon, Apr 25" style short date. */
+export function formatShortDate(value: string): string {
+  const pdt = toPlainDateTime(value)
+  if (!pdt) return value
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(pdt.year, pdt.month - 1, pdt.day, pdt.hour, pdt.minute))
+}
+
+// ---------------------------------------------------------------------------
+// Serialization helpers (server/SQL boundaries)
+// ---------------------------------------------------------------------------
+
+/** Serialize a DB Date or string to YYYY-MM-DDTHH:mm (minute precision). */
+export function serializeTimestamp(value: Date | string): string {
+  if (value instanceof Date) {
+    const pd = Temporal.PlainDateTime.from({
+      year: value.getFullYear(),
+      month: value.getMonth() + 1,
+      day: value.getDate(),
+      hour: value.getHours(),
+      minute: value.getMinutes(),
+    })
+    return pd.toString({ smallestUnit: "minute" })
+  }
+  const pdt = toPlainDateTime(value)
+  return pdt ? pdt.toString({ smallestUnit: "minute" }) : value
+}
+
+/** Serialize a DB Date or string to YYYY-MM-DD (date only). */
+export function serializeDateOnly(value: Date | string): string {
+  if (value instanceof Date) {
+    return Temporal.PlainDate.from({
+      year: value.getFullYear(),
+      month: value.getMonth() + 1,
+      day: value.getDate(),
+    }).toString()
+  }
+  return value.split(/[ T]/)[0]
+}
+
+/** Normalize a UI datetime string to SQL-safe format (YYYY-MM-DD HH:mm:00). */
+export function normalizeTimestampForSql(value: string): string {
+  const serialized = serializeTimestamp(value)
+  return serialized.replace("T", " ") + ":00"
+}
+
+// ---------------------------------------------------------------------------
+// Boundary helpers (react-day-picker needs JS Date)
+// ---------------------------------------------------------------------------
+
+/** Convert YYYY-MM-DD to JS Date for react-day-picker. */
+export function plainDateToJsDate(value: string): Date | undefined {
+  const pd = toPlainDate(value)
+  if (!pd) return undefined
+  return new Date(pd.year, pd.month - 1, pd.day)
+}
+
+/** Convert JS Date from react-day-picker to YYYY-MM-DD string. */
+export function jsDateToPlainDateString(date: Date | undefined): string {
+  if (!date) return ""
+  return Temporal.PlainDate.from({
+    year: date.getFullYear(),
+    month: date.getMonth() + 1,
+    day: date.getDate(),
+  }).toString()
+}
+
+/** Today as a JS Date for react-day-picker minDate. */
+export function todayJsDate(): Date {
+  const t = todayDate()
+  return new Date(t.year, t.month - 1, t.day)
+}
+
+export { Temporal }
