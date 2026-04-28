@@ -1,14 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
+import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu"
 import {
-  type Column,
-  type ColumnDef,
-  type ColumnFiltersState,
-  type OnChangeFn,
-  type PaginationState,
-  type Row,
-  type RowSelectionState,
-  type SortingState,
-  type VisibilityState,
   flexRender,
   getCoreRowModel,
   getFacetedRowModel,
@@ -18,7 +10,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { type VirtualItem, useVirtualizer } from "@tanstack/react-virtual"
+import { useVirtualizer } from "@tanstack/react-virtual"
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs"
 import {
   ArrowDownIcon,
@@ -30,6 +22,18 @@ import {
   SearchIcon,
   XIcon,
 } from "lucide-react"
+import type { VirtualItem } from "@tanstack/react-virtual"
+import type {
+  Column,
+  ColumnDef,
+  ColumnFiltersState,
+  OnChangeFn,
+  PaginationState,
+  Row,
+  RowSelectionState,
+  SortingState,
+  VisibilityState,
+} from "@tanstack/react-table"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -63,6 +67,11 @@ type DashboardDataTableBulkAction<TData> = {
   onSelect: (rows: Array<TData>) => Promise<void> | void
 }
 
+type DashboardDataTableRowAction<TData> = {
+  label: string
+  onSelect: (rows: Array<TData>) => Promise<void> | void
+}
+
 type DashboardDataTableFilter = {
   columnId: string
   label: string
@@ -78,8 +87,9 @@ type DashboardDataTableProps<TData, TValue> = {
   enableVirtualization?: boolean
   filters?: Array<DashboardDataTableFilter>
   globalFilterFn?: "auto" | "includesString"
-  searchPlaceholder?: string
   queryPrefix?: string
+  rowActions?: Array<DashboardDataTableRowAction<TData>>
+  searchPlaceholder?: string
 }
 
 type DashboardDataTableFilterContextValue = {
@@ -105,8 +115,9 @@ export function DashboardDataTable<TData, TValue>({
   enableVirtualization = false,
   filters = [],
   globalFilterFn = "includesString",
-  searchPlaceholder = "Search table...",
   queryPrefix = "",
+  rowActions = [],
+  searchPlaceholder = "Search table...",
 }: DashboardDataTableProps<TData, TValue>) {
   const queryParsers = useMemo(
     () => ({
@@ -151,9 +162,9 @@ export function DashboardDataTable<TData, TValue>({
       typeof updater === "function" ? updater(sorting) : updater
     const next = nextSorting[0]
     void setQuery({
-      [dirKey]: next?.desc ? "desc" : "asc",
+      [dirKey]: next.desc ? "desc" : "asc",
       [pageKey]: 1,
-      [sortKey]: next?.id ?? "",
+      [sortKey]: next.id,
     })
   }
 
@@ -251,6 +262,19 @@ export function DashboardDataTable<TData, TValue>({
     .getFilteredSelectedRowModel()
     .rows.map((row) => row.original)
   const hasFilters = columnFilters.length > 0 || search.length > 0
+
+  function getContextRows(row: Row<TData>) {
+    if (enableRowSelection && row.getIsSelected()) return selectedRows
+    return [row.original]
+  }
+
+  async function runRowAction(
+    action: DashboardDataTableRowAction<TData>,
+    row: Row<TData>
+  ) {
+    await action.onSelect(getContextRows(row))
+    setRowSelection({})
+  }
 
   function clearFilters() {
     setColumnFilters([])
@@ -365,12 +389,21 @@ export function DashboardDataTable<TData, TValue>({
                 </TableRow>
               ) : enableVirtualization ? (
                 <VirtualizedRows
+                  rowActions={rowActions}
+                  runRowAction={runRowAction}
                   rows={rows}
                   totalSize={virtualizer.getTotalSize()}
                   virtualRows={virtualRows}
                 />
               ) : (
-                rows.map((row) => <DashboardDataTableRow key={row.id} row={row} />)
+                rows.map((row) => (
+                  <DashboardDataTableRow
+                    key={row.id}
+                    row={row}
+                    rowActions={rowActions}
+                    runRowAction={runRowAction}
+                  />
+                ))
               )}
             </TableBody>
           </Table>
@@ -473,35 +506,80 @@ function getColumnLabel<TData, TValue>(column: Column<TData, TValue>) {
     .replace(/^./, (letter) => letter.toUpperCase())
 }
 
-function DashboardDataTableRow<TData>({ row }: { row: Row<TData> }) {
+function DashboardDataTableRow<TData>({
+  row,
+  rowActions,
+  runRowAction,
+}: {
+  row: Row<TData>
+  rowActions: Array<DashboardDataTableRowAction<TData>>
+  runRowAction: (
+    action: DashboardDataTableRowAction<TData>,
+    row: Row<TData>
+  ) => Promise<void>
+}) {
+  function renderRow() {
+    return (
+      <TableRow data-state={row.getIsSelected() ? "selected" : undefined}>
+        {row.getVisibleCells().map((cell) => (
+          <TableCell key={cell.id}>
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </TableCell>
+        ))}
+      </TableRow>
+    )
+  }
+
+  if (rowActions.length === 0) return renderRow()
+
   return (
-    <TableRow data-state={row.getIsSelected() ? "selected" : undefined}>
-      {row.getVisibleCells().map((cell) => (
-        <TableCell key={cell.id}>
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-        </TableCell>
-      ))}
-    </TableRow>
+    <ContextMenuPrimitive.Root>
+      <ContextMenuPrimitive.Trigger render={renderRow()} />
+      <ContextMenuPrimitive.Portal>
+        <ContextMenuPrimitive.Positioner className="isolate z-50 outline-none">
+          <ContextMenuPrimitive.Popup className="relative z-50 min-w-40 origin-(--transform-origin) overflow-hidden rounded-md bg-popover/70 p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none before:pointer-events-none before:absolute before:inset-0 before:-z-1 before:rounded-[inherit] before:backdrop-blur-2xl before:backdrop-saturate-150 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95">
+            <ContextMenuPrimitive.Group>
+              {rowActions.map((action) => (
+                <ContextMenuPrimitive.Item
+                  key={action.label}
+                  className="relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50"
+                  onClick={() => void runRowAction(action, row)}
+                >
+                  {action.label}
+                </ContextMenuPrimitive.Item>
+              ))}
+            </ContextMenuPrimitive.Group>
+          </ContextMenuPrimitive.Popup>
+        </ContextMenuPrimitive.Positioner>
+      </ContextMenuPrimitive.Portal>
+    </ContextMenuPrimitive.Root>
   )
 }
 
 type VirtualizedRowsProps<TData> = {
+  rowActions: Array<DashboardDataTableRowAction<TData>>
   rows: Array<Row<TData>>
+  runRowAction: (
+    action: DashboardDataTableRowAction<TData>,
+    row: Row<TData>
+  ) => Promise<void>
   totalSize: number
   virtualRows: Array<VirtualItem>
 }
 
 function VirtualizedRows<TData>({
+  rowActions,
   rows,
+  runRowAction,
   totalSize,
   virtualRows,
 }: VirtualizedRowsProps<TData>) {
+  if (virtualRows.length === 0) return null
+
   const firstVirtualRow = virtualRows[0]
-  const lastVirtualRow = virtualRows.at(-1)
-  const paddingTop = firstVirtualRow?.start ?? 0
-  const paddingBottom = lastVirtualRow
-    ? Math.max(0, totalSize - lastVirtualRow.end)
-    : 0
+  const lastVirtualRow = virtualRows[virtualRows.length - 1]
+  const paddingTop = firstVirtualRow.start
+  const paddingBottom = Math.max(0, totalSize - lastVirtualRow.end)
 
   return (
     <>
@@ -515,8 +593,14 @@ function VirtualizedRows<TData>({
       ) : null}
       {virtualRows.map((virtualRow) => {
         const row = rows[virtualRow.index]
-        if (!row) return null
-        return <DashboardDataTableRow key={virtualRow.key} row={row} />
+        return (
+          <DashboardDataTableRow
+            key={virtualRow.key}
+            row={row}
+            rowActions={rowActions}
+            runRowAction={runRowAction}
+          />
+        )
       })}
       {paddingBottom > 0 ? (
         <TableRow aria-hidden="true">

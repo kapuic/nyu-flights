@@ -5,18 +5,19 @@ import {
 } from "@tanstack/react-router"
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
 import { useForm } from "@tanstack/react-form"
-import type { ColumnDef } from "@tanstack/react-table"
 import { useMemo, useState } from "react"
-import { toast } from "sonner"
 import { AlertTriangleIcon, CircleCheckIcon, Plus } from "lucide-react"
+import { toast } from "sonner"
+import type { ColumnDef } from "@tanstack/react-table"
 
+import type {DashboardDataTableFilterOption} from "@/components/dashboard-data-table";
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { CountryFlag } from "@/components/country-flag"
 import {
   DashboardDataTable,
-  type DashboardDataTableFilterOption,
-  DashboardDataTableColumnHeader,
+  DashboardDataTableColumnHeader
+  
 } from "@/components/dashboard-data-table"
 
 import { Input } from "@/components/ui/input"
@@ -484,6 +485,23 @@ function StaffFlightsPage() {
     },
   ]
 
+  const statusActions = useMemo(
+    () => [
+      {
+        label: "Mark on time",
+        onSelect: (rows: Array<FlightRow>) =>
+          handleBulkStatusUpdate(rows, "on_time"),
+      },
+      {
+        label: "Mark delayed",
+        onSelect: (rows: Array<FlightRow>) =>
+          handleBulkStatusUpdate(rows, "delayed"),
+      },
+    ],
+    []
+  )
+
+
   return (
     <div className="flex min-w-0 flex-col gap-6 overflow-hidden p-4 md:p-6">
       <div className="flex items-center justify-between">
@@ -638,26 +656,17 @@ function StaffFlightsPage() {
       </ResponsiveModal>
 
       <DashboardDataTable
-        bulkActions={[
-          {
-            label: "Mark on time",
-            onSelect: (rows) => handleBulkStatusUpdate(rows, "on_time"),
-          },
-          {
-            label: "Mark delayed",
-            onSelect: (rows) => handleBulkStatusUpdate(rows, "delayed"),
-          },
-        ]}
+        bulkActions={statusActions}
         columns={columns}
         data={data.flights}
         emptyMessage="No flights scheduled."
         enableRowSelection
         enableVirtualization
         filters={filterOptions}
-        searchPlaceholder="Search flights..."
         queryPrefix="flights"
+        rowActions={statusActions}
+        searchPlaceholder="Search flights..."
       />
-
     </div>
   )
 }
