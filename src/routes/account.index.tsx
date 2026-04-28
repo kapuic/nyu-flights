@@ -176,13 +176,13 @@ function InlineCountryField({
   }
 
   async function handleSelect(country: CountryOption | null) {
-    const newValue = country?.label ?? ""
+    if (!country) return // input cleared, not a selection
     selectingRef.current = true
-    if (!newValue || newValue === value) { cancel(); return }
+    if (country.label === value) { cancel(); return }
     setSaving(true)
     setError("")
     try {
-      await onSave(newValue)
+      await onSave(country.label)
       setEditing(false)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save.")
@@ -281,13 +281,13 @@ function InlineStateField({
   }
 
   async function handleSelect(state: StateOption | null) {
-    const newValue = state?.label ?? ""
+    if (!state) return // input cleared, not a selection
     selectingRef.current = true
-    if (!newValue || newValue === value) { cancel(); return }
+    if (state.label === value) { cancel(); return }
     setSaving(true)
     setError("")
     try {
-      await onSave(newValue)
+      await onSave(state.label)
       setEditing(false)
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save.")
