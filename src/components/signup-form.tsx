@@ -9,7 +9,6 @@ import {
   Eye,
   UserRoundPlus,
 } from "lucide-react"
-import { IMaskInput } from "react-imask"
 import { type ComponentProps, type FormEvent, type ReactNode, useId, useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -32,6 +31,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
 import {
   Popover,
   PopoverContent,
@@ -48,8 +48,6 @@ type RegionOption = {
   label: string
 }
 
-const maskedInputClassName =
-  "h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-2.5 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
 
 const US_STATE_OPTIONS: Array<RegionOption> = US_STATES.map((s) => ({ code: "", label: s }))
 
@@ -450,14 +448,13 @@ export function SignupFormFields({
                   {(field) => (
                     <Field>
                       <FieldLabel htmlFor={`${formId}-phone`}>Phone</FieldLabel>
-                      <IMaskInput
+                      <PhoneInput
                         id={`${formId}-phone`}
-                        className={maskedInputClassName}
-                        mask="+{1} (000) 000-0000"
-                        onAccept={(value) => field.handleChange(String(value))}
+                        defaultCountry="US"
+                        onChange={(value: string) => field.handleChange(value ?? "")}
                         onBlur={field.handleBlur}
-                        placeholder="+1 (555) 000-0000"
-                        value={field.state.value}
+                        placeholder="(555) 000-0000"
+                        value={field.state.value as import("react-phone-number-input").Value}
                       />
                       {field.state.meta.isTouched && !field.state.meta.isValid ? (
                         <FieldError errors={field.state.meta.errors} />

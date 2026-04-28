@@ -17,9 +17,10 @@ import { cn } from "@/lib/utils"
 // ---------------------------------------------------------------------------
 
 type PhoneInputProps = Omit<
-  React.ComponentProps<"input">,
-  "onChange" | "value" | "ref"
+  React.ComponentProps<typeof RPNInput.default>,
+  "onChange" | "value" | "ref" | "className"
 > & {
+  className?: string
   onChange?: (value: RPNInput.Value) => void
   value?: RPNInput.Value
 }

@@ -8,6 +8,8 @@ import { Check, Pencil, X } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { InlineField, type InlineFieldVariant } from "@/components/ui/inline-field"
+import { PhoneInput } from "@/components/ui/phone-input"
+import type { Value as PhoneValue } from "react-phone-number-input"
 import {
   Combobox,
   ComboboxContent,
@@ -70,6 +72,80 @@ function GhostOverlay({ input, suffix }: { input: string; suffix: string }) {
       <span className="invisible whitespace-pre">{input}</span>
       <span className="whitespace-pre text-muted-foreground/40">{suffix}</span>
     </div>
+  )
+}
+
+function InlinePhoneField({
+  controls,
+  label,
+  onSave,
+  value,
+}: {
+  controls: InlineControls
+  label: string
+  onSave: (v: string) => Promise<void>
+  value: string
+}) {
+  const [editing, setEditing] = useState(false)
+  const [error, setError] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [draft, setDraft] = useState(value)
+
+  function cancel() {
+    setDraft(value)
+    setEditing(false)
+    setError("")
+  }
+
+  async function save() {
+    const trimmed = draft.trim()
+    if (!trimmed || trimmed === value) { cancel(); return }
+    setSaving(true)
+    setError("")
+    try {
+      await onSave(trimmed)
+      setEditing(false)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (editing) {
+    return (
+      <InlineFieldWrapper label={label} error={error}>
+        <div className="flex items-center gap-1.5">
+          <div className="flex-1">
+            <PhoneInput
+              defaultCountry="US"
+              value={draft as PhoneValue}
+              onChange={(v: string) => setDraft(v ?? "")}
+              placeholder="(555) 000-0000"
+            />
+          </div>
+          {controls === "external" && (
+            <>
+              <button type="button" data-inline-action="save" onClick={() => void save()} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                <Check className="size-3.5" />
+              </button>
+              <button type="button" data-inline-action="cancel" onClick={cancel} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                <X className="size-3.5" />
+              </button>
+            </>
+          )}
+        </div>
+      </InlineFieldWrapper>
+    )
+  }
+
+  return (
+    <InlineFieldWrapper label={label}>
+      <div role="button" tabIndex={0} onClick={() => { setDraft(value); setError(""); setEditing(true) }} onKeyDown={(e) => { if (e.key === "Enter") setEditing(true) }} className="flex min-h-8 items-center justify-between rounded-md px-2.5 py-1 text-sm cursor-pointer transition-colors hover:bg-muted/50">
+        <span className={value ? "" : "italic text-muted-foreground"}>{value || "Not set"}</span>
+        <Pencil className="size-3.5 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground" />
+      </div>
+    </InlineFieldWrapper>
   )
 }
 
@@ -500,7 +576,7 @@ function ProfilePage() {
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <InlineField variant={V} label="Name" value={profile.name} onSave={(v) => save("name", v)} />
           <InlineField variant={V} label="Email" value={profile.email} readOnly />
-          <InlineField variant={V} label="Phone" value={profile.phoneNumber} onSave={(v) => save("phoneNumber", v)} />
+          <InlinePhoneField controls={C} label="Phone" value={profile.phoneNumber} onSave={(v) => save("phoneNumber", v)} />
           <InlineDateField variant={V} controls={C} label="Date of Birth" value={profile.dateOfBirth} readOnly />
         </CardContent>
       </Card>
