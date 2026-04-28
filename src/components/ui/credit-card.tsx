@@ -373,7 +373,7 @@ export function CreditCardVisual({
 
             <div
               className={cn(
-                "font-mono text-[20px] tracking-[0.18em]",
+                "font-mono text-[clamp(0.9rem,5.4vw,1.25rem)] tracking-[0.14em] whitespace-nowrap sm:tracking-[0.18em]",
                 theme.textColor
               )}
               style={{ textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}
