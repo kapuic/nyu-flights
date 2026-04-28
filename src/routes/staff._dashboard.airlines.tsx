@@ -15,13 +15,25 @@ import {
 } from "@/components/delete-confirmation"
 import { ResponsiveModal } from "@/components/responsive-modal"
 import { Button } from "@/components/ui/button"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { createAirlineFn, deleteAirlineFn } from "@/lib/queries"
+import { createAirlineSchema } from "@/lib/schemas"
 import { staffAirlinesQueryOptions } from "@/lib/staff-queries"
 
 type AirlineRow = {
   name: string
+}
+function getAirlineNameError(name: string) {
+  return (
+    createAirlineSchema.shape.name.safeParse(name).error?.issues.at(0)
+      ?.message ?? null
+  )
 }
 
 export const Route = createFileRoute("/staff/_dashboard/airlines")({
@@ -39,6 +51,7 @@ function ManageAirlinesPage() {
   const deleteConfirm = useDeleteConfirmation()
   const queryClient = useQueryClient()
   const router = useRouter()
+  const airlineNameError = getAirlineNameError(newName)
 
   async function refreshAirlines() {
     await queryClient.invalidateQueries({ queryKey: ["staff-airlines"] })
@@ -49,7 +62,10 @@ function ManageAirlinesPage() {
     event.preventDefault()
     setError(null)
     try {
-      const result = await createAirlineFn({ data: { name: newName } })
+      const parsed = createAirlineSchema.safeParse({ name: newName })
+      if (!parsed.success) return
+
+      const result = await createAirlineFn({ data: parsed.data })
       toast.success(result.message)
       setNewName("")
       setCreateOpen(false)
@@ -63,9 +79,13 @@ function ManageAirlinesPage() {
     async (rows: Array<AirlineRow>) => {
       try {
         const results = await Promise.all(
-          rows.map((airline) => deleteAirlineFn({ data: { name: airline.name } }))
+          rows.map((airline) =>
+            deleteAirlineFn({ data: { name: airline.name } })
+          )
         )
-        const failed = results.find((result) => "error" in result && result.error)
+        const failed = results.find(
+          (result) => "error" in result && result.error
+        )
         if (failed && "error" in failed) {
           toast.error(String(failed.error))
           return
@@ -139,18 +159,25 @@ function ManageAirlinesPage() {
       >
         <form onSubmit={handleCreate}>
           <FieldGroup>
-            <Field>
+            <Field data-invalid={Boolean(error || airlineNameError)}>
               <FieldLabel>Airline Name</FieldLabel>
               <Input
+                aria-invalid={Boolean(error || airlineNameError)}
                 required
                 placeholder="Pacific Airlines"
                 value={newName}
-                onChange={(event) => setNewName(event.target.value)}
+                onChange={(event) => {
+                  setError(null)
+                  setNewName(event.target.value)
+                }}
               />
+              {error || airlineNameError ? (
+                <FieldError
+                  errors={[{ message: error ?? airlineNameError ?? undefined }]}
+                />
+              ) : null}
             </Field>
-            {error ? (
-              <p className="text-sm text-destructive">{error}</p>
-            ) : null}
+
             <Button type="submit" className="w-full sm:w-auto">
               Create Airline
             </Button>
@@ -176,4 +203,3 @@ function ManageAirlinesPage() {
     </div>
   )
 }
-

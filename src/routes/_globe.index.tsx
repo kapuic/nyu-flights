@@ -10,7 +10,6 @@ import {
   Search,
 } from "lucide-react"
 
-
 import { listDbAirportsFn, searchFlightsFn } from "@/lib/queries"
 import type { FlightOption, FlightSearchResponse } from "@/lib/queries"
 type SortKey = "price" | "duration" | "departure" | "arrival"
@@ -39,16 +38,24 @@ function sortFlights(flights: FlightOption[], sort: SortState): FlightOption[] {
         cmp = a.basePrice - b.basePrice
         break
       case "duration": {
-        const dA = new Date(a.arrivalDatetime).getTime() - new Date(a.departureDatetime).getTime()
-        const dB = new Date(b.arrivalDatetime).getTime() - new Date(b.departureDatetime).getTime()
+        const dA =
+          new Date(a.arrivalDatetime).getTime() -
+          new Date(a.departureDatetime).getTime()
+        const dB =
+          new Date(b.arrivalDatetime).getTime() -
+          new Date(b.departureDatetime).getTime()
         cmp = dA - dB
         break
       }
       case "departure":
-        cmp = new Date(a.departureDatetime).getTime() - new Date(b.departureDatetime).getTime()
+        cmp =
+          new Date(a.departureDatetime).getTime() -
+          new Date(b.departureDatetime).getTime()
         break
       case "arrival":
-        cmp = new Date(a.arrivalDatetime).getTime() - new Date(b.arrivalDatetime).getTime()
+        cmp =
+          new Date(a.arrivalDatetime).getTime() -
+          new Date(b.arrivalDatetime).getTime()
         break
     }
     return sort.dir === "asc" ? cmp : -cmp
@@ -78,6 +85,14 @@ type SearchFormValues = {
   returnDate: string
   source: string
   tripType: "one-way" | "round-trip"
+}
+function getRouteError(
+  searchFrom: AirportSelection | null,
+  searchTo: AirportSelection | null
+) {
+  return searchFrom && searchTo && searchFrom.code === searchTo.code
+    ? "Origin and destination must differ."
+    : null
 }
 
 function formatDateKey(d: Date | undefined) {
@@ -118,19 +133,21 @@ function PublicHomePage() {
   const setShowAuthModal = useBookingStore((s) => s.setShowAuthModal)
   const selectOutbound = useBookingStore((s) => s.selectOutbound)
   const selectReturn = useBookingStore((s) => s.selectReturn)
+  const routeError = getRouteError(searchFrom, searchTo)
 
   // Round-trip phase 2: outbound selected, picking return
   const [pickingReturn, setPickingReturn] = useState<FlightOption | null>(null)
-
-  // Validation errors
-  const [validationError, setValidationError] = useState<string | null>(null)
 
   // Whether a search has been triggered
   const [hasSearched, setHasSearched] = useState(false)
   // Sort state
   const [sort, setSort] = useState<SortState>({ key: "price", dir: "asc" })
   function toggleSort(key: SortKey) {
-    setSort((prev) => prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" })
+    setSort((prev) =>
+      prev.key === key
+        ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
+        : { key, dir: "asc" }
+    )
   }
 
   // TanStack Form
@@ -144,12 +161,7 @@ function PublicHomePage() {
     } satisfies SearchFormValues,
     onSubmit: async () => {
       if (searchFrom || searchTo) {
-        // Validate same from/to
-        if (searchFrom && searchTo && searchFrom.code === searchTo.code) {
-          setValidationError("Origin and destination must differ.")
-          return
-        }
-        setValidationError(null)
+        if (getRouteError(searchFrom, searchTo)) return
         setHasSearched(true)
       }
     },
@@ -254,10 +266,8 @@ function PublicHomePage() {
   // Airport selection handlers
   const handleFromSelect = useCallback(
     (airport: AirportSelection) => {
-      setValidationError(null)
       setPickingReturn(null)
       if (searchTo && airport.code === searchTo.code) {
-        setValidationError("Origin and destination must differ.")
         return
       }
       setSearch({ searchFrom: airport })
@@ -269,10 +279,8 @@ function PublicHomePage() {
 
   const handleToSelect = useCallback(
     (airport: AirportSelection) => {
-      setValidationError(null)
       setPickingReturn(null)
       if (searchFrom && airport.code === searchFrom.code) {
-        setValidationError("Origin and destination must differ.")
         return
       }
       setSearch({ searchTo: airport })
@@ -283,7 +291,6 @@ function PublicHomePage() {
   )
 
   const handleSwap = useCallback(() => {
-    setValidationError(null)
     const prevFrom = searchFrom
     const prevTo = searchTo
     const prevSource = form.getFieldValue("source")
@@ -325,14 +332,12 @@ function PublicHomePage() {
   )
 
   const handleFromClear = useCallback(() => {
-    setValidationError(null)
     setPickingReturn(null)
     setSearch({ searchFrom: null })
     if (!searchTo) setHasSearched(false)
   }, [searchTo, setSearch])
 
   const handleToClear = useCallback(() => {
-    setValidationError(null)
     setPickingReturn(null)
     setSearch({ searchTo: null })
     if (!searchFrom) setHasSearched(false)
@@ -413,7 +418,9 @@ function PublicHomePage() {
                       }
                     }}
                     onSelect={handleToSelect}
-                    placeholder={searchFrom ? "Any destination" : "Select destination"}
+                    placeholder={
+                      searchFrom ? "Any destination" : "Select destination"
+                    }
                   />
                 )}
               </form.Field>
@@ -483,9 +490,9 @@ function PublicHomePage() {
           </div>
         </form>
 
-        {validationError && (
+        {routeError && (
           <div className="mt-2 text-center text-sm text-red-400">
-            {validationError}
+            {routeError}
           </div>
         )}
 
@@ -619,7 +626,8 @@ function PublicHomePage() {
                 <span className="text-xs font-medium tracking-widest text-white/30 uppercase">
                   {results.outbound.length} flight
                   {results.outbound.length !== 1 ? "s" : ""}
-                  {" · "}{SORT_LABELS[sort.key][sort.dir]}
+                  {" · "}
+                  {SORT_LABELS[sort.key][sort.dir]}
                 </span>
                 <div className="flex items-center gap-1">
                   {SORT_OPTIONS.map((opt) => {
@@ -638,7 +646,9 @@ function PublicHomePage() {
                       >
                         {opt.label}
                         {active && (
-                          <span className="ml-0.5">{sort.dir === "asc" ? "\u2191" : "\u2193"}</span>
+                          <span className="ml-0.5">
+                            {sort.dir === "asc" ? "\u2191" : "\u2193"}
+                          </span>
                         )}
                       </button>
                     )

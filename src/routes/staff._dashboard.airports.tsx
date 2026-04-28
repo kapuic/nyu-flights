@@ -1,18 +1,17 @@
+import type { ColumnDef } from "@tanstack/react-table"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
+import { Plus } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { Plus } from "lucide-react"
-import type { ColumnDef } from "@tanstack/react-table"
 
-import type {DashboardDataTableFilterOption} from "@/components/dashboard-data-table";
 import { AirportComboboxField } from "@/components/combobox-fields"
 import { CountryFlag } from "@/components/country-flag"
 import {
   DashboardDataTable,
-  DashboardDataTableColumnHeader
-  
+  DashboardDataTableColumnHeader,
 } from "@/components/dashboard-data-table"
+import type { DashboardDataTableFilterOption } from "@/components/dashboard-data-table"
 import {
   DeleteConfirmation,
   useDeleteConfirmation,
@@ -21,7 +20,12 @@ import { DialogGlobe } from "@/components/dialog-globe"
 import { ResponsiveModal } from "@/components/responsive-modal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import {
   Select,
   SelectContent,
@@ -30,7 +34,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { REAL_AIRPORT_OPTIONS, getAirportOption } from "@/lib/airports"
+import type { AirportOption } from "@/lib/airports"
 import { createAirportFn, deleteAirportFn } from "@/lib/queries"
+import { createAirportSchema } from "@/lib/schemas"
 import { staffAirportsQueryOptions } from "@/lib/staff-queries"
 
 type AirportRow = {
@@ -38,6 +44,28 @@ type AirportRow = {
   city: string
   code: string
   country: string
+}
+type AirportCreateFieldErrors = {
+  airport?: string
+  type?: string
+}
+
+function getAirportCreateFieldErrors(data: {
+  airportType: string
+  selectedAirport: AirportOption | null
+}): AirportCreateFieldErrors {
+  const errors: AirportCreateFieldErrors = {}
+  if (!data.selectedAirport)
+    errors.airport = "Choose a real airport from the list."
+
+  const parsedAirportType = createAirportSchema.shape.airportType.safeParse(
+    data.airportType.toLowerCase()
+  )
+  if (!parsedAirportType.success)
+    errors.type =
+      parsedAirportType.error.issues.at(0)?.message ?? "Choose an airport type."
+
+  return errors
 }
 
 export const Route = createFileRoute("/staff/_dashboard/airports")({
@@ -71,10 +99,14 @@ function ManageAirportsPage() {
   const queryClient = useQueryClient()
   const router = useRouter()
 
-  const selectedAirport = useMemo(
-    () => getAirportOption(selectedAirportCode),
+  const selectedAirport = useMemo<AirportOption | null>(
+    () => getAirportOption(selectedAirportCode) ?? null,
     [selectedAirportCode]
   )
+  const fieldErrors = getAirportCreateFieldErrors({
+    airportType,
+    selectedAirport,
+  })
 
   const globeMarkers = useMemo(() => {
     if (!selectedAirport) return []
@@ -83,7 +115,10 @@ function ManageAirportsPage() {
         id: selectedAirport.code.toLowerCase(),
         countryCode: selectedAirport.countryCode,
         label: `${selectedAirport.city} (${selectedAirport.code})`,
-        location: [selectedAirport.lat, selectedAirport.lng] as [number, number],
+        location: [selectedAirport.lat, selectedAirport.lng] as [
+          number,
+          number,
+        ],
       },
     ]
   }, [selectedAirport])
@@ -97,10 +132,7 @@ function ManageAirportsPage() {
     event.preventDefault()
     setError(null)
     try {
-      if (!selectedAirport) {
-        setError("Choose a real airport from the list.")
-        return
-      }
+      if (fieldErrors.airport || fieldErrors.type || !selectedAirport) return
 
       const result = await createAirportFn({
         data: {
@@ -124,9 +156,13 @@ function ManageAirportsPage() {
     async (rows: Array<AirportRow>) => {
       try {
         const results = await Promise.all(
-          rows.map((airport) => deleteAirportFn({ data: { code: airport.code } }))
+          rows.map((airport) =>
+            deleteAirportFn({ data: { code: airport.code } })
+          )
         )
-        const failed = results.find((result) => "error" in result && result.error)
+        const failed = results.find(
+          (result) => "error" in result && result.error
+        )
         if (failed && "error" in failed) {
           toast.error(String(failed.error))
           return
@@ -137,7 +173,9 @@ function ManageAirportsPage() {
         )
         await refreshAirports()
       } catch {
-        toast.error("Failed to delete airports. They may have dependent flights.")
+        toast.error(
+          "Failed to delete airports. They may have dependent flights."
+        )
       }
     },
     [refreshAirports]
@@ -154,50 +192,52 @@ function ManageAirportsPage() {
 
   const columns = useMemo<Array<ColumnDef<AirportRow>>>(
     () => [
-    {
-      accessorKey: "code",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Code" />
-      ),
-      cell: ({ row }) => <span className="font-medium">{row.original.code}</span>,
-    },
-    {
-      accessorKey: "city",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="City" />
-      ),
-    },
-    {
-      accessorKey: "country",
-      filterFn: "arrIncludesSome",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Country" />
-      ),
-      cell: ({ row }) => {
-        const airport = getAirportOption(row.original.code)
-        return (
-          <div className="flex items-center gap-2 text-muted-foreground">
-            {airport ? (
-              <CountryFlag countryCode={airport.countryCode} size={18} />
-            ) : null}
-            <span>{row.original.country}</span>
-          </div>
-        )
+      {
+        accessorKey: "code",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="Code" />
+        ),
+        cell: ({ row }) => (
+          <span className="font-medium">{row.original.code}</span>
+        ),
       },
-    },
-    {
-      accessorKey: "airport_type",
-      filterFn: "arrIncludesSome",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Type" />
-      ),
-      cell: ({ row }) => (
-        <Badge variant="secondary" className="capitalize">
-          {row.original.airport_type}
-        </Badge>
-      ),
-    },
-  ],
+      {
+        accessorKey: "city",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="City" />
+        ),
+      },
+      {
+        accessorKey: "country",
+        filterFn: "arrIncludesSome",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="Country" />
+        ),
+        cell: ({ row }) => {
+          const airport = getAirportOption(row.original.code)
+          return (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              {airport ? (
+                <CountryFlag countryCode={airport.countryCode} size={18} />
+              ) : null}
+              <span>{row.original.country}</span>
+            </div>
+          )
+        },
+      },
+      {
+        accessorKey: "airport_type",
+        filterFn: "arrIncludesSome",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="Type" />
+        ),
+        cell: ({ row }) => (
+          <Badge variant="secondary" className="capitalize">
+            {row.original.airport_type}
+          </Badge>
+        ),
+      },
+    ],
     []
   )
 
@@ -254,22 +294,33 @@ function ManageAirportsPage() {
         <form onSubmit={handleCreate}>
           <FieldGroup>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field>
+              <Field data-invalid={Boolean(error || fieldErrors.airport)}>
                 <FieldLabel>Airport</FieldLabel>
                 <AirportComboboxField
                   items={REAL_AIRPORT_OPTIONS}
                   value={selectedAirportCode}
-                  onChange={(value) => setSelectedAirportCode(value)}
+                  onChange={(value) => {
+                    setError(null)
+                    setSelectedAirportCode(value)
+                  }}
                   placeholder="Search airports"
                 />
+                {error || fieldErrors.airport ? (
+                  <FieldError
+                    errors={[{ message: error ?? fieldErrors.airport }]}
+                  />
+                ) : null}
               </Field>
-              <Field>
+              <Field data-invalid={Boolean(fieldErrors.type)}>
                 <FieldLabel>Type</FieldLabel>
                 <Select
                   value={airportType}
-                  onValueChange={(value) => setAirportType(value ?? "")}
+                  onValueChange={(value) => {
+                    setError(null)
+                    setAirportType(value ?? "")
+                  }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger aria-invalid={Boolean(fieldErrors.type)}>
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -278,9 +329,12 @@ function ManageAirportsPage() {
                     <SelectItem value="Both">Both</SelectItem>
                   </SelectContent>
                 </Select>
+                {fieldErrors.type ? (
+                  <FieldError errors={[{ message: fieldErrors.type }]} />
+                ) : null}
               </Field>
             </div>
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
             <Button type="submit" className="w-full sm:w-auto">
               Create Airport
             </Button>
@@ -307,4 +361,3 @@ function ManageAirportsPage() {
     </div>
   )
 }
-

@@ -512,3 +512,12 @@ export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Current password is required."),
   newPassword: z.string().min(8, "New password must be at least 8 characters."),
 })
+
+export const changePasswordFormSchema = changePasswordSchema
+  .extend({
+    confirmPassword: changePasswordSchema.shape.newPassword,
+  })
+  .refine((value) => value.newPassword === value.confirmPassword, {
+    message: "New passwords do not match.",
+    path: ["confirmPassword"],
+  })

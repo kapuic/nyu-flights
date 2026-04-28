@@ -6,18 +6,23 @@ import { toast } from "sonner"
 import { Plus } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 
-import type {DashboardDataTableFilterOption} from "@/components/dashboard-data-table";
+import type { DashboardDataTableFilterOption } from "@/components/dashboard-data-table"
 import { DatePickerField } from "@/components/date-time-picker"
 import {
   DashboardDataTable,
-  DashboardDataTableColumnHeader
-  
+  DashboardDataTableColumnHeader,
 } from "@/components/dashboard-data-table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field"
 import { ResponsiveModal } from "@/components/responsive-modal"
 import { staffDashboardQueryOptions } from "@/lib/staff-queries"
+import { addAirplaneSchema } from "@/lib/schemas"
 import { addAirplaneFn } from "@/lib/queries"
 
 type AirplaneRow = {
@@ -25,6 +30,12 @@ type AirplaneRow = {
   manufacturingCompany: string
   manufacturingDate: string
   numberOfSeats: number
+}
+function shouldShowFieldError(
+  meta: { isTouched: boolean; isValid: boolean },
+  submissionAttempts: number
+) {
+  return (meta.isTouched || submissionAttempts > 0) && !meta.isValid
 }
 
 export const Route = createFileRoute("/staff/_dashboard/fleet")({
@@ -67,6 +78,9 @@ function StaffFleetPage() {
       manufacturingCompany: "",
       manufacturingDate: "",
     },
+    validators: {
+      onSubmit: ({ value }) => addAirplaneSchema.safeParse(value).error?.issues,
+    },
     onSubmit: async ({ value }) => {
       const result = await addAirplaneFn({
         data: {
@@ -96,49 +110,52 @@ function StaffFleetPage() {
 
   const columns = useMemo<Array<ColumnDef<AirplaneRow>>>(
     () => [
-    {
-      accessorKey: "airplaneId",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Airplane ID" />
-      ),
-      cell: ({ row }) => (
-        <span className="font-medium">{row.original.airplaneId}</span>
-      ),
-    },
-    {
-      accessorKey: "manufacturingCompany",
-      filterFn: "arrIncludesSome",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Manufacturer" />
-      ),
-    },
-    {
-      accessorKey: "manufacturingDate",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Mfg. Date" />
-      ),
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {formatDate(row.original.manufacturingDate)}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "numberOfSeats",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader
-          column={column}
-          title="Seats"
-          className="ms-auto"
-        />
-      ),
-      cell: ({ row }) => (
-        <div className="text-right tabular-nums">
-          {row.original.numberOfSeats}
-        </div>
-      ),
-    },
-  ],
+      {
+        accessorKey: "airplaneId",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="Airplane ID" />
+        ),
+        cell: ({ row }) => (
+          <span className="font-medium">{row.original.airplaneId}</span>
+        ),
+      },
+      {
+        accessorKey: "manufacturingCompany",
+        filterFn: "arrIncludesSome",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader
+            column={column}
+            title="Manufacturer"
+          />
+        ),
+      },
+      {
+        accessorKey: "manufacturingDate",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="Mfg. Date" />
+        ),
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {formatDate(row.original.manufacturingDate)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "numberOfSeats",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader
+            column={column}
+            title="Seats"
+            className="ms-auto"
+          />
+        ),
+        cell: ({ row }) => (
+          <div className="text-right tabular-nums">
+            {row.original.numberOfSeats}
+          </div>
+        ),
+      },
+    ],
     []
   )
 
@@ -174,61 +191,126 @@ function StaffFleetPage() {
         title="Add Airplane"
         description="Register a new aircraft in the fleet."
       >
-        <form.Subscribe selector={(state) => state.isSubmitting}>
-          {(isSubmitting) => (
+        <form.Subscribe
+          selector={(state) => ({
+            isSubmitting: state.isSubmitting,
+            submissionAttempts: state.submissionAttempts,
+          })}
+        >
+          {({ isSubmitting, submissionAttempts }) => (
             <form onSubmit={handleSubmit}>
               <FieldGroup>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <form.Field name="airplaneId">
                     {(field) => (
-                      <Field>
+                      <Field
+                        data-invalid={shouldShowFieldError(
+                          field.state.meta,
+                          submissionAttempts
+                        )}
+                      >
                         <FieldLabel>Airplane ID</FieldLabel>
                         <Input
+                          aria-invalid={shouldShowFieldError(
+                            field.state.meta,
+                            submissionAttempts
+                          )}
                           placeholder="B737-001"
                           required
                           value={field.state.value}
+                          onBlur={field.handleBlur}
                           onChange={(e) => field.handleChange(e.target.value)}
                         />
+                        {shouldShowFieldError(
+                          field.state.meta,
+                          submissionAttempts
+                        ) ? (
+                          <FieldError errors={field.state.meta.errors} />
+                        ) : null}
                       </Field>
                     )}
                   </form.Field>
                   <form.Field name="numberOfSeats">
                     {(field) => (
-                      <Field>
+                      <Field
+                        data-invalid={shouldShowFieldError(
+                          field.state.meta,
+                          submissionAttempts
+                        )}
+                      >
                         <FieldLabel>Number of Seats</FieldLabel>
                         <Input
                           type="number"
                           min="1"
                           required
                           placeholder="180"
+                          aria-invalid={shouldShowFieldError(
+                            field.state.meta,
+                            submissionAttempts
+                          )}
                           value={field.state.value}
+                          onBlur={field.handleBlur}
                           onChange={(e) => field.handleChange(e.target.value)}
                         />
+                        {shouldShowFieldError(
+                          field.state.meta,
+                          submissionAttempts
+                        ) ? (
+                          <FieldError errors={field.state.meta.errors} />
+                        ) : null}
                       </Field>
                     )}
                   </form.Field>
                   <form.Field name="manufacturingCompany">
                     {(field) => (
-                      <Field>
+                      <Field
+                        data-invalid={shouldShowFieldError(
+                          field.state.meta,
+                          submissionAttempts
+                        )}
+                      >
                         <FieldLabel>Manufacturer</FieldLabel>
                         <Input
                           placeholder="Boeing"
                           required
+                          aria-invalid={shouldShowFieldError(
+                            field.state.meta,
+                            submissionAttempts
+                          )}
                           value={field.state.value}
+                          onBlur={field.handleBlur}
                           onChange={(e) => field.handleChange(e.target.value)}
                         />
+                        {shouldShowFieldError(
+                          field.state.meta,
+                          submissionAttempts
+                        ) ? (
+                          <FieldError errors={field.state.meta.errors} />
+                        ) : null}
                       </Field>
                     )}
                   </form.Field>
                   <form.Field name="manufacturingDate">
                     {(field) => (
-                      <Field>
+                      <Field
+                        data-invalid={shouldShowFieldError(
+                          field.state.meta,
+                          submissionAttempts
+                        )}
+                      >
                         <FieldLabel>Manufacturing Date</FieldLabel>
                         <DatePickerField
                           value={field.state.value}
+                          onBlur={field.handleBlur}
                           onChange={(value) => field.handleChange(value)}
                           placeholder="Pick manufacturing date"
                         />
+                        {shouldShowFieldError(
+                          field.state.meta,
+                          submissionAttempts
+                        ) ? (
+                          <FieldError errors={field.state.meta.errors} />
+                        ) : null}
                       </Field>
                     )}
                   </form.Field>
@@ -260,7 +342,6 @@ function StaffFleetPage() {
         searchPlaceholder="Search fleet..."
         queryPrefix="fleet"
       />
-
     </div>
   )
 }

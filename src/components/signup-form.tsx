@@ -281,28 +281,20 @@ export function SignupFormFields({
           e.preventDefault()
           e.stopPropagation()
 
-          const values = form.state.values
-          const stepOneValid = customerRegistrationSchema
-            .pick({
-              email: true,
-              name: true,
-              password: true,
-            })
-            .safeParse({
-              email: values.email,
-              name: values.name,
-              password: values.password,
-            })
-
-          if (stepOneValid.success) {
-            setError(null)
-            setStep(2)
-            return
-          }
-
-          setError(
-            stepOneValid.error.issues.map((issue) => issue.message).join(" ")
-          )
+          void Promise.all([
+            form.validateField("name", "submit"),
+            form.validateField("email", "submit"),
+            form.validateField("password", "submit"),
+          ]).then(([nameErrors, emailErrors, passwordErrors]) => {
+            if (
+              nameErrors.length === 0 &&
+              emailErrors.length === 0 &&
+              passwordErrors.length === 0
+            ) {
+              setError(null)
+              setStep(2)
+            }
+          })
           return
         }
 
@@ -325,105 +317,122 @@ export function SignupFormFields({
         </div>
 
         {step === 1 ? (
-          <>
-            <form.Field name="name">
-              {(field) => (
-                <Field
-                  data-invalid={
-                    field.state.meta.isTouched && !field.state.meta.isValid
-                  }
-                >
-                  <FieldLabel htmlFor={`${formId}-name`}>Full Name</FieldLabel>
-                  <Input
-                    id={`${formId}-name`}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="John Smith"
-                    required
-                    value={field.state.value}
-                  />
-                  {field.state.meta.isTouched && !field.state.meta.isValid ? (
-                    <FieldError errors={field.state.meta.errors} />
-                  ) : null}
-                </Field>
-              )}
-            </form.Field>
+          <form.Subscribe selector={(s) => s.submissionAttempts}>
+            {(submissionAttempts) => (
+              <>
+                <form.Field name="name">
+                  {(field) => {
+                    const isInvalid =
+                      (field.state.meta.isTouched || submissionAttempts > 0) &&
+                      !field.state.meta.isValid
 
-            <form.Field name="email">
-              {(field) => (
-                <Field
-                  data-invalid={
-                    field.state.meta.isTouched && !field.state.meta.isValid
-                  }
-                >
-                  <FieldLabel htmlFor={`${formId}-email`}>Email</FieldLabel>
-                  <Input
-                    id={`${formId}-email`}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="name@example.com"
-                    required
-                    type="email"
-                    value={field.state.value}
-                  />
-                  {field.state.meta.isTouched && !field.state.meta.isValid ? (
-                    <FieldError errors={field.state.meta.errors} />
-                  ) : (
-                    <FieldDescription>
-                      We&apos;ll use this to send booking confirmations.
-                    </FieldDescription>
-                  )}
-                </Field>
-              )}
-            </form.Field>
+                    return (
+                      <Field data-invalid={isInvalid}>
+                        <FieldLabel htmlFor={`${formId}-name`}>
+                          Full Name
+                        </FieldLabel>
+                        <Input
+                          aria-invalid={isInvalid}
+                          id={`${formId}-name`}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          placeholder="John Smith"
+                          required
+                          value={field.state.value}
+                        />
+                        {isInvalid ? (
+                          <FieldError errors={field.state.meta.errors} />
+                        ) : null}
+                      </Field>
+                    )
+                  }}
+                </form.Field>
 
-            <form.Field name="password">
-              {(field) => (
-                <Field
-                  data-invalid={
-                    field.state.meta.isTouched && !field.state.meta.isValid
-                  }
-                >
-                  <FieldLabel htmlFor={`${formId}-password`}>
-                    Password
-                  </FieldLabel>
-                  <div className="relative">
-                    <Input
-                      autoComplete="new-password"
-                      className="pr-10"
-                      id={`${formId}-password`}
-                      onBlur={field.handleBlur}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      type={showPassword ? "text" : "password"}
-                      value={field.state.value}
-                    />
-                    <Button
-                      aria-label={
-                        showPassword ? "Hide password" : "Show password"
-                      }
-                      aria-pressed={showPassword}
-                      className="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      size="icon-sm"
-                      type="button"
-                      variant="ghost"
-                    >
-                      <Eye className="size-4" />
-                    </Button>
-                  </div>
-                  {field.state.meta.isTouched && !field.state.meta.isValid ? (
-                    <FieldError errors={field.state.meta.errors} />
-                  ) : (
-                    <FieldDescription>
-                      Must be at least 8 characters long.
-                    </FieldDescription>
-                  )}
-                </Field>
-              )}
-            </form.Field>
-          </>
+                <form.Field name="email">
+                  {(field) => {
+                    const isInvalid =
+                      (field.state.meta.isTouched || submissionAttempts > 0) &&
+                      !field.state.meta.isValid
+
+                    return (
+                      <Field data-invalid={isInvalid}>
+                        <FieldLabel htmlFor={`${formId}-email`}>
+                          Email
+                        </FieldLabel>
+                        <Input
+                          aria-invalid={isInvalid}
+                          id={`${formId}-email`}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          placeholder="name@example.com"
+                          required
+                          type="email"
+                          value={field.state.value}
+                        />
+                        {isInvalid ? (
+                          <FieldError errors={field.state.meta.errors} />
+                        ) : (
+                          <FieldDescription>
+                            We&apos;ll use this to send booking confirmations.
+                          </FieldDescription>
+                        )}
+                      </Field>
+                    )
+                  }}
+                </form.Field>
+
+                <form.Field name="password">
+                  {(field) => {
+                    const isInvalid =
+                      (field.state.meta.isTouched || submissionAttempts > 0) &&
+                      !field.state.meta.isValid
+
+                    return (
+                      <Field data-invalid={isInvalid}>
+                        <FieldLabel htmlFor={`${formId}-password`}>
+                          Password
+                        </FieldLabel>
+                        <div className="relative">
+                          <Input
+                            aria-invalid={isInvalid}
+                            autoComplete="new-password"
+                            className="pr-10"
+                            id={`${formId}-password`}
+                            onBlur={field.handleBlur}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            placeholder="••••••••"
+                            required
+                            type={showPassword ? "text" : "password"}
+                            value={field.state.value}
+                          />
+                          <Button
+                            aria-label={
+                              showPassword ? "Hide password" : "Show password"
+                            }
+                            aria-pressed={showPassword}
+                            className="absolute top-1/2 right-1 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            onClick={() => setShowPassword((prev) => !prev)}
+                            size="icon-sm"
+                            type="button"
+                            variant="ghost"
+                          >
+                            <Eye className="size-4" />
+                          </Button>
+                        </div>
+                        {isInvalid ? (
+                          <FieldError errors={field.state.meta.errors} />
+                        ) : (
+                          <FieldDescription>
+                            Must be at least 8 characters long.
+                          </FieldDescription>
+                        )}
+                      </Field>
+                    )
+                  }}
+                </form.Field>
+              </>
+            )}
+          </form.Subscribe>
         ) : null}
 
         {step === 2 ? (
