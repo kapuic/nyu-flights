@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import type { DashboardDataTableFilterOption } from "@/components/dashboard-data-table";
+import { Button } from "@/components/ui/button";
 
 import { StaffPhoneNumbersSheet } from "@/components/staff-phone-numbers-sheet";
 import {
@@ -224,18 +225,20 @@ function ManageStaffPage() {
         accessorKey: "phone_numbers",
         header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Phone" />,
         cell: ({ row }) => (
-          <button
+          <Button
             aria-label={`Manage ${row.original.username} phone numbers`}
-            className="min-h-8 rounded-md px-2.5 py-1 text-left text-sm transition-colors hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+            className="h-8 justify-start px-1.5 font-normal"
             onClick={() => openPhoneSheet(row.original)}
+            size="sm"
             type="button"
+            variant="ghost"
           >
             <span
               className={row.original.phone_numbers.length ? "" : "italic text-muted-foreground"}
             >
               {getPhoneSummary(row.original.phone_numbers)}
             </span>
-          </button>
+          </Button>
         ),
       },
       {
