@@ -41,7 +41,7 @@ function PaymentsPage() {
               return (
                 <Card key={card.card_number} className="overflow-hidden">
                   <CardContent className="space-y-4">
-                    <div className="aspect-[1.586/1] max-w-xs">
+                    <div className="aspect-[1.586/1] w-full [&_.cc-root]:w-full [&_.cc-inner]:!h-full [&_.cc-inner]:!w-full">
                       <CreditCardVisual cardNumber={card.card_number} nameOnCard={card.name_on_card} expiration={formatExpiry(card.card_expiration)} cvv="" brand={brand} flipped={false} />
                     </div>
                     <div className="flex items-center justify-between text-sm">
