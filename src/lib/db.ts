@@ -2,6 +2,8 @@ import postgres from "postgres"
 
 import { env } from "@/lib/env"
 
+export const NANOID_LENGTH = 21
+
 export const db = postgres(env.databaseUrl, {
   idle_timeout: 20,
   max: 10,
@@ -9,6 +11,7 @@ export const db = postgres(env.databaseUrl, {
 })
 
 let ensureSessionTablePromise: Promise<void> | null = null
+let ensureTicketIdColumnPromise: Promise<void> | null = null
 
 export async function ensureAppSessionTable() {
   if (!ensureSessionTablePromise) {
@@ -16,7 +19,7 @@ export async function ensureAppSessionTable() {
       try {
         await db`
           create table if not exists app_session (
-            id varchar(128) primary key,
+            id varchar(21) primary key,
             role varchar(20) not null,
             customer_email varchar(254),
             staff_username varchar(50),
@@ -32,7 +35,9 @@ export async function ensureAppSessionTable() {
             foreign key (staff_username) references airline_staff(username) on delete cascade
           )
         `
+        await db`alter table app_session alter column id type varchar(21)`
         await db`create index if not exists app_session_expires_at_idx on app_session (expires_at)`
+
         await db`delete from app_session where expires_at <= now()`
       } catch (error) {
         ensureSessionTablePromise = null
@@ -42,4 +47,19 @@ export async function ensureAppSessionTable() {
   }
 
   await ensureSessionTablePromise
+}
+
+export async function ensureTicketIdColumn() {
+  if (!ensureTicketIdColumnPromise) {
+    ensureTicketIdColumnPromise = (async function migrateTicketIdColumn() {
+      try {
+        await db`alter table ticket alter column ticket_id type varchar(21) using ticket_id::text`
+      } catch (error) {
+        ensureTicketIdColumnPromise = null
+        throw error
+      }
+    })()
+  }
+
+  await ensureTicketIdColumnPromise
 }

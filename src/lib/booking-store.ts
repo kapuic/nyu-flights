@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import { persist, createJSONStorage } from "zustand/middleware"
+import { createJSONStorage, persist } from "zustand/middleware"
 
 import type { FlightOption } from "@/lib/queries"
 
@@ -10,8 +10,8 @@ export type AirportSelection = {
 }
 
 type BookingConfirmation = {
-  flights: FlightOption[]
-  ticketIds: number[]
+  flights: Array<FlightOption>
+  ticketIds: Array<string>
   totalPrice: number
 }
 
@@ -33,7 +33,7 @@ type BookingState = {
   selectedReturn: FlightOption | null
 
   // Globe display (not persisted)
-  resultRoutes: GlobeResultRoute[]
+  resultRoutes: Array<GlobeResultRoute>
 
   // Payment draft (non-sensitive only)
   paymentDraft: {
@@ -53,7 +53,7 @@ type BookingActions = {
   selectOutbound: (flight: FlightOption) => void
   clearOutbound: () => void
   selectReturn: (flight: FlightOption) => void
-  setResultRoutes: (routes: GlobeResultRoute[]) => void
+  setResultRoutes: (routes: Array<GlobeResultRoute>) => void
   setPaymentDraft: (draft: BookingState["paymentDraft"]) => void
   setConfirmation: (data: BookingConfirmation) => void
   setShowAuthModal: (show: boolean) => void

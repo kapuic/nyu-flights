@@ -1,3 +1,5 @@
+import { nanoid } from "nanoid";
+
 import type {
   CustomerDashboardData,
   CustomerFlight,
@@ -7,7 +9,7 @@ import type {
   StaffDashboardData,
 } from "@/lib/queries";
 import type { AirportOption } from "@/lib/airports";
-import { db } from "@/lib/db";
+import { NANOID_LENGTH, db, ensureTicketIdColumn } from "@/lib/db";
 import { requireUser } from "@/lib/auth.server";
 import {
   canManageOperationalAirline,
@@ -668,38 +670,44 @@ export async function purchaseTicketInternal(data: {
 }) {
   const user = await requireUser("customer");
 
+  await ensureTicketIdColumn();
+
   const result = await db.begin(async (transaction) => {
     const flightRows = await transaction<
       Array<{
-        available_seats: number;
         base_price: string;
         is_future: boolean;
+        number_of_seats: number;
       }>
     >`
       select
-        greatest(airplane.number_of_seats - count(ticket.ticket_id), 0)::int as available_seats,
         f.base_price,
-        f.departure_datetime > now() as is_future
+        f.departure_datetime > now() as is_future,
+        airplane.number_of_seats
       from flight f
       join airplane on airplane.airline_name = f.airline_name and airplane.airplane_id = f.airplane_id
-      left join ticket on ticket.airline_name = f.airline_name and ticket.flight_number = f.flight_number and ticket.departure_datetime = f.departure_datetime
       where f.airline_name = ${data.airlineName}
         and f.flight_number = ${data.flightNumber}
         and f.departure_datetime::text = replace(${data.departureDatetime}, 'T', ' ')
-      group by f.base_price, f.departure_datetime, airplane.number_of_seats
-      limit 1
+      for update
     `;
     if (!flightRows.length) throw new Error("That flight could not be found anymore.");
 
     const flight = flightRows[0];
     if (!flight.is_future) throw new Error("Tickets can only be purchased for future flights.");
 
-    if (flight.available_seats <= 0) throw new Error("That flight is already full.");
-
-    const [nextTicket] = await transaction<Array<{ next_id: number }>>`
-      select coalesce(max(ticket_id), 1000) + 1 as next_id
+    const ticketCountRows = await transaction<Array<{ ticket_count: number }>>`
+      select count(*)::int as ticket_count
       from ticket
+      where airline_name = ${data.airlineName}
+        and flight_number = ${data.flightNumber}
+        and departure_datetime::text = replace(${data.departureDatetime}, 'T', ' ')
     `;
+    const ticketCount = ticketCountRows[0].ticket_count;
+
+    if (ticketCount >= flight.number_of_seats) throw new Error("That flight is already full.");
+
+    const nextTicketId = nanoid(NANOID_LENGTH);
 
     await transaction`
       insert into ticket (
@@ -715,7 +723,7 @@ export async function purchaseTicketInternal(data: {
         card_expiration
       )
       values (
-        ${nextTicket.next_id},
+        ${nextTicketId},
         ${user.email},
         ${data.airlineName},
         ${data.flightNumber},
@@ -729,7 +737,7 @@ export async function purchaseTicketInternal(data: {
     `;
 
     return {
-      nextTicketId: nextTicket.next_id,
+      nextTicketId,
       price: Number(flight.base_price),
     };
   });
@@ -1253,7 +1261,7 @@ export async function getFlightPassengersInternal(data: {
       customer_name: string;
       passport_number: string;
       purchase_datetime: string;
-      ticket_id: number;
+      ticket_id: string;
     }>
   >`
     select

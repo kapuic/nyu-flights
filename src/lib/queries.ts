@@ -113,7 +113,7 @@ export type PassengerRecord = {
   customerName: string;
   passportNumber: string;
   purchaseDatetime: string;
-  ticketId: number;
+  ticketId: string;
 };
 
 export type StaffDashboardData = {

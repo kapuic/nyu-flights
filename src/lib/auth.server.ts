@@ -1,7 +1,8 @@
 import bcrypt from "bcrypt"
+import { nanoid } from "nanoid"
 
 import type { AuthRole, AuthUser } from "@/lib/auth"
-import { db, ensureAppSessionTable } from "@/lib/db"
+import { NANOID_LENGTH, db, ensureAppSessionTable } from "@/lib/db"
 import { getStaffPermission } from "@/lib/staff-permissions"
 import { useAppSession } from "@/lib/session"
 
@@ -23,7 +24,7 @@ export async function createPersistentSession(user: AuthUser) {
   await ensureAppSessionTable()
 
   const session = await useAppSession()
-  const sessionId = crypto.randomUUID()
+  const sessionId = nanoid(NANOID_LENGTH)
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7)
 
   if (session.data.sessionId) {

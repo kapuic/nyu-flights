@@ -1,5 +1,5 @@
-import { type FormEvent, useCallback, useEffect, useRef, useState } from "react"
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router"
 import {
   ArrowLeft,
   ArrowRight,
@@ -9,16 +9,15 @@ import {
   Plane,
 } from "lucide-react"
 
-import { useBookingStore } from "@/lib/booking-store"
-import { purchaseTicketFn } from "@/lib/queries"
+import type { FormEvent } from "react"
+
 import type { FlightOption } from "@/lib/queries"
+
+import type { PaymentCardFieldErrors, PaymentCardValues } from "@/components/ui/payment-form"
+import { PaymentCardForm, validatePaymentCard } from "@/components/ui/payment-form"
+import { useBookingStore } from "@/lib/booking-store"
 import { formatCurrency } from "@/lib/format"
-import {
-  type PaymentCardFieldErrors,
-  type PaymentCardValues,
-  PaymentCardForm,
-  validatePaymentCard,
-} from "@/components/ui/payment-form"
+import { purchaseTicketFn } from "@/lib/queries"
 import { cn, getErrorMessage } from "@/lib/utils"
 
 export const Route = createFileRoute("/_globe/checkout")({
@@ -115,8 +114,8 @@ function CheckoutForm({
   outbound: FlightOption
   returnFlight: FlightOption | null
   onConfirmation: (data: {
-    flights: FlightOption[]
-    ticketIds: number[]
+    flights: Array<FlightOption>
+    ticketIds: Array<string>
     totalPrice: number
   }) => void
 }) {
@@ -170,8 +169,8 @@ function CheckoutForm({
     setSubmitting(true)
     try {
       const rawCardNumber = card.cardNumber.replace(/\s/g, "")
-      const ticketIds: number[] = []
-      const flights: FlightOption[] = [outbound]
+      const ticketIds: Array<string> = []
+      const flights: Array<FlightOption> = [outbound]
 
       const purchaseData = {
         cardType: inferCardType(cardType),
@@ -430,8 +429,8 @@ function ConfirmationView({
   onReset,
 }: {
   confirmation: {
-    flights: FlightOption[]
-    ticketIds: number[]
+    flights: Array<FlightOption>
+    ticketIds: Array<string>
     totalPrice: number
   }
   onReset: () => void

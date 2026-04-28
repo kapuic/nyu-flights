@@ -24,11 +24,11 @@ type PassengerRow = {
   customerName: string;
   passportNumber: string;
   purchaseDatetime: string;
-  ticketId: number;
+  ticketId: string;
 };
 
 function getPassengerRowId(passenger: PassengerRow) {
-  return String(passenger.ticketId);
+  return passenger.ticketId;
 }
 
 const passengerSearchParams = {
