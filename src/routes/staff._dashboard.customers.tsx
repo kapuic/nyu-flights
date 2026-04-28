@@ -8,9 +8,9 @@ import type { DashboardDataTableFilterOption } from "@/components/dashboard-data
 import {
   DashboardDataTable,
   DashboardDataTableColumnHeader,
-  DashboardDataTableInlineTextCell,
 } from "@/components/dashboard-data-table";
 import { DeleteConfirmation, useDeleteConfirmation } from "@/components/delete-confirmation";
+import { InlineField, InlinePhoneField } from "@/components/ui/inline-field";
 import { deleteCustomerFn, updateManagedCustomerFieldFn } from "@/lib/queries";
 import { staffCustomersQueryOptions } from "@/lib/staff-queries";
 
@@ -108,10 +108,12 @@ function ManageCustomersPage() {
         accessorKey: "name",
         header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Name" />,
         cell: ({ row }) => (
-          <DashboardDataTableInlineTextCell
+          <InlineField
             ariaLabel={`Update ${row.original.email} name`}
+            label="Name"
             onSave={(value) => saveCustomerField(row.original, "name", value)}
             value={row.original.name}
+            variant="outline"
           />
         ),
       },
@@ -127,10 +129,12 @@ function ManageCustomersPage() {
         filterFn: "arrIncludesSome",
         header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="City" />,
         cell: ({ row }) => (
-          <DashboardDataTableInlineTextCell
+          <InlineField
             ariaLabel={`Update ${row.original.email} city`}
+            label="City"
             onSave={(value) => saveCustomerField(row.original, "city", value)}
             value={row.original.city}
+            variant="outline"
           />
         ),
       },
@@ -138,10 +142,12 @@ function ManageCustomersPage() {
         accessorKey: "phone_number",
         header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="Phone" />,
         cell: ({ row }) => (
-          <DashboardDataTableInlineTextCell
-            ariaLabel={`Update ${row.original.email} phone`}
+          <InlinePhoneField
+            controls="external"
+            label="Phone"
             onSave={(value) => saveCustomerField(row.original, "phoneNumber", value)}
             value={row.original.phone_number}
+            variant="outline"
           />
         ),
       },

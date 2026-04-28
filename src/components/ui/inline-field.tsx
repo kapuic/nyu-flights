@@ -1,21 +1,26 @@
-import { useEffect, useRef, useState } from "react"
-import { Check, Pencil, X } from "lucide-react"
+import { useEffect, useRef, useState } from "react";
+import { Check, Pencil, X } from "lucide-react";
+import type { Value as PhoneValue } from "react-phone-number-input";
 
-import { cn } from "@/lib/utils"
+import { PhoneInput } from "@/components/ui/phone-input";
+import { cn } from "@/lib/utils";
 
-export type InlineFieldVariant = "filled" | "outline"
+export type InlineControls = "internal" | "external";
+export type InlineFieldVariant = "filled" | "outline";
 
 type InlineFieldProps = {
-  error?: string
-  label: string
-  onSave?: (value: string) => Promise<void>
-  readOnly?: boolean
-  type?: "text" | "date"
-  value: string
-  variant: InlineFieldVariant
-}
+  ariaLabel?: string;
+  error?: string;
+  label: string;
+  onSave?: (value: string) => Promise<void>;
+  readOnly?: boolean;
+  type?: "text" | "date";
+  value: string;
+  variant: InlineFieldVariant;
+};
 
 export function InlineField({
+  ariaLabel,
   error: externalError,
   label,
   onSave,
@@ -24,87 +29,84 @@ export function InlineField({
   value: currentValue,
   variant,
 }: InlineFieldProps) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(currentValue)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState("")
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(currentValue);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!editing) setDraft(currentValue)
-  }, [currentValue, editing])
+    if (!editing) setDraft(currentValue);
+  }, [currentValue, editing]);
 
   function startEditing() {
-    if (readOnly || !onSave) return
-    setDraft(currentValue)
-    setError("")
-    setEditing(true)
-    requestAnimationFrame(() => inputRef.current?.focus())
+    if (readOnly || !onSave) return;
+    setDraft(currentValue);
+    setError("");
+    setEditing(true);
+    requestAnimationFrame(() => inputRef.current?.focus());
   }
 
   async function save() {
-    if (saving || !onSave) return
-    const trimmed = draft.trim()
+    if (saving || !onSave) return;
+    const trimmed = draft.trim();
     if (trimmed === currentValue) {
-      setEditing(false)
-      return
+      setEditing(false);
+      return;
     }
-    setSaving(true)
-    setError("")
+    setSaving(true);
+    setError("");
     try {
-      await onSave(trimmed)
-      setEditing(false)
+      await onSave(trimmed);
+      setEditing(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save.")
+      setError(err instanceof Error ? err.message : "Failed to save.");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
   function cancel() {
-    setDraft(currentValue)
-    setError("")
-    setEditing(false)
+    setDraft(currentValue);
+    setError("");
+    setEditing(false);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") {
-      e.preventDefault()
-      void save()
+      e.preventDefault();
+      void save();
     }
     if (e.key === "Escape") {
-      cancel()
+      cancel();
     }
   }
 
-  const displayError = error || externalError
+  const displayError = error || externalError;
 
   if (editing) {
     return (
       <div className="group space-y-1">
-        <span className="text-xs font-medium text-muted-foreground">
-          {label}
-        </span>
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
         <div className="flex items-center gap-1.5">
           <input
+            aria-label={ariaLabel ?? label}
             ref={inputRef}
             type={type}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKeyDown}
             onBlur={(e) => {
-              const related = e.relatedTarget as HTMLElement | null
-              if (related?.dataset.inlineAction) return
-              void save()
+              const related = e.relatedTarget as HTMLElement | null;
+              if (related?.dataset.inlineAction) return;
+              void save();
             }}
             disabled={saving}
             className={cn(
               "h-8 flex-1 rounded-md border border-input px-2.5 text-sm outline-none transition-colors",
               "focus:border-ring focus:ring-1 focus:ring-ring/50",
               "disabled:opacity-50",
-              variant === "filled"
-                ? "dark:bg-input/30 shadow-xs"
-                : "bg-transparent"
+              variant === "filled" ? "dark:bg-input/30 shadow-xs" : "bg-transparent",
             )}
           />
           <button
@@ -126,19 +128,16 @@ export function InlineField({
             <X className="size-3.5" />
           </button>
         </div>
-        {displayError && (
-          <p className="text-xs text-destructive">{displayError}</p>
-        )}
+        {displayError && <p className="text-xs text-destructive">{displayError}</p>}
       </div>
-    )
+    );
   }
 
   return (
     <div className="group space-y-1">
-      <span className="text-xs font-medium text-muted-foreground">
-        {label}
-      </span>
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <div
+        aria-label={ariaLabel ?? label}
         role={readOnly ? undefined : "button"}
         tabIndex={readOnly ? undefined : 0}
         onClick={readOnly ? undefined : startEditing}
@@ -146,14 +145,12 @@ export function InlineField({
           readOnly
             ? undefined
             : (e) => {
-                if (e.key === "Enter") startEditing()
+                if (e.key === "Enter") startEditing();
               }
         }
         className={cn(
           "flex min-h-8 items-center justify-between rounded-md px-2.5 py-1 text-sm transition-colors",
-          readOnly
-            ? "cursor-default"
-            : "cursor-pointer hover:bg-muted/50"
+          readOnly ? "cursor-default" : "cursor-pointer hover:bg-muted/50",
         )}
       >
         <span className={currentValue ? "" : "italic text-muted-foreground"}>
@@ -163,9 +160,144 @@ export function InlineField({
           <Pencil className="size-3.5 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground" />
         )}
       </div>
-      {displayError && (
-        <p className="text-xs text-destructive">{displayError}</p>
-      )}
+      {displayError && <p className="text-xs text-destructive">{displayError}</p>}
     </div>
-  )
+  );
+}
+
+type InlinePhoneFieldProps = {
+  controls: InlineControls;
+  label: string;
+  onSave: (value: string) => Promise<void>;
+  value: string;
+  variant?: InlineFieldVariant;
+};
+
+export function InlinePhoneField({
+  controls,
+  label,
+  onSave,
+  value,
+  variant = "filled",
+}: InlinePhoneFieldProps) {
+  const [editing, setEditing] = useState(false);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const pickerOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (!editing) setDraft(value);
+  }, [editing, value]);
+
+  function startEditing() {
+    setDraft(value);
+    setError("");
+    setEditing(true);
+  }
+
+  function cancel() {
+    setDraft(value);
+    setEditing(false);
+    setError("");
+  }
+
+  async function save() {
+    if (saving) return;
+    const trimmed = draft.trim();
+    if (!trimmed || trimmed === value) {
+      cancel();
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    try {
+      await onSave(trimmed);
+      setEditing(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const fieldClassName = cn(
+    "h-8 [&_button]:h-8 [&_input]:h-8",
+    variant === "outline" && "[&_input]:bg-transparent",
+  );
+
+  if (editing) {
+    return (
+      <div className="group space-y-1">
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        <div
+          className="flex items-center gap-1.5"
+          onBlur={(event) => {
+            const related = event.relatedTarget as HTMLElement | null;
+            if (related?.dataset.inlineAction) return;
+            if (event.currentTarget.contains(related)) return;
+            requestAnimationFrame(() => {
+              if (pickerOpenRef.current) return;
+              void save();
+            });
+          }}
+        >
+          <div className="flex-1">
+            <PhoneInput
+              defaultCountry="US"
+              value={draft as PhoneValue}
+              onChange={(nextValue: PhoneValue) => setDraft(nextValue ?? "")}
+              placeholder="(555) 000-0000"
+              className={fieldClassName}
+              pickerOpenRef={pickerOpenRef}
+            />
+          </div>
+          {controls === "external" ? (
+            <>
+              <button
+                type="button"
+                data-inline-action="save"
+                onClick={() => void save()}
+                disabled={saving}
+                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <Check className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                data-inline-action="cancel"
+                onClick={cancel}
+                disabled={saving}
+                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <X className="size-3.5" />
+              </button>
+            </>
+          ) : null}
+        </div>
+        {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="group space-y-1">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <div
+        aria-label={label}
+        role="button"
+        tabIndex={0}
+        onClick={startEditing}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") startEditing();
+        }}
+        className="flex min-h-8 cursor-pointer items-center justify-between rounded-md px-2.5 py-1 text-sm transition-colors hover:bg-muted/50"
+      >
+        <span className={value ? "" : "italic text-muted-foreground"}>{value || "Not set"}</span>
+        <Pencil className="size-3.5 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground" />
+      </div>
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
+  );
 }

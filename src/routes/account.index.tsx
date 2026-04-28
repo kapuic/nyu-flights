@@ -1,15 +1,18 @@
-"use client"
+"use client";
 
-import { useMemo, useRef, useState } from "react"
-import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { format } from "date-fns"
-import { getData as getCountries, getCode } from "country-list"
-import { Check, Pencil, X } from "lucide-react"
+import { useMemo, useRef, useState } from "react";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { format } from "date-fns";
+import { getData as getCountries, getCode } from "country-list";
+import { Check, Pencil, X } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { InlineField, type InlineFieldVariant } from "@/components/ui/inline-field"
-import { PhoneInput } from "@/components/ui/phone-input"
-import type { Value as PhoneValue } from "react-phone-number-input"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  InlineField,
+  InlinePhoneField,
+  type InlineControls,
+  type InlineFieldVariant,
+} from "@/components/ui/inline-field";
 import {
   Combobox,
   ComboboxContent,
@@ -17,152 +20,73 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
-} from "@/components/ui/combobox"
-import { CountryFlag } from "@/components/country-flag"
-import { DatePickerField } from "@/components/date-time-picker"
-import { getCustomerProfileFn, updateCustomerFieldFn } from "@/lib/queries"
-import { US_STATES } from "@/lib/schemas"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/combobox";
+import { CountryFlag } from "@/components/country-flag";
+import { DatePickerField } from "@/components/date-time-picker";
+import { getCustomerProfileFn, updateCustomerFieldFn } from "@/lib/queries";
+import { US_STATES } from "@/lib/schemas";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/account/")({
   loader: () => getCustomerProfileFn(),
   component: ProfilePage,
-})
+});
 
-type CountryOption = { code: string; label: string }
+type CountryOption = { code: string; label: string };
 const COUNTRY_OPTIONS: Array<CountryOption> = getCountries()
   .map((c) => ({ code: c.code, label: c.name }))
-  .sort((a, b) => a.label.localeCompare(b.label))
+  .sort((a, b) => a.label.localeCompare(b.label));
 
-type StateOption = { label: string }
-const STATE_OPTIONS: Array<StateOption> = US_STATES.map((s) => ({ label: s }))
+type StateOption = { label: string };
+const STATE_OPTIONS: Array<StateOption> = US_STATES.map((s) => ({ label: s }));
 
 async function saveField(field: string, value: string) {
-  await updateCustomerFieldFn({ data: { field, value } })
+  await updateCustomerFieldFn({ data: { field, value } });
 }
 
 function formatDisplayDate(value: string) {
-  if (!value) return ""
-  const d = new Date(value.includes("T") ? value : `${value}T00:00:00`)
-  return Number.isNaN(d.getTime()) ? value : format(d, "PPP")
+  if (!value) return "";
+  const d = new Date(value.includes("T") ? value : `${value}T00:00:00`);
+  return Number.isNaN(d.getTime()) ? value : format(d, "PPP");
 }
 
 function countryToCode(name: string): string {
-  return getCode(name) ?? COUNTRY_OPTIONS.find((c) => c.label.toLowerCase() === name.toLowerCase())?.code ?? ""
+  return (
+    getCode(name) ??
+    COUNTRY_OPTIONS.find((c) => c.label.toLowerCase() === name.toLowerCase())?.code ??
+    ""
+  );
 }
 
-type InlineControls = "internal" | "external"
-type InlineComboboxMode = "freeform" | "strict"
+type InlineComboboxMode = "freeform" | "strict";
 
-function InlineFieldWrapper({ children, error, label }: { children: React.ReactNode; error?: string; label: string }) {
+function InlineFieldWrapper({
+  children,
+  error,
+  label,
+}: {
+  children: React.ReactNode;
+  error?: string;
+  label: string;
+}) {
   return (
     <div className="group space-y-1">
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
       {children}
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
-  )
+  );
 }
 
 /** Ghost text overlay — renders inside ComboboxInput children (within InputGroup which is relative). */
 function GhostOverlay({ input, suffix }: { input: string; suffix: string }) {
-  if (!suffix) return null
+  if (!suffix) return null;
   return (
     <div className="pointer-events-none absolute inset-y-0 left-0 right-0 flex items-center overflow-hidden px-2.5 text-base md:text-sm">
       <span className="invisible whitespace-pre">{input}</span>
       <span className="whitespace-pre text-muted-foreground/40">{suffix}</span>
     </div>
-  )
-}
-
-function InlinePhoneField({
-  controls,
-  label,
-  onSave,
-  value,
-}: {
-  controls: InlineControls
-  label: string
-  onSave: (v: string) => Promise<void>
-  value: string
-}) {
-  const [editing, setEditing] = useState(false)
-  const [error, setError] = useState("")
-  const [saving, setSaving] = useState(false)
-  const [draft, setDraft] = useState(value)
-  const pickerOpenRef = useRef(false)
-
-  function cancel() {
-    setDraft(value)
-    setEditing(false)
-    setError("")
-  }
-
-  async function save() {
-    const trimmed = draft.trim()
-    if (!trimmed || trimmed === value) { cancel(); return }
-    setSaving(true)
-    setError("")
-    try {
-      await onSave(trimmed)
-      setEditing(false)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save.")
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  if (editing) {
-    return (
-      <InlineFieldWrapper label={label} error={error}>
-        <div
-          className="flex items-center gap-1.5"
-          onBlur={(e) => {
-            const related = e.relatedTarget as HTMLElement | null
-            if (related?.dataset.inlineAction) return
-            if (e.currentTarget.contains(related)) return
-            // Defer check: onOpenChange sets pickerOpenRef synchronously,
-            // but it fires after blur. A microtask lets it run first.
-            requestAnimationFrame(() => {
-              if (pickerOpenRef.current) return
-              void save()
-            })
-          }}
-        >
-          <div className="flex-1">
-            <PhoneInput
-              defaultCountry="US"
-              value={draft as PhoneValue}
-              onChange={(v: string) => setDraft(v ?? "")}
-              placeholder="(555) 000-0000"
-              className="h-8 [&_button]:h-8 [&_input]:h-8"
-              pickerOpenRef={pickerOpenRef}
-            />
-          </div>
-          {controls === "external" && (
-            <>
-              <button type="button" data-inline-action="save" onClick={() => void save()} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                <Check className="size-3.5" />
-              </button>
-              <button type="button" data-inline-action="cancel" onClick={cancel} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                <X className="size-3.5" />
-              </button>
-            </>
-          )}
-        </div>
-      </InlineFieldWrapper>
-    )
-  }
-
-  return (
-    <InlineFieldWrapper label={label}>
-      <div role="button" tabIndex={0} onClick={() => { setDraft(value); setError(""); setEditing(true) }} onKeyDown={(e) => { if (e.key === "Enter") setEditing(true) }} className="flex min-h-8 items-center justify-between rounded-md px-2.5 py-1 text-sm cursor-pointer transition-colors hover:bg-muted/50">
-        <span className={value ? "" : "italic text-muted-foreground"}>{value || "Not set"}</span>
-        <Pencil className="size-3.5 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground" />
-      </div>
-    </InlineFieldWrapper>
-  )
+  );
 }
 
 function InlineDateField({
@@ -173,38 +97,43 @@ function InlineDateField({
   value,
   variant,
 }: {
-  controls: InlineControls
-  label: string
-  onSave?: (v: string) => Promise<void>
-  readOnly?: boolean
-  value: string
-  variant: InlineFieldVariant
+  controls: InlineControls;
+  label: string;
+  onSave?: (v: string) => Promise<void>;
+  readOnly?: boolean;
+  value: string;
+  variant: InlineFieldVariant;
 }) {
-  const [editing, setEditing] = useState(false)
-  const [error, setError] = useState("")
-  const [saving, setSaving] = useState(false)
+  const [editing, setEditing] = useState(false);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   if (readOnly || !onSave) {
     return (
       <InlineFieldWrapper label={label}>
         <div className="flex min-h-8 items-center rounded-md px-2.5 py-1 text-sm">
-          <span className={value ? "" : "italic text-muted-foreground"}>{formatDisplayDate(value) || "Not set"}</span>
+          <span className={value ? "" : "italic text-muted-foreground"}>
+            {formatDisplayDate(value) || "Not set"}
+          </span>
         </div>
       </InlineFieldWrapper>
-    )
+    );
   }
 
   async function handleDateSelect(newValue: string) {
-    if (newValue === value || !onSave) { setEditing(false); return }
-    setSaving(true)
-    setError("")
+    if (newValue === value || !onSave) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    setError("");
     try {
-      await onSave(newValue)
-      setEditing(false)
+      await onSave(newValue);
+      setEditing(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save.")
+      setError(e instanceof Error ? e.message : "Failed to save.");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
@@ -217,32 +146,48 @@ function InlineDateField({
               value={value}
               onChange={handleDateSelect}
               defaultOpen
-              className={cn(
-                "h-8",
-                variant === "filled"
-                  ? "dark:bg-input/30"
-                  : "bg-transparent"
-              )}
+              className={cn("h-8", variant === "filled" ? "dark:bg-input/30" : "bg-transparent")}
             />
           </div>
           {controls === "external" && (
-            <button type="button" onClick={() => { setEditing(false); setError("") }} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(false);
+                setError("");
+              }}
+              disabled={saving}
+              className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
               <X className="size-3.5" />
             </button>
           )}
         </div>
       </InlineFieldWrapper>
-    )
+    );
   }
 
   return (
     <InlineFieldWrapper label={label}>
-      <div role="button" tabIndex={0} onClick={() => { setError(""); setEditing(true) }} onKeyDown={(e) => { if (e.key === "Enter") setEditing(true) }} className="flex min-h-8 items-center justify-between rounded-md px-2.5 py-1 text-sm cursor-pointer transition-colors hover:bg-muted/50">
-        <span className={value ? "" : "italic text-muted-foreground"}>{formatDisplayDate(value) || "Not set"}</span>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => {
+          setError("");
+          setEditing(true);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") setEditing(true);
+        }}
+        className="flex min-h-8 items-center justify-between rounded-md px-2.5 py-1 text-sm cursor-pointer transition-colors hover:bg-muted/50"
+      >
+        <span className={value ? "" : "italic text-muted-foreground"}>
+          {formatDisplayDate(value) || "Not set"}
+        </span>
         <Pencil className="size-3.5 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground" />
       </div>
     </InlineFieldWrapper>
-  )
+  );
 }
 
 function InlineCountryField({
@@ -253,79 +198,87 @@ function InlineCountryField({
   value,
   variant,
 }: {
-  controls: InlineControls
-  label: string
-  mode: InlineComboboxMode
-  onSave: (v: string) => Promise<void>
-  value: string
-  variant: InlineFieldVariant
+  controls: InlineControls;
+  label: string;
+  mode: InlineComboboxMode;
+  onSave: (v: string) => Promise<void>;
+  value: string;
+  variant: InlineFieldVariant;
 }) {
-  const [editing, setEditing] = useState(false)
-  const [error, setError] = useState("")
-  const [saving, setSaving] = useState(false)
-  const [inputText, setInputText] = useState("")
-  const [highlightedItem, setHighlightedItem] = useState<CountryOption | undefined>(undefined)
-  const selectingRef = useRef(false)
-  const code = countryToCode(value)
-  const selected = COUNTRY_OPTIONS.find((c) => c.label === value || c.code === value || c.label.toLowerCase() === value.toLowerCase()) ?? null
+  const [editing, setEditing] = useState(false);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [inputText, setInputText] = useState("");
+  const [highlightedItem, setHighlightedItem] = useState<CountryOption | undefined>(undefined);
+  const selectingRef = useRef(false);
+  const code = countryToCode(value);
+  const selected =
+    COUNTRY_OPTIONS.find(
+      (c) => c.label === value || c.code === value || c.label.toLowerCase() === value.toLowerCase(),
+    ) ?? null;
 
   // Ghost shows the completion for the currently highlighted item, not a static first-match
   const ghost = useMemo(() => {
-    if (mode !== "strict" || !inputText || !highlightedItem) return ""
-    const label = highlightedItem.label
-    if (!label.toLowerCase().startsWith(inputText.toLowerCase())) return ""
-    return label.slice(inputText.length)
-  }, [mode, inputText, highlightedItem])
+    if (mode !== "strict" || !inputText || !highlightedItem) return "";
+    const label = highlightedItem.label;
+    if (!label.toLowerCase().startsWith(inputText.toLowerCase())) return "";
+    return label.slice(inputText.length);
+  }, [mode, inputText, highlightedItem]);
   // Sort startsWith matches first so autoHighlight aligns with ghost text
   const filteredCountries = useMemo(() => {
-    if (!inputText) return COUNTRY_OPTIONS
-    const lower = inputText.toLowerCase()
-    const starts: CountryOption[] = []
-    const contains: CountryOption[] = []
+    if (!inputText) return COUNTRY_OPTIONS;
+    const lower = inputText.toLowerCase();
+    const starts: CountryOption[] = [];
+    const contains: CountryOption[] = [];
     for (const c of COUNTRY_OPTIONS) {
       if (c.label.toLowerCase().startsWith(lower)) {
-        starts.push(c)
+        starts.push(c);
       } else if (`${c.label} ${c.code}`.toLowerCase().includes(lower)) {
-        contains.push(c)
+        contains.push(c);
       }
     }
-    return [...starts, ...contains]
-  }, [inputText])
-
+    return [...starts, ...contains];
+  }, [inputText]);
 
   function cancel() {
-    setEditing(false)
-    setError("")
+    setEditing(false);
+    setError("");
   }
 
   async function handleSelect(country: CountryOption | null) {
-    if (!country) return // input cleared, not a selection
-    selectingRef.current = true
-    if (country.label === value) { cancel(); return }
-    setSaving(true)
-    setError("")
+    if (!country) return; // input cleared, not a selection
+    selectingRef.current = true;
+    if (country.label === value) {
+      cancel();
+      return;
+    }
+    setSaving(true);
+    setError("");
     try {
-      await onSave(country.label)
-      setEditing(false)
+      await onSave(country.label);
+      setEditing(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save.")
+      setError(e instanceof Error ? e.message : "Failed to save.");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
   async function saveFreeform() {
-    const trimmed = inputText.trim()
-    if (!trimmed || trimmed === value) { cancel(); return }
-    setSaving(true)
-    setError("")
+    const trimmed = inputText.trim();
+    if (!trimmed || trimmed === value) {
+      cancel();
+      return;
+    }
+    setSaving(true);
+    setError("");
     try {
-      await onSave(trimmed)
-      setEditing(false)
+      await onSave(trimmed);
+      setEditing(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save.")
+      setError(e instanceof Error ? e.message : "Failed to save.");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
@@ -348,13 +301,13 @@ function InlineCountryField({
                   setTimeout(() => {
                     if (!selectingRef.current) {
                       if (mode === "freeform") {
-                        void saveFreeform()
+                        void saveFreeform();
                       } else {
-                        cancel()
+                        cancel();
                       }
                     }
-                    selectingRef.current = false
-                  }, 0)
+                    selectingRef.current = false;
+                  }, 0);
                 }
               }}
             >
@@ -387,28 +340,54 @@ function InlineCountryField({
           {controls === "external" && (
             <>
               {mode === "freeform" && (
-                <button type="button" data-inline-action="save" onClick={() => void saveFreeform()} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                <button
+                  type="button"
+                  data-inline-action="save"
+                  onClick={() => void saveFreeform()}
+                  disabled={saving}
+                  className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
                   <Check className="size-3.5" />
                 </button>
               )}
-              <button type="button" data-inline-action="cancel" onClick={cancel} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+              <button
+                type="button"
+                data-inline-action="cancel"
+                onClick={cancel}
+                disabled={saving}
+                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
                 <X className="size-3.5" />
               </button>
             </>
           )}
         </div>
       </InlineFieldWrapper>
-    )
+    );
   }
 
   return (
     <InlineFieldWrapper label={label}>
-      <div role="button" tabIndex={0} onClick={() => { setError(""); setEditing(true) }} onKeyDown={(e) => { if (e.key === "Enter") setEditing(true) }} className="flex min-h-8 items-center justify-between rounded-md px-2.5 py-1 text-sm cursor-pointer transition-colors hover:bg-muted/50">
-        <span className={cn("flex items-center gap-2", !value && "italic text-muted-foreground")}>{code && <CountryFlag countryCode={code} size={16} />}{value || "Not set"}</span>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => {
+          setError("");
+          setEditing(true);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") setEditing(true);
+        }}
+        className="flex min-h-8 items-center justify-between rounded-md px-2.5 py-1 text-sm cursor-pointer transition-colors hover:bg-muted/50"
+      >
+        <span className={cn("flex items-center gap-2", !value && "italic text-muted-foreground")}>
+          {code && <CountryFlag countryCode={code} size={16} />}
+          {value || "Not set"}
+        </span>
         <Pencil className="size-3.5 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground" />
       </div>
     </InlineFieldWrapper>
-  )
+  );
 }
 
 function InlineStateField({
@@ -419,76 +398,81 @@ function InlineStateField({
   value,
   variant,
 }: {
-  controls: InlineControls
-  label: string
-  mode: InlineComboboxMode
-  onSave: (v: string) => Promise<void>
-  value: string
-  variant: InlineFieldVariant
+  controls: InlineControls;
+  label: string;
+  mode: InlineComboboxMode;
+  onSave: (v: string) => Promise<void>;
+  value: string;
+  variant: InlineFieldVariant;
 }) {
-  const [editing, setEditing] = useState(false)
-  const [error, setError] = useState("")
-  const [saving, setSaving] = useState(false)
-  const [inputText, setInputText] = useState("")
-  const [highlightedItem, setHighlightedItem] = useState<StateOption | undefined>(undefined)
-  const selectingRef = useRef(false)
-  const selected = STATE_OPTIONS.find((s) => s.label.toLowerCase() === value.toLowerCase()) ?? null
+  const [editing, setEditing] = useState(false);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [inputText, setInputText] = useState("");
+  const [highlightedItem, setHighlightedItem] = useState<StateOption | undefined>(undefined);
+  const selectingRef = useRef(false);
+  const selected = STATE_OPTIONS.find((s) => s.label.toLowerCase() === value.toLowerCase()) ?? null;
 
   const ghost = useMemo(() => {
-    if (mode !== "strict" || !inputText || !highlightedItem) return ""
-    const label = highlightedItem.label
-    if (!label.toLowerCase().startsWith(inputText.toLowerCase())) return ""
-    return label.slice(inputText.length)
-  }, [mode, inputText, highlightedItem])
+    if (mode !== "strict" || !inputText || !highlightedItem) return "";
+    const label = highlightedItem.label;
+    if (!label.toLowerCase().startsWith(inputText.toLowerCase())) return "";
+    return label.slice(inputText.length);
+  }, [mode, inputText, highlightedItem]);
   const filteredStates = useMemo(() => {
-    if (!inputText) return STATE_OPTIONS
-    const lower = inputText.toLowerCase()
-    const starts: StateOption[] = []
-    const contains: StateOption[] = []
+    if (!inputText) return STATE_OPTIONS;
+    const lower = inputText.toLowerCase();
+    const starts: StateOption[] = [];
+    const contains: StateOption[] = [];
     for (const s of STATE_OPTIONS) {
       if (s.label.toLowerCase().startsWith(lower)) {
-        starts.push(s)
+        starts.push(s);
       } else if (s.label.toLowerCase().includes(lower)) {
-        contains.push(s)
+        contains.push(s);
       }
     }
-    return [...starts, ...contains]
-  }, [inputText])
-
+    return [...starts, ...contains];
+  }, [inputText]);
 
   function cancel() {
-    setEditing(false)
-    setError("")
+    setEditing(false);
+    setError("");
   }
 
   async function handleSelect(state: StateOption | null) {
-    if (!state) return // input cleared, not a selection
-    selectingRef.current = true
-    if (state.label === value) { cancel(); return }
-    setSaving(true)
-    setError("")
+    if (!state) return; // input cleared, not a selection
+    selectingRef.current = true;
+    if (state.label === value) {
+      cancel();
+      return;
+    }
+    setSaving(true);
+    setError("");
     try {
-      await onSave(state.label)
-      setEditing(false)
+      await onSave(state.label);
+      setEditing(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save.")
+      setError(e instanceof Error ? e.message : "Failed to save.");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
   async function saveFreeform() {
-    const trimmed = inputText.trim()
-    if (!trimmed || trimmed === value) { cancel(); return }
-    setSaving(true)
-    setError("")
+    const trimmed = inputText.trim();
+    if (!trimmed || trimmed === value) {
+      cancel();
+      return;
+    }
+    setSaving(true);
+    setError("");
     try {
-      await onSave(trimmed)
-      setEditing(false)
+      await onSave(trimmed);
+      setEditing(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save.")
+      setError(e instanceof Error ? e.message : "Failed to save.");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
@@ -511,13 +495,13 @@ function InlineStateField({
                   setTimeout(() => {
                     if (!selectingRef.current) {
                       if (mode === "freeform") {
-                        void saveFreeform()
+                        void saveFreeform();
                       } else {
-                        cancel()
+                        cancel();
                       }
                     }
-                    selectingRef.current = false
-                  }, 0)
+                    selectingRef.current = false;
+                  }, 0);
                 }
               }}
             >
@@ -548,38 +532,64 @@ function InlineStateField({
           {controls === "external" && (
             <>
               {mode === "freeform" && (
-                <button type="button" data-inline-action="save" onClick={() => void saveFreeform()} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                <button
+                  type="button"
+                  data-inline-action="save"
+                  onClick={() => void saveFreeform()}
+                  disabled={saving}
+                  className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
                   <Check className="size-3.5" />
                 </button>
               )}
-              <button type="button" data-inline-action="cancel" onClick={cancel} disabled={saving} className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+              <button
+                type="button"
+                data-inline-action="cancel"
+                onClick={cancel}
+                disabled={saving}
+                className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
                 <X className="size-3.5" />
               </button>
             </>
           )}
         </div>
       </InlineFieldWrapper>
-    )
+    );
   }
 
   return (
     <InlineFieldWrapper label={label}>
-      <div role="button" tabIndex={0} onClick={() => { setError(""); setEditing(true) }} onKeyDown={(e) => { if (e.key === "Enter") setEditing(true) }} className="flex min-h-8 items-center justify-between rounded-md px-2.5 py-1 text-sm cursor-pointer transition-colors hover:bg-muted/50">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => {
+          setError("");
+          setEditing(true);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") setEditing(true);
+        }}
+        className="flex min-h-8 items-center justify-between rounded-md px-2.5 py-1 text-sm cursor-pointer transition-colors hover:bg-muted/50"
+      >
         <span className={value ? "" : "italic text-muted-foreground"}>{value || "Not set"}</span>
         <Pencil className="size-3.5 text-muted-foreground/0 transition-colors group-hover:text-muted-foreground" />
       </div>
     </InlineFieldWrapper>
-  )
+  );
 }
 
 function ProfilePage() {
-  const profile = Route.useLoaderData()
-  const router = useRouter()
-  async function save(field: string, value: string) { await saveField(field, value); void router.invalidate() }
+  const profile = Route.useLoaderData();
+  const router = useRouter();
+  async function save(field: string, value: string) {
+    await saveField(field, value);
+    void router.invalidate();
+  }
 
-  const V: InlineFieldVariant = "filled"
-  const C: InlineControls = "external"
-  const M: InlineComboboxMode = "strict"
+  const V: InlineFieldVariant = "filled";
+  const C: InlineControls = "external";
+  const M: InlineComboboxMode = "strict";
 
   return (
     <div className="space-y-6">
@@ -588,31 +598,93 @@ function ProfilePage() {
         <p className="text-sm text-muted-foreground mt-1">Manage your personal information.</p>
       </div>
       <Card>
-        <CardHeader><CardTitle>Personal Information</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Personal Information</CardTitle>
+        </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <InlineField variant={V} label="Name" value={profile.name} onSave={(v) => save("name", v)} />
+          <InlineField
+            variant={V}
+            label="Name"
+            value={profile.name}
+            onSave={(v) => save("name", v)}
+          />
           <InlineField variant={V} label="Email" value={profile.email} readOnly />
-          <InlinePhoneField controls={C} label="Phone" value={profile.phoneNumber} onSave={(v) => save("phoneNumber", v)} />
-          <InlineDateField variant={V} controls={C} label="Date of Birth" value={profile.dateOfBirth} readOnly />
+          <InlinePhoneField
+            controls={C}
+            label="Phone"
+            value={profile.phoneNumber}
+            onSave={(v) => save("phoneNumber", v)}
+          />
+          <InlineDateField
+            variant={V}
+            controls={C}
+            label="Date of Birth"
+            value={profile.dateOfBirth}
+            readOnly
+          />
         </CardContent>
       </Card>
       <Card>
-        <CardHeader><CardTitle>Address</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Address</CardTitle>
+        </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <InlineField variant={V} label="Street" value={profile.street} onSave={(v) => save("street", v)} />
-          <InlineField variant={V} label="Building #" value={profile.buildingNumber} onSave={(v) => save("buildingNumber", v)} />
-          <InlineField variant={V} label="City" value={profile.city} onSave={(v) => save("city", v)} />
-          <InlineStateField variant={V} controls={C} mode={M} label="State" value={profile.state} onSave={(v) => save("state", v)} />
+          <InlineField
+            variant={V}
+            label="Street"
+            value={profile.street}
+            onSave={(v) => save("street", v)}
+          />
+          <InlineField
+            variant={V}
+            label="Building #"
+            value={profile.buildingNumber}
+            onSave={(v) => save("buildingNumber", v)}
+          />
+          <InlineField
+            variant={V}
+            label="City"
+            value={profile.city}
+            onSave={(v) => save("city", v)}
+          />
+          <InlineStateField
+            variant={V}
+            controls={C}
+            mode={M}
+            label="State"
+            value={profile.state}
+            onSave={(v) => save("state", v)}
+          />
         </CardContent>
       </Card>
       <Card>
-        <CardHeader><CardTitle>Passport</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Passport</CardTitle>
+        </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <InlineField variant={V} label="Passport #" value={profile.passportNumber} onSave={(v) => save("passportNumber", v)} />
-          <InlineDateField variant={V} controls={C} label="Expiration" value={profile.passportExpiration} onSave={(v) => save("passportExpiration", v)} />
-          <InlineCountryField variant={V} controls={C} mode={M} label="Country" value={profile.passportCountry} onSave={(v) => save("passportCountry", v)} />
+          <InlineField
+            variant={V}
+            label="Passport #"
+            value={profile.passportNumber}
+            onSave={(v) => save("passportNumber", v)}
+          />
+          <InlineDateField
+            variant={V}
+            controls={C}
+            label="Expiration"
+            value={profile.passportExpiration}
+            onSave={(v) => save("passportExpiration", v)}
+          />
+          <InlineCountryField
+            variant={V}
+            controls={C}
+            mode={M}
+            label="Country"
+            value={profile.passportCountry}
+            onSave={(v) => save("passportCountry", v)}
+          />
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
