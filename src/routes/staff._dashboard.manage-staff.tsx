@@ -1,14 +1,15 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
-import type { ColumnDef } from "@tanstack/react-table"
+import { useCallback, useMemo } from "react"
 import { toast } from "sonner"
-import { Trash2 } from "lucide-react"
+import type { ColumnDef } from "@tanstack/react-table"
 
+import type {DashboardDataTableFilterOption} from "@/components/dashboard-data-table";
 import {
   DashboardDataTable,
-  DashboardDataTableColumnHeader,
+  DashboardDataTableColumnHeader
+  
 } from "@/components/dashboard-data-table"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
   DeleteConfirmation,
@@ -33,24 +34,68 @@ export const Route = createFileRoute("/staff/_dashboard/manage-staff")({
   component: ManageStaffPage,
 })
 
+function getUniqueOptions(
+  staff: Array<StaffRow>,
+  valueKey: "airline_name" | "role"
+): Array<DashboardDataTableFilterOption> {
+  const options = new Map<string, string>()
+  for (const member of staff) {
+    const value =
+      valueKey === "role" ? getStaffPermission(member.username) : member[valueKey]
+    options.set(value, valueKey === "role" ? getRoleLabel(value) : value)
+  }
+  return Array.from(options, ([value, label]) => ({ label, value })).sort(
+    (a, b) => a.label.localeCompare(b.label)
+  )
+}
+
+function getRoleLabel(role: string) {
+  if (role === "superadmin") return "Superadmin"
+  if (role === "admin") return "Admin"
+  return "Staff"
+}
+
 function ManageStaffPage() {
   const { data: staff } = useSuspenseQuery(staffMembersQueryOptions())
   const deleteConfirm = useDeleteConfirmation()
   const queryClient = useQueryClient()
   const router = useRouter()
 
-  async function handleDelete(username: string) {
-    try {
-      const result = await deleteStaffFn({ data: { username } })
-      toast.success(result.message)
-      await queryClient.invalidateQueries({ queryKey: ["staff-members"] })
-      await router.invalidate()
-    } catch {
-      toast.error("Failed to delete staff member.")
-    }
-  }
+  const refreshStaff = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ["staff-members"] })
+    await router.invalidate()
+  }, [queryClient, router])
 
-  const columns: Array<ColumnDef<StaffRow>> = [
+  const deleteStaffMembers = useCallback(
+    async (rows: Array<StaffRow>) => {
+      try {
+        await Promise.all(
+          rows.map((member) =>
+            deleteStaffFn({ data: { username: member.username } })
+          )
+        )
+        toast.success(
+          `Deleted ${rows.length} staff account${rows.length === 1 ? "" : "s"}.`
+        )
+        await refreshStaff()
+      } catch {
+        toast.error("Failed to delete staff members.")
+      }
+    },
+    [refreshStaff]
+  )
+
+  const requestDeleteStaff = useCallback(
+    (rows: Array<StaffRow>) => {
+      const label =
+        rows.length === 1 ? rows[0].username : `${rows.length} selected staff`
+      deleteConfirm.requestDelete(label, () => void deleteStaffMembers(rows))
+    },
+    [deleteConfirm, deleteStaffMembers]
+  )
+
+  const columns = useMemo<Array<ColumnDef<StaffRow>>>(
+    () => [
     {
       accessorKey: "username",
       header: ({ column }) => (
@@ -69,6 +114,7 @@ function ManageStaffPage() {
     },
     {
       accessorKey: "airline_name",
+      filterFn: "arrIncludesSome",
       header: ({ column }) => (
         <DashboardDataTableColumnHeader column={column} title="Airline" />
       ),
@@ -92,6 +138,7 @@ function ManageStaffPage() {
     {
       id: "role",
       accessorFn: (row) => getStaffPermission(row.username),
+      filterFn: "arrIncludesSome",
       header: ({ column }) => (
         <DashboardDataTableColumnHeader column={column} title="Role" />
       ),
@@ -107,29 +154,35 @@ function ManageStaffPage() {
         )
       },
     },
-    {
-      id: "actions",
-      enableHiding: false,
-      enableSorting: false,
-      header: () => <span className="sr-only">Actions</span>,
-      cell: ({ row }) => (
-        <div className="text-right">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Delete ${row.original.username}`}
-            onClick={() =>
-              deleteConfirm.requestDelete(row.original.username, () =>
-                handleDelete(row.original.username)
-              )
-            }
-          >
-            <Trash2 className="text-destructive" />
-          </Button>
-        </div>
-      ),
-    },
-  ]
+  ],
+    []
+  )
+
+  const filterOptions = useMemo(
+    () => [
+      {
+        columnId: "airline_name",
+        label: "Airline",
+        options: getUniqueOptions(staff, "airline_name"),
+      },
+      {
+        columnId: "role",
+        label: "Role",
+        options: getUniqueOptions(staff, "role"),
+      },
+    ],
+    [staff]
+  )
+
+  const tableActions = useMemo(
+    () => [
+      {
+        label: "Delete staff",
+        onSelect: requestDeleteStaff,
+      },
+    ],
+    [requestDeleteStaff]
+  )
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -146,11 +199,15 @@ function ManageStaffPage() {
       />
 
       <DashboardDataTable
+        bulkActions={tableActions}
         columns={columns}
         data={staff}
         emptyMessage="No staff accounts."
+        enableRowSelection
+        filters={filterOptions}
         searchPlaceholder="Search staff..."
         queryPrefix="staff"
+        rowActions={tableActions}
       />
     </div>
   )
