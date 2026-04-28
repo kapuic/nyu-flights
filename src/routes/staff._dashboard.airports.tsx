@@ -7,6 +7,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import type {DashboardDataTableFilterOption} from "@/components/dashboard-data-table";
 import { AirportComboboxField } from "@/components/combobox-fields"
+import { CountryFlag } from "@/components/country-flag"
 import {
   DashboardDataTable,
   DashboardDataTableColumnHeader
@@ -172,9 +173,17 @@ function ManageAirportsPage() {
       header: ({ column }) => (
         <DashboardDataTableColumnHeader column={column} title="Country" />
       ),
-      cell: ({ row }) => (
-        <span className="text-muted-foreground">{row.original.country}</span>
-      ),
+      cell: ({ row }) => {
+        const airport = getAirportOption(row.original.code)
+        return (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            {airport ? (
+              <CountryFlag countryCode={airport.countryCode} size={18} />
+            ) : null}
+            <span>{row.original.country}</span>
+          </div>
+        )
+      },
     },
     {
       accessorKey: "airport_type",
