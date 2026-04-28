@@ -1,14 +1,15 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
-import type { ColumnDef } from "@tanstack/react-table"
+import { useCallback, useMemo } from "react"
 import { toast } from "sonner"
-import { Trash2 } from "lucide-react"
+import type { ColumnDef } from "@tanstack/react-table"
 
+import type {DashboardDataTableFilterOption} from "@/components/dashboard-data-table";
 import {
   DashboardDataTable,
-  DashboardDataTableColumnHeader,
+  DashboardDataTableColumnHeader
+  
 } from "@/components/dashboard-data-table"
-import { Button } from "@/components/ui/button"
 import {
   DeleteConfirmation,
   useDeleteConfirmation,
@@ -30,24 +31,59 @@ export const Route = createFileRoute("/staff/_dashboard/manage-customers")({
   component: ManageCustomersPage,
 })
 
+function getUniqueOptions(
+  customers: Array<CustomerRow>,
+  valueKey: "city"
+): Array<DashboardDataTableFilterOption> {
+  const options = new Map<string, string>()
+  for (const customer of customers) {
+    const value = customer[valueKey]
+    options.set(value, value)
+  }
+  return Array.from(options, ([value, label]) => ({ label, value })).sort(
+    (a, b) => a.label.localeCompare(b.label)
+  )
+}
+
 function ManageCustomersPage() {
   const { data: customers } = useSuspenseQuery(staffCustomersQueryOptions())
   const deleteConfirm = useDeleteConfirmation()
   const queryClient = useQueryClient()
   const router = useRouter()
 
-  async function handleDelete(email: string) {
-    try {
-      const result = await deleteCustomerFn({ data: { email } })
-      toast.success(result.message)
-      await queryClient.invalidateQueries({ queryKey: ["staff-customers"] })
-      await router.invalidate()
-    } catch {
-      toast.error("Failed to delete customer.")
-    }
-  }
+  const refreshCustomers = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ["staff-customers"] })
+    await router.invalidate()
+  }, [queryClient, router])
 
-  const columns: Array<ColumnDef<CustomerRow>> = [
+  const deleteCustomers = useCallback(
+    async (rows: Array<CustomerRow>) => {
+      try {
+        await Promise.all(
+          rows.map((customer) => deleteCustomerFn({ data: { email: customer.email } }))
+        )
+        toast.success(
+          `Deleted ${rows.length} customer${rows.length === 1 ? "" : "s"}.`
+        )
+        await refreshCustomers()
+      } catch {
+        toast.error("Failed to delete customers.")
+      }
+    },
+    [refreshCustomers]
+  )
+
+  const requestDeleteCustomers = useCallback(
+    (rows: Array<CustomerRow>) => {
+      const label =
+        rows.length === 1 ? rows[0].name : `${rows.length} selected customers`
+      deleteConfirm.requestDelete(label, () => void deleteCustomers(rows))
+    },
+    [deleteConfirm, deleteCustomers]
+  )
+
+  const columns = useMemo<Array<ColumnDef<CustomerRow>>>(
+    () => [
     {
       accessorKey: "name",
       header: ({ column }) => (
@@ -68,6 +104,7 @@ function ManageCustomersPage() {
     },
     {
       accessorKey: "city",
+      filterFn: "arrIncludesSome",
       header: ({ column }) => (
         <DashboardDataTableColumnHeader column={column} title="City" />
       ),
@@ -84,29 +121,30 @@ function ManageCustomersPage() {
         <span className="text-muted-foreground">{row.original.phone_number}</span>
       ),
     },
-    {
-      id: "actions",
-      enableHiding: false,
-      enableSorting: false,
-      header: () => <span className="sr-only">Actions</span>,
-      cell: ({ row }) => (
-        <div className="text-right">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Delete ${row.original.name}`}
-            onClick={() =>
-              deleteConfirm.requestDelete(row.original.email, () =>
-                handleDelete(row.original.email)
-              )
-            }
-          >
-            <Trash2 className="text-destructive" />
-          </Button>
-        </div>
-      ),
-    },
-  ]
+  ],
+    []
+  )
+
+  const filterOptions = useMemo(
+    () => [
+      {
+        columnId: "city",
+        label: "City",
+        options: getUniqueOptions(customers, "city"),
+      },
+    ],
+    [customers]
+  )
+
+  const tableActions = useMemo(
+    () => [
+      {
+        label: "Delete customers",
+        onSelect: requestDeleteCustomers,
+      },
+    ],
+    [requestDeleteCustomers]
+  )
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -123,11 +161,15 @@ function ManageCustomersPage() {
       />
 
       <DashboardDataTable
+        bulkActions={tableActions}
         columns={columns}
         data={customers}
         emptyMessage="No customers."
+        enableRowSelection
+        filters={filterOptions}
         searchPlaceholder="Search customers..."
         queryPrefix="customers"
+        rowActions={tableActions}
       />
     </div>
   )
