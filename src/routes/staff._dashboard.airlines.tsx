@@ -1,9 +1,9 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
-import type { ColumnDef } from "@tanstack/react-table"
-import { useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus } from "lucide-react"
+import type { ColumnDef } from "@tanstack/react-table"
 
 import {
   DashboardDataTable,
@@ -59,47 +59,62 @@ function ManageAirlinesPage() {
     }
   }
 
-  async function handleDelete(name: string) {
-    try {
-      const result = await deleteAirlineFn({ data: { name } })
-      toast.success(result.message)
-      await refreshAirlines()
-    } catch {
-      toast.error("Failed to delete airline. It may have dependent data.")
-    }
-  }
+  const deleteAirlines = useCallback(
+    async (rows: Array<AirlineRow>) => {
+      try {
+        const results = await Promise.all(
+          rows.map((airline) => deleteAirlineFn({ data: { name: airline.name } }))
+        )
+        const failed = results.find((result) => "error" in result && result.error)
+        if (failed && "error" in failed) {
+          toast.error(String(failed.error))
+          return
+        }
 
-  const columns: Array<ColumnDef<AirlineRow>> = [
-    {
-      accessorKey: "name",
-      header: ({ column }) => (
-        <DashboardDataTableColumnHeader column={column} title="Name" />
-      ),
-      cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+        toast.success(
+          `Deleted ${rows.length} airline${rows.length === 1 ? "" : "s"}.`
+        )
+        await refreshAirlines()
+      } catch {
+        toast.error("Failed to delete airlines. They may have dependent data.")
+      }
     },
-    {
-      id: "actions",
-      enableHiding: false,
-      enableSorting: false,
-      header: () => <span className="sr-only">Actions</span>,
-      cell: ({ row }) => (
-        <div className="text-right">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Delete ${row.original.name}`}
-            onClick={() =>
-              deleteConfirm.requestDelete(row.original.name, () =>
-                handleDelete(row.original.name)
-              )
-            }
-          >
-            <Trash2 className="text-destructive" />
-          </Button>
-        </div>
-      ),
+    [refreshAirlines]
+  )
+
+  const requestDeleteAirlines = useCallback(
+    (rows: Array<AirlineRow>) => {
+      const label =
+        rows.length === 1 ? rows[0].name : `${rows.length} selected airlines`
+      deleteConfirm.requestDelete(label, () => void deleteAirlines(rows))
     },
-  ]
+    [deleteAirlines, deleteConfirm]
+  )
+
+  const columns = useMemo<Array<ColumnDef<AirlineRow>>>(
+    () => [
+      {
+        accessorKey: "name",
+        header: ({ column }) => (
+          <DashboardDataTableColumnHeader column={column} title="Name" />
+        ),
+        cell: ({ row }) => (
+          <span className="font-medium">{row.original.name}</span>
+        ),
+      },
+    ],
+    []
+  )
+
+  const tableActions = useMemo(
+    () => [
+      {
+        label: "Delete airlines",
+        onSelect: requestDeleteAirlines,
+      },
+    ],
+    [requestDeleteAirlines]
+  )
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
@@ -149,11 +164,14 @@ function ManageAirlinesPage() {
       />
 
       <DashboardDataTable
+        bulkActions={tableActions}
         columns={columns}
         data={airlines}
         emptyMessage="No airlines."
+        enableRowSelection
         searchPlaceholder="Search airlines..."
         queryPrefix="airlines"
+        rowActions={tableActions}
       />
     </div>
   )
