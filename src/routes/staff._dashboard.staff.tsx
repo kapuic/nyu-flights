@@ -30,7 +30,7 @@ function getStaffRowId(staff: StaffRow) {
   return staff.username;
 }
 
-export const Route = createFileRoute("/staff/_dashboard/manage-staff")({
+export const Route = createFileRoute("/staff/_dashboard/staff")({
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(staffMembersQueryOptions());
   },

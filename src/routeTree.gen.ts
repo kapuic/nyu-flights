@@ -24,12 +24,12 @@ import { Route as AccountSecurityRouteImport } from './routes/account.security'
 import { Route as AccountPaymentsRouteImport } from './routes/account.payments'
 import { Route as GlobeCheckoutRouteImport } from './routes/_globe.checkout'
 import { Route as StaffDashboardIndexRouteImport } from './routes/staff._dashboard.index'
+import { Route as StaffDashboardStaffRouteImport } from './routes/staff._dashboard.staff'
 import { Route as StaffDashboardReportsRouteImport } from './routes/staff._dashboard.reports'
 import { Route as StaffDashboardPassengersRouteImport } from './routes/staff._dashboard.passengers'
-import { Route as StaffDashboardManageStaffRouteImport } from './routes/staff._dashboard.manage-staff'
-import { Route as StaffDashboardManageCustomersRouteImport } from './routes/staff._dashboard.manage-customers'
 import { Route as StaffDashboardFlightsRouteImport } from './routes/staff._dashboard.flights'
 import { Route as StaffDashboardFleetRouteImport } from './routes/staff._dashboard.fleet'
+import { Route as StaffDashboardCustomersRouteImport } from './routes/staff._dashboard.customers'
 import { Route as StaffDashboardAirportsRouteImport } from './routes/staff._dashboard.airports'
 import { Route as StaffDashboardAirlinesRouteImport } from './routes/staff._dashboard.airlines'
 
@@ -106,6 +106,11 @@ const StaffDashboardIndexRoute = StaffDashboardIndexRouteImport.update({
   path: '/',
   getParentRoute: () => StaffDashboardRoute,
 } as any)
+const StaffDashboardStaffRoute = StaffDashboardStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => StaffDashboardRoute,
+} as any)
 const StaffDashboardReportsRoute = StaffDashboardReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -117,18 +122,6 @@ const StaffDashboardPassengersRoute =
     path: '/passengers',
     getParentRoute: () => StaffDashboardRoute,
   } as any)
-const StaffDashboardManageStaffRoute =
-  StaffDashboardManageStaffRouteImport.update({
-    id: '/manage-staff',
-    path: '/manage-staff',
-    getParentRoute: () => StaffDashboardRoute,
-  } as any)
-const StaffDashboardManageCustomersRoute =
-  StaffDashboardManageCustomersRouteImport.update({
-    id: '/manage-customers',
-    path: '/manage-customers',
-    getParentRoute: () => StaffDashboardRoute,
-  } as any)
 const StaffDashboardFlightsRoute = StaffDashboardFlightsRouteImport.update({
   id: '/flights',
   path: '/flights',
@@ -137,6 +130,11 @@ const StaffDashboardFlightsRoute = StaffDashboardFlightsRouteImport.update({
 const StaffDashboardFleetRoute = StaffDashboardFleetRouteImport.update({
   id: '/fleet',
   path: '/fleet',
+  getParentRoute: () => StaffDashboardRoute,
+} as any)
+const StaffDashboardCustomersRoute = StaffDashboardCustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
   getParentRoute: () => StaffDashboardRoute,
 } as any)
 const StaffDashboardAirportsRoute = StaffDashboardAirportsRouteImport.update({
@@ -165,12 +163,12 @@ export interface FileRoutesByFullPath {
   '/account/': typeof AccountIndexRoute
   '/staff/airlines': typeof StaffDashboardAirlinesRoute
   '/staff/airports': typeof StaffDashboardAirportsRoute
+  '/staff/customers': typeof StaffDashboardCustomersRoute
   '/staff/fleet': typeof StaffDashboardFleetRoute
   '/staff/flights': typeof StaffDashboardFlightsRoute
-  '/staff/manage-customers': typeof StaffDashboardManageCustomersRoute
-  '/staff/manage-staff': typeof StaffDashboardManageStaffRoute
   '/staff/passengers': typeof StaffDashboardPassengersRoute
   '/staff/reports': typeof StaffDashboardReportsRoute
+  '/staff/staff': typeof StaffDashboardStaffRoute
   '/staff/': typeof StaffDashboardIndexRoute
 }
 export interface FileRoutesByTo {
@@ -187,12 +185,12 @@ export interface FileRoutesByTo {
   '/account': typeof AccountIndexRoute
   '/staff/airlines': typeof StaffDashboardAirlinesRoute
   '/staff/airports': typeof StaffDashboardAirportsRoute
+  '/staff/customers': typeof StaffDashboardCustomersRoute
   '/staff/fleet': typeof StaffDashboardFleetRoute
   '/staff/flights': typeof StaffDashboardFlightsRoute
-  '/staff/manage-customers': typeof StaffDashboardManageCustomersRoute
-  '/staff/manage-staff': typeof StaffDashboardManageStaffRoute
   '/staff/passengers': typeof StaffDashboardPassengersRoute
   '/staff/reports': typeof StaffDashboardReportsRoute
+  '/staff/staff': typeof StaffDashboardStaffRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -212,12 +210,12 @@ export interface FileRoutesById {
   '/account/': typeof AccountIndexRoute
   '/staff/_dashboard/airlines': typeof StaffDashboardAirlinesRoute
   '/staff/_dashboard/airports': typeof StaffDashboardAirportsRoute
+  '/staff/_dashboard/customers': typeof StaffDashboardCustomersRoute
   '/staff/_dashboard/fleet': typeof StaffDashboardFleetRoute
   '/staff/_dashboard/flights': typeof StaffDashboardFlightsRoute
-  '/staff/_dashboard/manage-customers': typeof StaffDashboardManageCustomersRoute
-  '/staff/_dashboard/manage-staff': typeof StaffDashboardManageStaffRoute
   '/staff/_dashboard/passengers': typeof StaffDashboardPassengersRoute
   '/staff/_dashboard/reports': typeof StaffDashboardReportsRoute
+  '/staff/_dashboard/staff': typeof StaffDashboardStaffRoute
   '/staff/_dashboard/': typeof StaffDashboardIndexRoute
 }
 export interface FileRouteTypes {
@@ -237,12 +235,12 @@ export interface FileRouteTypes {
     | '/account/'
     | '/staff/airlines'
     | '/staff/airports'
+    | '/staff/customers'
     | '/staff/fleet'
     | '/staff/flights'
-    | '/staff/manage-customers'
-    | '/staff/manage-staff'
     | '/staff/passengers'
     | '/staff/reports'
+    | '/staff/staff'
     | '/staff/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -259,12 +257,12 @@ export interface FileRouteTypes {
     | '/account'
     | '/staff/airlines'
     | '/staff/airports'
+    | '/staff/customers'
     | '/staff/fleet'
     | '/staff/flights'
-    | '/staff/manage-customers'
-    | '/staff/manage-staff'
     | '/staff/passengers'
     | '/staff/reports'
+    | '/staff/staff'
   id:
     | '__root__'
     | '/_globe'
@@ -283,12 +281,12 @@ export interface FileRouteTypes {
     | '/account/'
     | '/staff/_dashboard/airlines'
     | '/staff/_dashboard/airports'
+    | '/staff/_dashboard/customers'
     | '/staff/_dashboard/fleet'
     | '/staff/_dashboard/flights'
-    | '/staff/_dashboard/manage-customers'
-    | '/staff/_dashboard/manage-staff'
     | '/staff/_dashboard/passengers'
     | '/staff/_dashboard/reports'
+    | '/staff/_dashboard/staff'
     | '/staff/_dashboard/'
   fileRoutesById: FileRoutesById
 }
@@ -408,6 +406,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StaffDashboardIndexRouteImport
       parentRoute: typeof StaffDashboardRoute
     }
+    '/staff/_dashboard/staff': {
+      id: '/staff/_dashboard/staff'
+      path: '/staff'
+      fullPath: '/staff/staff'
+      preLoaderRoute: typeof StaffDashboardStaffRouteImport
+      parentRoute: typeof StaffDashboardRoute
+    }
     '/staff/_dashboard/reports': {
       id: '/staff/_dashboard/reports'
       path: '/reports'
@@ -422,20 +427,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StaffDashboardPassengersRouteImport
       parentRoute: typeof StaffDashboardRoute
     }
-    '/staff/_dashboard/manage-staff': {
-      id: '/staff/_dashboard/manage-staff'
-      path: '/manage-staff'
-      fullPath: '/staff/manage-staff'
-      preLoaderRoute: typeof StaffDashboardManageStaffRouteImport
-      parentRoute: typeof StaffDashboardRoute
-    }
-    '/staff/_dashboard/manage-customers': {
-      id: '/staff/_dashboard/manage-customers'
-      path: '/manage-customers'
-      fullPath: '/staff/manage-customers'
-      preLoaderRoute: typeof StaffDashboardManageCustomersRouteImport
-      parentRoute: typeof StaffDashboardRoute
-    }
     '/staff/_dashboard/flights': {
       id: '/staff/_dashboard/flights'
       path: '/flights'
@@ -448,6 +439,13 @@ declare module '@tanstack/react-router' {
       path: '/fleet'
       fullPath: '/staff/fleet'
       preLoaderRoute: typeof StaffDashboardFleetRouteImport
+      parentRoute: typeof StaffDashboardRoute
+    }
+    '/staff/_dashboard/customers': {
+      id: '/staff/_dashboard/customers'
+      path: '/customers'
+      fullPath: '/staff/customers'
+      preLoaderRoute: typeof StaffDashboardCustomersRouteImport
       parentRoute: typeof StaffDashboardRoute
     }
     '/staff/_dashboard/airports': {
@@ -497,24 +495,24 @@ const AccountRouteWithChildren =
 interface StaffDashboardRouteChildren {
   StaffDashboardAirlinesRoute: typeof StaffDashboardAirlinesRoute
   StaffDashboardAirportsRoute: typeof StaffDashboardAirportsRoute
+  StaffDashboardCustomersRoute: typeof StaffDashboardCustomersRoute
   StaffDashboardFleetRoute: typeof StaffDashboardFleetRoute
   StaffDashboardFlightsRoute: typeof StaffDashboardFlightsRoute
-  StaffDashboardManageCustomersRoute: typeof StaffDashboardManageCustomersRoute
-  StaffDashboardManageStaffRoute: typeof StaffDashboardManageStaffRoute
   StaffDashboardPassengersRoute: typeof StaffDashboardPassengersRoute
   StaffDashboardReportsRoute: typeof StaffDashboardReportsRoute
+  StaffDashboardStaffRoute: typeof StaffDashboardStaffRoute
   StaffDashboardIndexRoute: typeof StaffDashboardIndexRoute
 }
 
 const StaffDashboardRouteChildren: StaffDashboardRouteChildren = {
   StaffDashboardAirlinesRoute: StaffDashboardAirlinesRoute,
   StaffDashboardAirportsRoute: StaffDashboardAirportsRoute,
+  StaffDashboardCustomersRoute: StaffDashboardCustomersRoute,
   StaffDashboardFleetRoute: StaffDashboardFleetRoute,
   StaffDashboardFlightsRoute: StaffDashboardFlightsRoute,
-  StaffDashboardManageCustomersRoute: StaffDashboardManageCustomersRoute,
-  StaffDashboardManageStaffRoute: StaffDashboardManageStaffRoute,
   StaffDashboardPassengersRoute: StaffDashboardPassengersRoute,
   StaffDashboardReportsRoute: StaffDashboardReportsRoute,
+  StaffDashboardStaffRoute: StaffDashboardStaffRoute,
   StaffDashboardIndexRoute: StaffDashboardIndexRoute,
 }
 

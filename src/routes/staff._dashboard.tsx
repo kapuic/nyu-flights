@@ -5,10 +5,10 @@ import {
   redirect,
   useLocation,
   useRouter,
-} from "@tanstack/react-router"
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
-import { useHotkey } from "@tanstack/react-hotkeys"
-import { useEffect, useMemo, useState } from "react"
+} from "@tanstack/react-router";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useHotkey } from "@tanstack/react-hotkeys";
+import { useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
   Building2,
@@ -22,12 +22,12 @@ import {
   Shield,
   UserCog,
   Users,
-} from "lucide-react"
-import { toast } from "sonner"
-import type { ComponentType, KeyboardEvent } from "react"
+} from "lucide-react";
+import { toast } from "sonner";
+import type { ComponentType, KeyboardEvent } from "react";
 
-import type { StaffDashboardData } from "@/lib/queries"
-import type { StaffPermission } from "@/lib/staff-permissions"
+import type { StaffDashboardData } from "@/lib/queries";
+import type { StaffPermission } from "@/lib/staff-permissions";
 import {
   Sidebar,
   SidebarContent,
@@ -42,53 +42,48 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
-} from "@/components/ui/sidebar"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/sidebar";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { getCurrentUserFn, logoutFn } from "@/lib/auth"
-import { getQueryClient } from "@/lib/query-client"
-import { isSuperadmin } from "@/lib/staff-permissions"
-import { staffDashboardQueryOptions } from "@/lib/staff-queries"
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { getCurrentUserFn, logoutFn } from "@/lib/auth";
+import { getQueryClient } from "@/lib/query-client";
+import { isSuperadmin } from "@/lib/staff-permissions";
+import { staffDashboardQueryOptions } from "@/lib/staff-queries";
 
 export const Route = createFileRoute("/staff/_dashboard")({
   loader: async () => {
-    const currentUser = await getCurrentUserFn()
-    if (!currentUser) throw redirect({ to: "/staff/login" })
-    if (currentUser.role !== "staff") throw redirect({ to: "/trips" })
+    const currentUser = await getCurrentUserFn();
+    if (!currentUser) throw redirect({ to: "/staff/login" });
+    if (currentUser.role !== "staff") throw redirect({ to: "/trips" });
 
-    const qc = getQueryClient()
-    await qc.ensureQueryData(staffDashboardQueryOptions())
+    const qc = getQueryClient();
+    await qc.ensureQueryData(staffDashboardQueryOptions());
 
-    return { currentUser }
+    return { currentUser };
   },
   component: StaffDashboardLayout,
-})
+});
 
 type NavItem = {
-  icon: ComponentType<{ className?: string }>
-  label: string
-  to: string
-}
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  to: string;
+};
 
 type CommandItem = {
-  group: "Navigation" | "Flights" | "Fleet" | "Administration"
-  href: string
-  label: string
-  search: string
-}
+  group: "Navigation" | "Flights" | "Fleet" | "Administration";
+  href: string;
+  label: string;
+  search: string;
+};
 
 function getNavItems() {
   const items: Array<NavItem> = [
@@ -97,52 +92,50 @@ function getNavItems() {
     { to: "/staff/fleet", label: "Fleet", icon: Plane },
     { to: "/staff/passengers", label: "Passengers", icon: Users },
     { to: "/staff/reports", label: "Reports", icon: BarChart3 },
-  ]
-  return items
+  ];
+  return items;
 }
 
 function getAdminNavItems(permission: StaffPermission): Array<NavItem> {
-  if (!isSuperadmin(permission)) return []
+  if (!isSuperadmin(permission)) return [];
   return [
     { to: "/staff/airlines", label: "Airlines", icon: Building2 },
     { to: "/staff/airports", label: "Airports", icon: Globe },
-    { to: "/staff/manage-staff", label: "Staff", icon: Shield },
-    { to: "/staff/manage-customers", label: "Customers", icon: UserCog },
-  ]
+    { to: "/staff/staff", label: "Staff", icon: Shield },
+    { to: "/staff/customers", label: "Customers", icon: UserCog },
+  ];
 }
 
 function permissionLabel(permission: StaffPermission) {
-  if (permission === "superadmin") return "Superadmin"
-  if (permission === "admin") return "Admin"
-  return null
+  if (permission === "superadmin") return "Superadmin";
+  if (permission === "admin") return "Admin";
+  return null;
 }
 
 function getPrivilegedBannerStorageKey(username: string) {
-  return `staff-privileged-banner-hidden:${username}`
+  return `staff-privileged-banner-hidden:${username}`;
 }
 
 function getPrivilegedBannerCopy(permission: StaffPermission) {
   if (permission === "superadmin")
-    return "Signed in as Superadmin. You can administer airlines, airports, staff accounts, and customer accounts, and manage all flight operations."
+    return "Signed in as Superadmin. You can administer airlines, airports, staff accounts, and customer accounts, and manage all flight operations.";
   if (permission === "admin")
-    return "Signed in as Admin. You can manage cross-airline flights, fleet, passenger manifests, and reports."
-  return null
+    return "Signed in as Admin. You can manage cross-airline flights, fleet, passenger manifests, and reports.";
+  return null;
 }
 
 function buildCommandItems(
   navItems: Array<NavItem>,
   adminItems: Array<NavItem>,
-  dashboardData: StaffDashboardData
+  dashboardData: StaffDashboardData,
 ): Array<CommandItem> {
-  const adminPaths = new Set(adminItems.map((item) => item.to))
-  const navigationItems: Array<CommandItem> = [...navItems, ...adminItems].map(
-    (item) => ({
-      group: adminPaths.has(item.to) ? "Administration" : "Navigation",
-      href: item.to,
-      label: item.label,
-      search: item.label.toLowerCase(),
-    })
-  )
+  const adminPaths = new Set(adminItems.map((item) => item.to));
+  const navigationItems: Array<CommandItem> = [...navItems, ...adminItems].map((item) => ({
+    group: adminPaths.has(item.to) ? "Administration" : "Navigation",
+    href: item.to,
+    label: item.label,
+    search: item.label.toLowerCase(),
+  }));
 
   const flightItems = dashboardData.flights.slice(0, 40).map((flight) => ({
     group: "Flights" as const,
@@ -150,28 +143,27 @@ function buildCommandItems(
     label: `${flight.flightNumber} · ${flight.departureAirportCode} to ${flight.arrivalAirportCode}`,
     search:
       `${flight.flightNumber} ${flight.departureAirportCode} ${flight.arrivalAirportCode} ${flight.status}`.toLowerCase(),
-  }))
+  }));
 
   const fleetItems = dashboardData.airplanes.slice(0, 40).map((airplane) => ({
     group: "Fleet" as const,
     href: `/staff/fleet?fleetQ=${encodeURIComponent(airplane.airplaneId)}`,
     label: `${airplane.airplaneId} · ${airplane.manufacturingCompany}`,
-    search:
-      `${airplane.airplaneId} ${airplane.manufacturingCompany}`.toLowerCase(),
-  }))
+    search: `${airplane.airplaneId} ${airplane.manufacturingCompany}`.toLowerCase(),
+  }));
 
-  return [...navigationItems, ...flightItems, ...fleetItems]
+  return [...navigationItems, ...flightItems, ...fleetItems];
 }
 
 type StaffCommandPaletteProps = {
-  items: Array<CommandItem>
-  onItemSelect: (item: CommandItem) => Promise<void>
-  onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void
-  onOpenChange: (open: boolean) => void
-  onSearchChange: (value: string) => void
-  open: boolean
-  search: string
-}
+  items: Array<CommandItem>;
+  onItemSelect: (item: CommandItem) => Promise<void>;
+  onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
+  onOpenChange: (open: boolean) => void;
+  onSearchChange: (value: string) => void;
+  open: boolean;
+  search: string;
+};
 
 function StaffCommandPalette({
   items,
@@ -211,9 +203,7 @@ function StaffCommandPalette({
                   onClick={() => void onItemSelect(item)}
                 >
                   <span className="truncate">{item.label}</span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {item.group}
-                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">{item.group}</span>
                 </button>
               ))}
             </div>
@@ -225,88 +215,86 @@ function StaffCommandPalette({
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 function StaffDashboardLayout() {
-  const { currentUser } = Route.useLoaderData()
-  const { data } = useSuspenseQuery(staffDashboardQueryOptions())
-  const [commandOpen, setCommandOpen] = useState(false)
-  const [commandSearch, setCommandSearch] = useState("")
-  const router = useRouter()
-  const location = useLocation()
-  const queryClient = useQueryClient()
+  const { currentUser } = Route.useLoaderData();
+  const { data } = useSuspenseQuery(staffDashboardQueryOptions());
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [commandSearch, setCommandSearch] = useState("");
+  const router = useRouter();
+  const location = useLocation();
+  const queryClient = useQueryClient();
 
-  const permission = currentUser.staffPermission ?? "staff"
-  const navItems = useMemo(() => getNavItems(), [])
-  const adminItems = useMemo(() => getAdminNavItems(permission), [permission])
+  const permission = currentUser.staffPermission ?? "staff";
+  const navItems = useMemo(() => getNavItems(), []);
+  const adminItems = useMemo(() => getAdminNavItems(permission), [permission]);
   const commandItems = useMemo(
     () => buildCommandItems(navItems, adminItems, data),
-    [adminItems, data, navItems]
-  )
+    [adminItems, data, navItems],
+  );
   const filteredCommandItems = useMemo(() => {
-    const normalizedSearch = commandSearch.trim().toLowerCase()
-    if (!normalizedSearch) return commandItems.slice(0, 12)
-    return commandItems
-      .filter((item) => item.search.includes(normalizedSearch))
-      .slice(0, 12)
-  }, [commandItems, commandSearch])
-  const badge = permissionLabel(permission)
-  const bannerCopy = getPrivilegedBannerCopy(permission)
-  const bannerStorageKey = getPrivilegedBannerStorageKey(currentUser.id)
-  const [bannerHidden, setBannerHidden] = useState(false)
+    const normalizedSearch = commandSearch.trim().toLowerCase();
+    if (!normalizedSearch) return commandItems.slice(0, 12);
+    return commandItems.filter((item) => item.search.includes(normalizedSearch)).slice(0, 12);
+  }, [commandItems, commandSearch]);
+  const badge = permissionLabel(permission);
+  const bannerCopy = getPrivilegedBannerCopy(permission);
+  const bannerStorageKey = getPrivilegedBannerStorageKey(currentUser.id);
+  const [bannerHidden, setBannerHidden] = useState(false);
 
   const initials = currentUser.displayName
     .split(" ")
     .map((part: string) => part[0])
     .join("")
     .toUpperCase()
-    .slice(0, 2)
+    .slice(0, 2);
 
   useEffect(() => {
-    if (!bannerCopy) return
-    setBannerHidden(sessionStorage.getItem(bannerStorageKey) === "true")
-  }, [bannerCopy, bannerStorageKey])
+    if (!bannerCopy) return;
+    setBannerHidden(sessionStorage.getItem(bannerStorageKey) === "true");
+  }, [bannerCopy, bannerStorageKey]);
 
   function hidePrivilegedBanner() {
-    sessionStorage.setItem(bannerStorageKey, "true")
-    setBannerHidden(true)
+    sessionStorage.setItem(bannerStorageKey, "true");
+    setBannerHidden(true);
   }
 
   async function handleLogout() {
-    const result = await logoutFn()
-    queryClient.clear()
-    toast.success("Signed out.")
-    await router.invalidate()
-    await router.navigate({ to: result.redirectTo })
+    const result = await logoutFn();
+    queryClient.clear();
+    toast.success("Signed out.");
+    await router.invalidate();
+    await router.navigate({ to: result.redirectTo });
   }
 
   async function runCommand(item: CommandItem) {
-    setCommandOpen(false)
-    setCommandSearch("")
-    await router.navigate({ href: item.href })
+    setCommandOpen(false);
+    setCommandSearch("");
+    await router.navigate({ href: item.href });
   }
 
   useHotkey(
     "Mod+K",
     (event) => {
-      event.preventDefault()
-      setCommandOpen((open) => !open)
+      event.preventDefault();
+      setCommandOpen((open) => !open);
     },
-    { ignoreInputs: false }
-  )
+    { ignoreInputs: false },
+  );
 
   function isActive(to: string) {
     if (to === "/staff") {
-      return location.pathname === "/staff" || location.pathname === "/staff/"
+      return location.pathname === "/staff" || location.pathname === "/staff/";
     }
-    return location.pathname === to || location.pathname.startsWith(to + "/")
+    return location.pathname === to || location.pathname.startsWith(to + "/");
   }
 
   function handleCommandKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key !== "Enter") return
-    event.preventDefault()
-    void runCommand(filteredCommandItems[0])
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    void runCommand(filteredCommandItems[0]);
   }
 
   return (
@@ -329,12 +317,8 @@ function StaffDashboardLayout() {
                   <Building2 className="size-4" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold">
-                    {currentUser.airlineName ?? "Operations"}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Staff Portal
-                  </span>
+                  <span className="font-semibold">{currentUser.airlineName ?? "Operations"}</span>
+                  <span className="text-xs text-muted-foreground">Staff Portal</span>
                 </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -362,10 +346,7 @@ function StaffDashboardLayout() {
               <SidebarMenu>
                 {navItems.map((item) => (
                   <SidebarMenuItem key={item.to}>
-                    <SidebarMenuButton
-                      isActive={isActive(item.to)}
-                      render={<Link to={item.to} />}
-                    >
+                    <SidebarMenuButton isActive={isActive(item.to)} render={<Link to={item.to} />}>
                       <item.icon className="size-4" />
                       <span>{item.label}</span>
                     </SidebarMenuButton>
@@ -401,34 +382,22 @@ function StaffDashboardLayout() {
               <DropdownMenu>
                 <DropdownMenuTrigger render={<SidebarMenuButton size="lg" />}>
                   <Avatar className="size-8">
-                    <AvatarFallback className="text-xs">
-                      {initials}
-                    </AvatarFallback>
+                    <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col gap-0.5 leading-none">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-medium">
-                        {currentUser.displayName}
-                      </span>
+                      <span className="text-sm font-medium">{currentUser.displayName}</span>
                       {badge ? (
-                        <Badge
-                          variant="secondary"
-                          className="px-1 py-0 text-[10px]"
-                        >
+                        <Badge variant="secondary" className="px-1 py-0 text-[10px]">
                           {badge}
                         </Badge>
                       ) : null}
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {currentUser.email}
-                    </span>
+                    <span className="text-xs text-muted-foreground">{currentUser.email}</span>
                   </div>
                   <ChevronUp className="ml-auto size-4" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  side="top"
-                  className="w-[--radix-dropdown-menu-trigger-width]"
-                >
+                <DropdownMenuContent side="top" className="w-[--radix-dropdown-menu-trigger-width]">
                   <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 size-4" />
                     Sign out
@@ -466,5 +435,5 @@ function StaffDashboardLayout() {
         <Outlet />
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }

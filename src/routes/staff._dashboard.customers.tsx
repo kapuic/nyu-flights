@@ -26,7 +26,7 @@ function getCustomerRowId(customer: CustomerRow) {
   return customer.email;
 }
 
-export const Route = createFileRoute("/staff/_dashboard/manage-customers")({
+export const Route = createFileRoute("/staff/_dashboard/customers")({
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(staffCustomersQueryOptions());
   },
