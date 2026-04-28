@@ -22,7 +22,7 @@ function LoginPage() {
           heroImageUrl={heroImageUrl}
           onSuccess={() => {
             toast.success("Booking unlocked.")
-            void router.navigate({ to: "/customer" })
+            void router.navigate({ to: "/trips" })
           }}
         />
       </div>

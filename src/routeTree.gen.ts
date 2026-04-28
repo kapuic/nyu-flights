@@ -13,7 +13,6 @@ import { Route as TripsRouteImport } from './routes/trips'
 import { Route as StaffRouteImport } from './routes/staff'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as CustomerRouteImport } from './routes/customer'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as GlobeRouteImport } from './routes/_globe'
 import { Route as AccountIndexRouteImport } from './routes/account.index'
@@ -52,11 +51,6 @@ const RegisterRoute = RegisterRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CustomerRoute = CustomerRouteImport.update({
-  id: '/customer',
-  path: '/customer',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountRoute = AccountRouteImport.update({
@@ -159,7 +153,6 @@ const StaffDashboardAirlinesRoute = StaffDashboardAirlinesRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof GlobeIndexRoute
   '/account': typeof AccountRouteWithChildren
-  '/customer': typeof CustomerRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/staff': typeof StaffDashboardRouteWithChildren
@@ -181,7 +174,6 @@ export interface FileRoutesByFullPath {
   '/staff/': typeof StaffDashboardIndexRoute
 }
 export interface FileRoutesByTo {
-  '/customer': typeof CustomerRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/staff': typeof StaffDashboardIndexRoute
@@ -206,7 +198,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_globe': typeof GlobeRouteWithChildren
   '/account': typeof AccountRouteWithChildren
-  '/customer': typeof CustomerRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/staff': typeof StaffRouteWithChildren
@@ -234,7 +225,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/account'
-    | '/customer'
     | '/login'
     | '/register'
     | '/staff'
@@ -256,7 +246,6 @@ export interface FileRouteTypes {
     | '/staff/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/customer'
     | '/login'
     | '/register'
     | '/staff'
@@ -280,7 +269,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_globe'
     | '/account'
-    | '/customer'
     | '/login'
     | '/register'
     | '/staff'
@@ -307,7 +295,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   GlobeRoute: typeof GlobeRouteWithChildren
   AccountRoute: typeof AccountRouteWithChildren
-  CustomerRoute: typeof CustomerRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   StaffRoute: typeof StaffRouteWithChildren
@@ -342,13 +329,6 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/customer': {
-      id: '/customer'
-      path: '/customer'
-      fullPath: '/customer'
-      preLoaderRoute: typeof CustomerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account': {
@@ -559,7 +539,6 @@ const StaffRouteWithChildren = StaffRoute._addFileChildren(StaffRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   GlobeRoute: GlobeRouteWithChildren,
   AccountRoute: AccountRouteWithChildren,
-  CustomerRoute: CustomerRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   StaffRoute: StaffRouteWithChildren,

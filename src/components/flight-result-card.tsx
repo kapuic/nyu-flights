@@ -18,6 +18,13 @@ function formatDuration(departure: string, arrival: string) {
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
   return `${hours}h ${minutes}m`
 }
+function formatShortDate(datetime: string) {
+  return new Date(datetime).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  })
+}
 
 type FlightResultCardProps = {
   flight: FlightOption
@@ -74,6 +81,7 @@ export function FlightResultCard({
             {flight.departureCity}
           </div>
           <div className="mt-0.5 text-sm text-white/70">
+            <span className="text-xs text-white/30">{formatShortDate(flight.departureDatetime)}</span>{" "}
             {formatTime(flight.departureDatetime)}
           </div>
         </div>
@@ -97,6 +105,7 @@ export function FlightResultCard({
             {flight.arrivalCity}
           </div>
           <div className="mt-0.5 text-sm text-white/70">
+            <span className="text-xs text-white/30">{formatShortDate(flight.arrivalDatetime)}</span>{" "}
             {formatTime(flight.arrivalDatetime)}
           </div>
         </div>

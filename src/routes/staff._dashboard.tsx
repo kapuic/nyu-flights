@@ -67,7 +67,7 @@ export const Route = createFileRoute("/staff/_dashboard")({
   loader: async () => {
     const currentUser = await getCurrentUserFn()
     if (!currentUser) throw redirect({ to: "/staff/login" })
-    if (currentUser.role !== "staff") throw redirect({ to: "/customer" })
+    if (currentUser.role !== "staff") throw redirect({ to: "/trips" })
 
     const qc = getQueryClient()
     await qc.ensureQueryData(staffDashboardQueryOptions())

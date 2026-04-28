@@ -184,7 +184,7 @@ async function authenticateUser<TRecord>(options: {
   errorMessage: string
   lookup: () => Promise<TRecord | null>
   password: string
-  redirectTo: "/customer" | "/staff"
+  redirectTo: "/trips" | "/staff"
   selectPassword: (record: TRecord) => string
 }) {
   const record = await options.lookup()
@@ -211,7 +211,7 @@ export async function loginUser(data: {
       errorMessage: "We could not match that customer login.",
       lookup: () => lookupCustomer(data.username),
       password: data.password,
-      redirectTo: "/customer",
+      redirectTo: "/trips",
       selectPassword: (customer) => customer.password,
     })
   }
@@ -282,7 +282,7 @@ export async function registerCustomer(data: {
     createCustomerAuthUser({ email: data.email, name: data.name })
   )
 
-  return { redirectTo: "/customer" as const }
+  return { redirectTo: "/trips" as const }
 }
 
 export async function registerStaff(data: {

@@ -22,7 +22,7 @@ function RegisterPage() {
           heroImageUrl={heroImageUrl}
           onSuccess={() => {
             toast.success("Welcome aboard.")
-            void router.navigate({ to: "/customer" })
+            void router.navigate({ to: "/trips" })
           }}
         />
       </div>

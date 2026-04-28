@@ -13,6 +13,48 @@ import {
 
 import { listDbAirportsFn, searchFlightsFn } from "@/lib/queries"
 import type { FlightOption, FlightSearchResponse } from "@/lib/queries"
+type SortKey = "price" | "duration" | "departure" | "arrival"
+type SortDir = "asc" | "desc"
+type SortState = { key: SortKey; dir: SortDir }
+
+const SORT_OPTIONS: Array<{ key: SortKey; label: string }> = [
+  { key: "price", label: "Price" },
+  { key: "duration", label: "Duration" },
+  { key: "departure", label: "Departure Time" },
+  { key: "arrival", label: "Arrival Time" },
+]
+
+const SORT_LABELS: Record<SortKey, { asc: string; desc: string }> = {
+  price: { asc: "cheapest first", desc: "most expensive first" },
+  duration: { asc: "shortest first", desc: "longest first" },
+  departure: { asc: "earliest departure", desc: "latest departure" },
+  arrival: { asc: "earliest arrival", desc: "latest arrival" },
+}
+
+function sortFlights(flights: FlightOption[], sort: SortState): FlightOption[] {
+  const sorted = [...flights].sort((a, b) => {
+    let cmp = 0
+    switch (sort.key) {
+      case "price":
+        cmp = a.basePrice - b.basePrice
+        break
+      case "duration": {
+        const dA = new Date(a.arrivalDatetime).getTime() - new Date(a.departureDatetime).getTime()
+        const dB = new Date(b.arrivalDatetime).getTime() - new Date(b.departureDatetime).getTime()
+        cmp = dA - dB
+        break
+      }
+      case "departure":
+        cmp = new Date(a.departureDatetime).getTime() - new Date(b.departureDatetime).getTime()
+        break
+      case "arrival":
+        cmp = new Date(a.arrivalDatetime).getTime() - new Date(b.arrivalDatetime).getTime()
+        break
+    }
+    return sort.dir === "asc" ? cmp : -cmp
+  })
+  return sorted
+}
 import { useBookingStore } from "@/lib/booking-store"
 import type { AirportSelection } from "@/lib/booking-store"
 import { AirportCombobox } from "@/components/airport-combobox"
@@ -85,6 +127,11 @@ function PublicHomePage() {
 
   // Whether a search has been triggered
   const [hasSearched, setHasSearched] = useState(false)
+  // Sort state
+  const [sort, setSort] = useState<SortState>({ key: "price", dir: "asc" })
+  function toggleSort(key: SortKey) {
+    setSort((prev) => prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" })
+  }
 
   // TanStack Form
   const form = useForm({
@@ -152,6 +199,10 @@ function PublicHomePage() {
   const isLoading =
     (searchQuery.isLoading || searchQuery.isFetching) && searchEnabled
   const searchError = searchQuery.error
+  const sortedOutbound = useMemo(() => {
+    if (!results) return []
+    return sortFlights(results.outbound, sort)
+  }, [results, sort])
 
   // Sync result routes to store for globe display
   const resultRoutes = useMemo(() => {
@@ -327,7 +378,7 @@ function PublicHomePage() {
                       }
                     }}
                     onSelect={handleFromSelect}
-                    placeholder="Select origin"
+                    placeholder={searchTo ? "Any origin" : "Select origin"}
                   />
                 )}
               </form.Field>
@@ -362,7 +413,7 @@ function PublicHomePage() {
                       }
                     }}
                     onSelect={handleToSelect}
-                    placeholder="Select destination"
+                    placeholder={searchFrom ? "Any destination" : "Select destination"}
                   />
                 )}
               </form.Field>
@@ -563,12 +614,38 @@ function PublicHomePage() {
           ) : null}
 
           {!pickingReturn && results && results.outbound.length > 0 && (
-            <div className="space-y-3">
-              <div className="mb-2 text-xs font-medium tracking-widest text-white/30 uppercase">
-                {results.outbound.length} flight
-                {results.outbound.length !== 1 ? "s" : ""} found
+            <div className="@container space-y-3">
+              <div className="mb-2 flex flex-col gap-2 @sm:flex-row @sm:items-center @sm:justify-between">
+                <span className="text-xs font-medium tracking-widest text-white/30 uppercase">
+                  {results.outbound.length} flight
+                  {results.outbound.length !== 1 ? "s" : ""}
+                  {" · "}{SORT_LABELS[sort.key][sort.dir]}
+                </span>
+                <div className="flex items-center gap-1">
+                  {SORT_OPTIONS.map((opt) => {
+                    const active = sort.key === opt.key
+                    return (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        onClick={() => toggleSort(opt.key)}
+                        className={cn(
+                          "rounded-full px-2.5 py-1 text-[10px] font-medium tracking-wide transition-colors",
+                          active
+                            ? "bg-white/10 text-white/70"
+                            : "text-white/25 hover:text-white/40"
+                        )}
+                      >
+                        {opt.label}
+                        {active && (
+                          <span className="ml-0.5">{sort.dir === "asc" ? "\u2191" : "\u2193"}</span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
-              {results.outbound.map((flight, i) => {
+              {sortedOutbound.map((flight, i) => {
                 const returnInfo =
                   tripTypeValue === "round-trip"
                     ? getReturnPreview(flight)

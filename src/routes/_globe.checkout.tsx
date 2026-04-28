@@ -510,7 +510,7 @@ function ConfirmationView({
 
       <div className="flex gap-3">
         <Link
-          to="/customer"
+          to="/trips"
           className="rounded-lg border border-white/10 bg-white/[0.06] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/10"
         >
           View My Trips
