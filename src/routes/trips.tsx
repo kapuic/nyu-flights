@@ -7,15 +7,16 @@ import {
   Star,
 } from "lucide-react"
 
+import type { CustomerFlight } from "@/lib/queries"
+
 import { AppNavbar } from "@/components/app-navbar"
+import { ReviewDialog } from "@/components/review-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ReviewDialog } from "@/components/review-dialog"
 import { getCurrentUserFn } from "@/lib/auth"
 import { getCustomerDashboardFn } from "@/lib/queries"
-import type { CustomerFlight } from "@/lib/queries"
 
 export const Route = createFileRoute("/trips")({
   loader: async () => {
@@ -149,37 +150,39 @@ function TripCard({
             </div>
           </div>
 
-          {/* Bottom row: price + ticket ID + review action */}
-          <div className="flex items-center justify-between border-t border-border/50 pt-3">
+          {/* Bottom row: price on left, action/rating/ticket ID on right */}
+          <div className="flex items-center gap-3 border-t border-border/50 pt-3">
             <span className="text-sm tabular-nums text-muted-foreground">
               ${flight.basePrice.toFixed(2)}
             </span>
 
-            {flight.canReview && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onReview(flight)}
-                className="border-white/10 bg-white/[0.04] text-white hover:bg-white/10"
-              >
-                Review Flight
-              </Button>
-            )}
+            <div className="ml-auto flex items-center gap-3">
+              {flight.rating !== null && (
+                <div className="flex items-center gap-2">
+                  <FilledStars rating={flight.rating} />
+                  {flight.comment && (
+                    <p className="max-w-40 truncate text-xs text-muted-foreground italic">
+                      &ldquo;{flight.comment}&rdquo;
+                    </p>
+                  )}
+                </div>
+              )}
 
-            {flight.rating !== null && (
-              <div className="flex items-center gap-2">
-                <FilledStars rating={flight.rating} />
-                {flight.comment && (
-                  <p className="max-w-40 truncate text-xs text-muted-foreground italic">
-                    &ldquo;{flight.comment}&rdquo;
-                  </p>
-                )}
-              </div>
-            )}
+              {flight.canReview && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onReview(flight)}
+                  className="border-white/10 bg-white/[0.04] text-white hover:bg-white/10"
+                >
+                  Review Flight
+                </Button>
+              )}
 
-            <span className="text-xs tabular-nums text-muted-foreground/60">
-              {flight.ticketId}
-            </span>
+              <span className="text-xs tabular-nums text-muted-foreground/60">
+                {flight.ticketId}
+              </span>
+            </div>
           </div>
         </div>
       </CardContent>
