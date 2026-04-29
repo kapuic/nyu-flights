@@ -23,15 +23,6 @@
 
   "version_metadata": { "binding": "CF_VERSION_METADATA" },
 
-  "vars": {
-    "DATABASE_URL": "postgres://flights:eWCwYQRxjVTDCsNq5jZqK4CI7yPi1Zb7@208.84.101.171:5485/air_ticket_reservation",
-    "SESSION_SECRET": "air-ticket-reservation-session-secret-2026-prod",
-  },
-
-  // Sensitive values should be set as secrets using:
-  // wrangler secret put SESSION_SECRET
-  // wrangler secret put DATABASE_URL
-
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
