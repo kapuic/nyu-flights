@@ -1734,7 +1734,7 @@ export async function getPaymentHistoryInternal() {
       name_on_card: string;
     }>
   >`
-    select distinct on (card_number) card_number, card_type, name_on_card, card_expiration
+    select distinct on (card_number) card_number, card_type, name_on_card, card_expiration::text as card_expiration
     from ticket
     where customer_email = ${user.email}
     order by card_number, card_expiration desc
