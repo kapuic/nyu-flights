@@ -5,9 +5,9 @@
 The public search page lets anyone browse future flights before signing in. It supports city/code autocomplete, one-way search, round-trip search, flexible "Any origin" / "Any destination" filters, result cards, and client-side sorting by price, duration, departure time, or arrival time. The globe UI uses real route data so the page feels like a travel product rather than a plain database form.
 
 <p>
-  <img src="showcase-screenshots/-02-public-main-page.jpeg" alt="Public main search page" width="32%" />
-  <img src="showcase-screenshots/-01-public-one-way-search-results.jpeg" alt="One-way search results" width="32%" />
-  <img src="showcase-screenshots/00-public-round-trip-search-results.jpeg" alt="Round-trip search results" width="32%" />
+  <img src="showcase-screenshots/public/home.jpeg" alt="Public main search page" width="32%" />
+  <img src="showcase-screenshots/public/one-way-search-results.jpeg" alt="One-way search results" width="32%" />
+  <img src="showcase-screenshots/public/round-trip-search-results.jpeg" alt="Round-trip search results" width="32%" />
 </p>
 
 ### Globe Routes
@@ -70,12 +70,12 @@ One-way search finds outbound future flights. Round-trip search runs the same qu
 Customers and staff have separate login/register flows, but both use bcrypt password checks and persistent server-side sessions. Search is public; booking, trips, reviews, profiles, reports, and staff operations require the correct role. Staff registration supports multiple phone numbers; the latest multi-phone state fix is UI-only and does not change the SQL below.
 
 <p>
-  <img src="showcase-screenshots/16-customer-signup-page.jpeg" alt="Customer signup page" width="32%" />
-  <img src="showcase-screenshots/09-staff-login.png" alt="Staff login page" width="32%" />
-  <img src="showcase-screenshots/17-staff-signup-page.png" alt="Staff signup page" width="32%" />
+  <img src="showcase-screenshots/customer/signup.jpeg" alt="Customer signup page" width="32%" />
+  <img src="showcase-screenshots/staff/login.png" alt="Staff login page" width="32%" />
+  <img src="showcase-screenshots/staff/signup.png" alt="Staff signup page" width="32%" />
 </p>
 <p>
-  <img src="showcase-screenshots/26-staff-signup-multi-phone-dialog-fixed.jpeg" alt="Staff signup multi-phone dialog" width="32%" />
+  <img src="showcase-screenshots/staff/signup-multi-phone-dialog.jpeg" alt="Staff signup multi-phone dialog" width="98%" />
 </p>
 
 ### Customer Login and Registration
@@ -166,7 +166,7 @@ Customers and staff have separate login/register flows, but both use bcrypt pass
 Checkout is a dedicated transactional flow with selected itinerary summary, payment fields, validation, and confirmation. A round trip is stored as two tickets. The server locks the flight, checks it is future-dated, checks capacity, and then inserts the ticket.
 
 <p>
-  <img src="showcase-screenshots/02-customer-booking-confirmed.jpeg" alt="Customer booking confirmation" width="48%" />
+  <img src="showcase-screenshots/customer/booking-confirmed.jpeg" alt="Customer booking confirmation" width="98%" />
 </p>
 
 > ```sql
@@ -214,8 +214,8 @@ Checkout is a dedicated transactional flow with selected itinerary summary, paym
 The trips page separates upcoming and past flights. Review controls appear only for completed purchased flights that have not already been reviewed.
 
 <p>
-  <img src="showcase-screenshots/03-customer-my-trips.png" alt="Customer trips page" width="32%" />
-  <img src="showcase-screenshots/04-customer-review-dialog.png" alt="Customer review dialog" width="32%" />
+  <img src="showcase-screenshots/customer/my-trips.png" alt="Customer trips page" width="48%" />
+  <img src="showcase-screenshots/customer/review-dialog.png" alt="Customer review dialog" width="48%" />
 </p>
 
 ### View My Flights
@@ -293,8 +293,8 @@ The trips page separates upcoming and past flights. Review controls appear only 
 The account area separates profile, payment history, and security so trips do not become a crowded settings page.
 
 <p>
-  <img src="showcase-screenshots/07-customer-profile.png" alt="Customer profile page" width="48%" />
-  <img src="showcase-screenshots/08-customer-security.png" alt="Customer security page" width="48%" />
+  <img src="showcase-screenshots/customer/profile.png" alt="Customer profile page" width="48%" />
+  <img src="showcase-screenshots/customer/security.png" alt="Customer security page" width="48%" />
 </p>
 
 > ```sql
@@ -335,8 +335,8 @@ The account area separates profile, payment history, and security so trips do no
 The staff dashboard uses a left-nav operations layout with dense tables, filters, charts, and role-aware actions. Normal staff are scoped to their airline through `airlineScope`; superadmins can view all airlines. Staff flight search also ensures `flight_read_model` exists before querying it. (This level of role-based access was not required by this project, but I felt like doing it.)
 
 <p>
-  <img src="showcase-screenshots/35-staff-reports-ratings-count-3-of-3.jpeg" alt="Staff reports and ratings" width="48%" />
-  <img src="showcase-screenshots/34-staff-passengers-united-206-count-3-of-3.jpeg" alt="Staff passenger manifest" width="48%" />
+  <img src="showcase-screenshots/staff/reports-ratings-count-3-of-3.jpeg" alt="Staff reports and ratings" width="48%" />
+  <img src="showcase-screenshots/staff/passengers-united-206-count-3-of-3.jpeg" alt="Staff passenger manifest" width="48%" />
 </p>
 
 ### Flight, Fleet, and Review Overview
@@ -412,11 +412,11 @@ The staff dashboard uses a left-nav operations layout with dense tables, filters
 Staff can create flights, edit fields, update status, and delete flights when safe. The UI uses tables and inline editing, but server-side checks enforce permissions, airport validity, capacity, and dependency rules.
 
 <p>
-  <img src="showcase-screenshots/12-staff-flight-status-action.png" alt="Staff flight status action" width="32%" />
-  <img src="showcase-screenshots/12-staff-flight-status-delayed.png" alt="Delayed flight status result" width="32%" />
+  <img src="showcase-screenshots/staff/flight-status-action.png" alt="Staff flight status action" width="48%" />
+  <img src="showcase-screenshots/staff/flight-status-delayed.png" alt="Delayed flight status result" width="48%" />
 </p>
 <p>
-  <img src="showcase-screenshots/13-staff-create-flight-dialog.png" alt="Staff create flight dialog" width="48%" />
+  <img src="showcase-screenshots/staff/create-flight-dialog.png" alt="Staff create flight dialog" width="98%" />
 </p>
 
 > ```sql
@@ -502,8 +502,8 @@ Staff can create flights, edit fields, update status, and delete flights when sa
 Fleet management lets staff add, edit, and delete airplanes. The manifest page lists customers on a selected flight.
 
 <p>
-  <img src="showcase-screenshots/14-staff-fleet-table-count-3-of-3.png" alt="Staff fleet table" width="48%" />
-  <img src="showcase-screenshots/15-staff-add-airplane-dialog.png" alt="Staff add airplane dialog" width="48%" />
+  <img src="showcase-screenshots/staff/fleet-table-count-3-of-3.png" alt="Staff fleet table" width="48%" />
+  <img src="showcase-screenshots/staff/add-airplane-dialog.png" alt="Staff add airplane dialog" width="48%" />
 </p>
 
 > ```sql
@@ -566,8 +566,8 @@ Fleet management lets staff add, edit, and delete airplanes. The manifest page l
 ## Staff Profile and Security
 
 <p>
-  <img src="showcase-screenshots/28-staff-profile-multi-phone-after-save.jpeg" alt="Staff profile phones after save" width="32%" />
-  <img src="showcase-screenshots/29-staff-profile-three-phone-dialog-before-save.jpeg" alt="Staff profile three-phone dialog" width="32%" />
+  <img src="showcase-screenshots/staff/profile-multi-phone-after-save.jpeg" alt="Staff profile phones after save" width="48%" />
+  <img src="showcase-screenshots/staff/profile-three-phone-dialog-before-save.jpeg" alt="Staff profile three-phone dialog" width="48%" />
 </p>
 
 > ```sql
@@ -608,16 +608,16 @@ Fleet management lets staff add, edit, and delete airplanes. The manifest page l
 Superadmin screens manage system-wide reference and account data. Normal staff do not see these pages.
 
 <p>
-  <img src="showcase-screenshots/18-staff-airlines-table-count-1-of-1.png" alt="Superadmin airlines table" width="32%" />
-  <img src="showcase-screenshots/20-staff-airports-table-count-8-of-8.png" alt="Superadmin airports table" width="32%" />
+  <img src="showcase-screenshots/staff/airlines-table-count-1-of-1.png" alt="Superadmin airlines table" width="48%" />
+  <img src="showcase-screenshots/staff/airports-table-count-8-of-8.png" alt="Superadmin airports table" width="48%" />
 </p>
 <p>
-  <img src="showcase-screenshots/21-staff-create-airport-dialog.png" alt="Superadmin create airport dialog" width="32%" />
-  <img src="showcase-screenshots/33-staff-customers-table-count-3-of-3.jpeg" alt="Superadmin customers table" width="32%" />
+  <img src="showcase-screenshots/staff/create-airport-dialog.png" alt="Superadmin create airport dialog" width="48%" />
+  <img src="showcase-screenshots/staff/customers-table-count-3-of-3.jpeg" alt="Superadmin customers table" width="48%" />
 </p>
 <p>
-  <img src="showcase-screenshots/24-staff-table-multi-phone-panel-added-third.png" alt="Staff table add third phone" width="32%" />
-  <img src="showcase-screenshots/25-staff-table-multi-phone-saved-third.png" alt="Staff table saved third phone" width="32%" />
+  <img src="showcase-screenshots/staff/table-multi-phone-added-third.png" alt="Staff table add third phone" width="48%" />
+  <img src="showcase-screenshots/staff/table-multi-phone-saved-third.png" alt="Staff table saved third phone" width="48%" />
 </p>
 
 ### Airlines and Airports
