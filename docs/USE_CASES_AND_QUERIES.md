@@ -1,16 +1,18 @@
 # Use Cases and Queries
 
-This document describes the main use cases implemented by the air ticket reservation application and the database queries behind them. The app is organized as a traveler-facing product for public visitors and customers, plus a staff-facing dashboard for airline operations and superadmin management.
-
-The SQL shown here is written in the same shape as the app's parameterized PostgreSQL queries. Values such as `sourceQuery`, `destinationQuery`, `customerEmail`, and `airlineScope` are runtime parameters supplied by validated forms, sessions, or staff permissions.
+This document summarizes the application's main use cases and the SQL behind them. It reflects the final E2E-fixed query paths, including runtime creation of `flight_read_model` for existing development databases, cache refresh behavior for staff profile phone saves, and normalized timestamp casting for flight foreign keys.
 
 ## Search
 
-The public search page is the first page travelers see. It lets visitors search future flights before signing in, compare routes, sort results, and start a booking flow. The page uses a dark, globe-based visual design so the search experience feels more like a real travel product than a class-project form. The controls are intentionally compact: trip type, origin, destination, date, and sorting stay close to the results they affect.
+The public search page lets anyone browse future flights before signing in. It supports city/code autocomplete, one-way search, round-trip search, flexible "Any origin" / "Any destination" filters, result cards, and client-side sorting by price, duration, departure time, or arrival time. The globe UI uses real route data so the page feels like a travel product rather than a plain database form.
+
+<p>
+  <img src="showcase-screenshots/-02-public-main-page.jpeg" alt="Public main search page" width="32%" />
+  <img src="showcase-screenshots/-01-public-one-way-search-results.jpeg" alt="One-way search results" width="32%" />
+  <img src="showcase-screenshots/00-public-round-trip-search-results.jpeg" alt="Round-trip search results" width="32%" />
+</p>
 
 ### Globe Routes
-
-The globe background shows a small rotating sample of real routes from the database. This makes the landing page feel connected to live route data instead of using decorative fake paths.
 
 > ```sql
 > select departure_airport_code, arrival_airport_code
@@ -19,111 +21,67 @@ The globe background shows a small rotating sample of real routes from the datab
 > limit 10;
 > ```
 >
-> Lists distinct route pairs from the `flight` table so the globe can draw route arcs between real airport codes.
+> Lists distinct route pairs from the `flight` table for the animated globe arcs.
 
 ### Autocomplete
 
-The airport inputs support autocomplete. Typing a city, airport code, or country searches the database and returns matching airports. This makes the search easier because users do not need to memorize three-letter airport codes.
+Airport inputs autocomplete from database airports by city, code, or country.
 
 > ```sql
-> select airport.city, airport.code, airport.country
+> select city, code, country
 > from airport
-> where lower(airport.city) like :query
->   or lower(airport.code) like :query
->   or lower(airport.country) like :query
+> where lower(city) like :query
+>    or lower(code) like :query
+>    or lower(country) like :query
 > order by
->   case when lower(airport.code) = lower(:rawQuery) then 0 else 1 end,
->   case when lower(airport.city) = lower(:rawQuery) then 0 else 1 end,
->   airport.city asc,
->   airport.code asc
+>   case when lower(code) = lower(:rawQuery) then 0 else 1 end,
+>   case when lower(city) = lower(:rawQuery) then 0 else 1 end,
+>   city asc,
+>   code asc
 > limit 8;
 > ```
 >
-> Matches `query` from the `airport` table against city, airport code, and country, then prioritizes exact airport-code and city matches before alphabetical suggestions.
+> Matches `query` from the `airport` table and ranks exact city/code matches first.
 
-### Airport Reference List
+### One-Way and Round-Trip Search
 
-The search page also loads database-backed airport options so the UI can render available airports consistently and combine them with static coordinate metadata for the globe.
-
-> ```sql
-> select code, city, country
-> from airport
-> order by code asc;
-> ```
->
-> Lists airport records from the `airport` table so the search UI, comboboxes, and globe helpers use the same airport source of truth.
-
-### One-Way Search
-
-One-way search finds future outbound flights. It supports normal origin-to-destination search, but also supports “Any origin” and “Any destination” by allowing either side to be blank. That is better than a rigid required-field search because travelers can browse all destinations from one city, all origins into one city, or every future flight on a specific date.
+One-way search finds outbound future flights. Round-trip search runs the same query twice: once for the outbound leg, then once with source and destination reversed for the return leg. Blank source or destination means "Any origin" or "Any destination," which makes browsing more flexible than requiring both endpoints. The server ensures `flight_read_model` exists before search queries run, so existing dev databases and fresh seeded databases share the same read model.
 
 > ```sql
-> select
->   airline_name,
->   airplane_id,
->   flight_number,
->   departure_datetime,
->   arrival_datetime,
->   departure_airport_code,
->   departure_city,
->   arrival_airport_code,
->   arrival_city,
->   base_price,
->   status,
->   ticket_count,
->   available_seats,
->   average_rating,
->   review_count
+> select airline_name, airplane_id, flight_number,
+>        departure_datetime, arrival_datetime,
+>        departure_airport_code, departure_city,
+>        arrival_airport_code, arrival_city,
+>        base_price, status, ticket_count,
+>        available_seats, average_rating, review_count
 > from flight_read_model
 > where departure_datetime >= now()
->   and (:departureDate::text is null or (departure_datetime >= :departureDate::date and departure_datetime < :departureDate::date + interval '1 day'))
->   and (:sourceQuery::text is null or lower(departure_city) like :sourceQuery or lower(departure_airport_code) like :sourceQuery)
->   and (:destinationQuery::text is null or lower(arrival_city) like :destinationQuery or lower(arrival_airport_code) like :destinationQuery)
+>   and (:date::text is null or departure_datetime >= :date::date
+>        and departure_datetime < :date::date + interval '1 day')
+>   and (:sourceQuery::text is null or lower(departure_city) like :sourceQuery
+>        or lower(departure_airport_code) like :sourceQuery)
+>   and (:destinationQuery::text is null or lower(arrival_city) like :destinationQuery
+>        or lower(arrival_airport_code) like :destinationQuery)
 > order by departure_datetime asc;
 > ```
 >
-> Searches future rows from the `flight_read_model` view according to optional `departureDate`, `sourceQuery`, and `destinationQuery` parameters, including seat availability and review summary data for each result.
+> Searches future rows from `flight_read_model` by optional date, source, and destination, while also returning price, seats, status, and rating summary data.
 
-### Round-Trip Search
+## Authentication and Sessions
 
-Round-trip search uses the same outbound query, then runs a second query with origin and destination reversed. The UI separates outbound selection from return selection so the traveler can make one decision at a time instead of scanning two unrelated result lists at once.
+Customers and staff have separate login/register flows, but both use bcrypt password checks and persistent server-side sessions. Search is public; booking, trips, reviews, profiles, reports, and staff operations require the correct role. Staff registration supports multiple phone numbers; the latest multi-phone state fix is UI-only and does not change the SQL below.
 
-> ```sql
-> select
->   airline_name,
->   airplane_id,
->   flight_number,
->   departure_datetime,
->   arrival_datetime,
->   departure_airport_code,
->   departure_city,
->   arrival_airport_code,
->   arrival_city,
->   base_price,
->   status,
->   ticket_count,
->   available_seats,
->   average_rating,
->   review_count
-> from flight_read_model
-> where departure_datetime >= now()
->   and (:returnDate::text is null or (departure_datetime >= :returnDate::date and departure_datetime < :returnDate::date + interval '1 day'))
->   and (:destinationQuery::text is null or lower(departure_city) like :destinationQuery or lower(departure_airport_code) like :destinationQuery)
->   and (:sourceQuery::text is null or lower(arrival_city) like :sourceQuery or lower(arrival_airport_code) like :sourceQuery)
-> order by departure_datetime asc;
-> ```
->
-> Searches return flights from the `flight_read_model` view by reversing the outbound `sourceQuery` and `destinationQuery`, while keeping the same future-flight and date filtering rules.
+<p>
+  <img src="showcase-screenshots/16-customer-signup-page.jpeg" alt="Customer signup page" width="32%" />
+  <img src="showcase-screenshots/09-staff-login.png" alt="Staff login page" width="32%" />
+  <img src="showcase-screenshots/17-staff-signup-page.png" alt="Staff signup page" width="32%" />
+</p>
+<p>
+  <img src="showcase-screenshots/26-staff-signup-multi-phone-dialog-fixed.jpeg" alt="Staff signup multi-phone dialog" width="32%" />
+  <img src="showcase-screenshots/31-staff-signup-three-phone-dialog.jpeg" alt="Staff signup three-phone dialog" width="32%" />
+</p>
 
-### Result Comparison and Sorting
-
-Search results show route, departure and arrival time, duration, price, status, seat availability, and rating information. Sorting happens in the client because the same returned result set can be reordered instantly by price, duration, departure time, or arrival time without another database round trip.
-
-## Customer Authentication
-
-Customer authentication is progressive. Visitors can search publicly, but booking, trips, reviews, profile, payment history, and security settings require a customer session. This keeps browsing friction low while still protecting customer-only actions.
-
-### Customer Login
+### Customer Login and Registration
 
 > ```sql
 > select email, name, password
@@ -132,64 +90,59 @@ Customer authentication is progressive. Visitors can search publicly, but bookin
 > limit 1;
 > ```
 >
-> Finds a customer account from the `customer` table using case-insensitive email lookup before bcrypt password verification.
-
-> ```sql
-> insert into app_session (id, role, customer_email, staff_username, expires_at)
-> values (:sessionId, 'customer', :customerEmail, null, :expiresAt);
-> ```
->
-> Creates a persistent customer session in the `app_session` table after the submitted password matches the stored bcrypt hash.
-
-### Customer Registration
-
-Customer registration creates a full customer profile, hashes the password, stores passport and contact fields, and immediately signs in the new customer. The UI uses multi-step form organization so identity and address/passport details do not become one overwhelming form.
-
-> ```sql
-> select email, name, password
-> from customer
-> where lower(email) = lower(:email)
-> limit 1;
-> ```
->
-> Checks the `customer` table for an existing account before creating a new customer.
+> Finds a customer from the `customer` table before password verification or duplicate-email rejection.
 
 > ```sql
 > insert into customer (
->   email,
->   name,
->   password,
->   building_number,
->   street,
->   city,
->   state,
->   phone_number,
->   passport_number,
->   passport_expiration,
->   passport_country,
->   date_of_birth
+>   email, name, password, building_number, street, city, state,
+>   phone_number, passport_number, passport_expiration,
+>   passport_country, date_of_birth
 > )
 > values (
->   :email,
->   :name,
->   :hashedPassword,
->   :buildingNumber,
->   :street,
->   :city,
->   :state,
->   :phoneNumber,
->   :passportNumber,
->   :passportExpiration,
->   :passportCountry,
->   :dateOfBirth
+>   :email, :name, :hashedPassword, :buildingNumber, :street, :city, :state,
+>   :phoneNumber, :passportNumber, :passportExpiration,
+>   :passportCountry, :dateOfBirth
 > );
 > ```
 >
-> Inserts a new customer into the `customer` table with validated profile, contact, passport, and bcrypt password fields.
+> Creates a customer account in `customer` with validated profile and passport fields.
 
-### Session Lookup
+### Staff Login and Registration
 
-The app reads the session on page loads and server actions so route guards and role-aware redirects are enforced by the server, not only by the UI.
+> ```sql
+> select username, airline_name, email, first_name, last_name, password
+> from airline_staff
+> where lower(username) = lower(:username)
+> limit 1;
+> ```
+>
+> Finds a staff account from `airline_staff` before password verification or duplicate-username rejection.
+
+> ```sql
+> select name
+> from airline
+> where name = :airlineName
+> limit 1;
+> ```
+>
+> Verifies `airlineName` from the `airline` table before registering staff for that airline.
+
+> ```sql
+> insert into airline_staff (
+>   username, airline_name, password, first_name, last_name, date_of_birth, email
+> )
+> values (
+>   :username, :airlineName, :hashedPassword,
+>   :firstName, :lastName, :dateOfBirth, :email
+> );
+>
+> insert into airline_staff_phone (username, phone_number)
+> values (:username, :phoneNumber);
+> ```
+>
+> Creates a staff account in `airline_staff` and stores each phone number in `airline_staff_phone`.
+
+### Session Lookup and Logout
 
 > ```sql
 > select role, customer_email, staff_username, expires_at
@@ -199,49 +152,41 @@ The app reads the session on page loads and server actions so route guards and r
 > limit 1;
 > ```
 >
-> Finds the active session from the `app_session` table and rejects missing or expired session IDs.
+> Resolves the current role from `app_session` for route guards and server actions.
 
 > ```sql
-> select email, name, password
-> from customer
-> where lower(email) = lower(:customerEmail)
-> limit 1;
-> ```
+> insert into app_session (id, role, customer_email, staff_username, expires_at)
+> values (:sessionId, :role, :customerEmail, :staffUsername, :expiresAt);
 >
-> Resolves the logged-in customer from the `customer` table after a valid customer session is found.
-
-### Logout
-
-> ```sql
 > delete from app_session
 > where id = :sessionId;
 > ```
 >
-> Deletes the current session from the `app_session` table so the browser cookie no longer points to an authenticated account.
+> Creates or deletes persistent sessions in `app_session` during login, registration, and logout.
 
 ## Checkout and Ticket Purchase
 
-Checkout turns a selected itinerary into one or more tickets. The page is a dedicated transactional flow rather than an inline form, which keeps the booking summary, payment form, validation, and confirmation state visually clear. For round trips, the app purchases the outbound and return selections as separate tickets.
+Checkout is a dedicated transactional flow with selected itinerary summary, payment fields, validation, and confirmation. A round trip is stored as two tickets. The server locks the flight, checks it is future-dated, checks capacity, and then inserts the ticket.
 
-### Flight Lock and Availability Check
-
-Before inserting a ticket, the app locks the selected flight row and checks that it is still a future flight. This prevents a user from buying a ticket for an old flight or racing against another purchase while seat availability is being checked.
+<p>
+  <img src="showcase-screenshots/02-customer-booking-confirmed.jpeg" alt="Customer booking confirmation" width="48%" />
+</p>
 
 > ```sql
-> select
->   f.base_price,
->   f.departure_datetime,
->   f.departure_datetime > now() as is_future,
->   airplane.number_of_seats
+> select f.base_price,
+>        f.departure_datetime,
+>        f.departure_datetime > now() as is_future,
+>        airplane.number_of_seats
 > from flight f
-> join airplane on airplane.airline_name = f.airline_name and airplane.airplane_id = f.airplane_id
+> join airplane on airplane.airline_name = f.airline_name
+>   and airplane.airplane_id = f.airplane_id
 > where f.airline_name = :airlineName
 >   and f.flight_number = :flightNumber
 >   and f.departure_datetime = :departureDatetime::text::timestamp
 > for update;
 > ```
 >
-> Locks the selected row from the `flight` table and joins `airplane` to read capacity before ticket purchase.
+> Locks the selected `flight` row and reads capacity from `airplane` before purchase.
 
 > ```sql
 > select count(*)::int as ticket_count
@@ -251,66 +196,50 @@ Before inserting a ticket, the app locks the selected flight row and checks that
 >   and departure_datetime = :departureDatetime;
 > ```
 >
-> Counts existing tickets from the `ticket` table for the selected flight so the app can compare sold tickets against airplane capacity.
-
-### Ticket Insert
+> Counts existing `ticket` rows for the flight so sold seats cannot exceed capacity.
 
 > ```sql
 > insert into ticket (
->   ticket_id,
->   customer_email,
->   airline_name,
->   flight_number,
->   departure_datetime,
->   purchase_datetime,
->   card_type,
->   card_number,
->   name_on_card,
->   card_expiration
+>   ticket_id, customer_email, airline_name, flight_number, departure_datetime,
+>   purchase_datetime, card_type, card_number, name_on_card, card_expiration
 > )
 > values (
->   :ticketId,
->   :customerEmail,
->   :airlineName,
->   :flightNumber,
->   :departureDatetime,
->   now(),
->   :cardType,
->   :cardNumber,
->   :nameOnCard,
->   :cardExpiration
+>   :ticketId, :customerEmail, :airlineName, :flightNumber,
+>   :departureDatetime::text::timestamp,
+>   now(), :cardType, :cardNumber, :nameOnCard, :cardExpiration
 > );
 > ```
 >
-> Inserts a ticket into the `ticket` table with the logged-in customer, selected flight identity, payment fields, and server-generated purchase timestamp.
+> Inserts a confirmed purchase into `ticket` with server-generated purchase time. The `departure_datetime` value is serialized back to SQL timestamp text before insertion so the ticket foreign key preserves the seeded flight row's second precision.
 
-## Customer Trips
+## Customer Trips and Reviews
 
-The trips page is the customer's travel history and upcoming itinerary page. It separates upcoming and past flights, displays status and timing clearly, and opens review actions only when the flight is eligible. The route is protected so staff accounts and anonymous users cannot see customer trip data.
+The trips page separates upcoming and past flights. Review controls appear only for completed purchased flights that have not already been reviewed.
+
+<p>
+  <img src="showcase-screenshots/03-customer-my-trips.png" alt="Customer trips page" width="32%" />
+  <img src="showcase-screenshots/04-customer-review-dialog.png" alt="Customer review dialog" width="32%" />
+  <img src="showcase-screenshots/05-customer-review-posted.png" alt="Posted customer review" width="32%" />
+</p>
+<p>
+  <img src="showcase-screenshots/06-customer-trips-filtered-past-review-state.png" alt="Filtered customer trip review state" width="48%" />
+</p>
 
 ### View My Flights
 
 > ```sql
-> select
->   flight_read_model.airline_name,
->   flight_read_model.airplane_id,
->   flight_read_model.flight_number,
->   flight_read_model.departure_datetime,
->   flight_read_model.arrival_datetime,
->   flight_read_model.departure_airport_code,
->   flight_read_model.departure_city,
->   flight_read_model.arrival_airport_code,
->   flight_read_model.arrival_city,
->   flight_read_model.base_price,
->   flight_read_model.status,
->   flight_read_model.ticket_count,
->   flight_read_model.available_seats,
->   flight_read_model.average_rating,
->   flight_read_model.review_count,
->   ticket.ticket_id,
->   ticket.purchase_datetime,
->   review.rating,
->   review.comment
+> select flight_read_model.airline_name,
+>        flight_read_model.flight_number,
+>        flight_read_model.departure_datetime,
+>        flight_read_model.arrival_datetime,
+>        flight_read_model.departure_city,
+>        flight_read_model.arrival_city,
+>        flight_read_model.base_price,
+>        flight_read_model.status,
+>        ticket.ticket_id,
+>        ticket.purchase_datetime,
+>        review.rating,
+>        review.comment
 > from ticket
 > join flight_read_model on flight_read_model.airline_name = ticket.airline_name
 >   and flight_read_model.flight_number = ticket.flight_number
@@ -322,16 +251,14 @@ The trips page is the customer's travel history and upcoming itinerary page. It 
 > where ticket.customer_email = :customerEmail
 >   and (:startDate::text is null or flight_read_model.departure_datetime >= :startDate::date)
 >   and (:endDate::text is null or flight_read_model.departure_datetime < :endDate::date + interval '1 day')
->   and (:sourceQuery::text is null or lower(flight_read_model.departure_city) like :sourceQuery or lower(flight_read_model.departure_airport_code) like :sourceQuery)
->   and (:destinationQuery::text is null or lower(flight_read_model.arrival_city) like :destinationQuery or lower(flight_read_model.arrival_airport_code) like :destinationQuery)
+>   and (:sourceQuery::text is null or lower(flight_read_model.departure_city) like :sourceQuery)
+>   and (:destinationQuery::text is null or lower(flight_read_model.arrival_city) like :destinationQuery)
 > order by flight_read_model.departure_datetime desc;
 > ```
 >
-> Lists the customer's tickets from the `ticket` table, enriches them through `flight_read_model`, and includes any matching `review` row so the page can split upcoming flights, past flights, and already-reviewed flights.
+> Lists a customer's purchased flights from `ticket`, enriched by `flight_read_model` and optional `review` data.
 
-### Submit a Review
-
-Customers can review only completed flights they purchased and have not already reviewed. The UI uses a focused responsive dialog/drawer with star rating and optional comment instead of placing review fields directly on every trip card.
+### Submit Review
 
 > ```sql
 > select ticket.departure_datetime
@@ -353,36 +280,29 @@ Customers can review only completed flights they purchased and have not already 
 > limit 1;
 > ```
 >
-> Checks the `ticket`, `flight`, and `review` tables to ensure the customer purchased the flight, the flight has arrived, and no prior review exists.
+> Checks `ticket`, `flight`, and `review` so only completed, purchased, unreviewed flights can be reviewed.
 
 > ```sql
 > insert into review (
->   customer_email,
->   airline_name,
->   flight_number,
->   departure_datetime,
->   rating,
->   comment,
->   review_datetime
+>   customer_email, airline_name, flight_number,
+>   departure_datetime, rating, comment, review_datetime
 > )
 > values (
->   :customerEmail,
->   :airlineName,
->   :flightNumber,
->   :departureDatetime,
->   :rating,
->   :comment,
->   now()
+>   :customerEmail, :airlineName, :flightNumber,
+>   :departureDatetime::text::timestamp, :rating, :comment, now()
 > );
 > ```
 >
-> Inserts a customer rating and optional comment into the `review` table with a server-generated review timestamp.
+> Inserts the customer rating and comment into `review`. The `departure_datetime` value is serialized back to SQL timestamp text before insertion so the review foreign key matches the exact flight timestamp.
 
 ## Customer Account
 
-Customer account pages keep profile, payment history, and security settings separate. This avoids turning the trips page into a crowded account dashboard and gives each task a clear surface.
+The account area separates profile, payment history, and security so trips do not become a crowded settings page.
 
-### View Profile
+<p>
+  <img src="showcase-screenshots/07-customer-profile.png" alt="Customer profile page" width="48%" />
+  <img src="showcase-screenshots/08-customer-security.png" alt="Customer security page" width="48%" />
+</p>
 
 > ```sql
 > select email, name, phone_number, building_number, street, city, state,
@@ -390,21 +310,13 @@ Customer account pages keep profile, payment history, and security settings sepa
 >        passport_country, date_of_birth::text as date_of_birth
 > from customer
 > where email = :customerEmail;
-> ```
 >
-> Reads the logged-in customer's editable profile fields from the `customer` table.
-
-### Update Profile Field
-
-> ```sql
 > update customer
 > set :column = :validatedValue
 > where email = :customerEmail;
 > ```
 >
-> Updates one validated editable profile field in the `customer` table for the logged-in customer.
-
-### Payment History
+> Reads and updates validated profile fields in `customer`.
 
 > ```sql
 > select distinct on (card_number) card_number, card_type, name_on_card, card_expiration
@@ -413,169 +325,60 @@ Customer account pages keep profile, payment history, and security settings sepa
 > order by card_number, card_expiration desc;
 > ```
 >
-> Lists previously used payment cards from the `ticket` table so customers can review their payment history without exposing unrelated ticket details.
-
-### Change Customer Password
+> Lists previously used payment cards from `ticket`.
 
 > ```sql
-> select password
-> from customer
-> where email = :customerEmail;
-> ```
+> select password from customer where email = :customerEmail;
 >
-> Fetches the current bcrypt password hash from the `customer` table before verifying the submitted current password.
-
-> ```sql
 > update customer
 > set password = :hashedPassword
 > where email = :customerEmail;
 > ```
 >
-> Updates the customer password in the `customer` table after bcrypt verification and hashing of the new password.
+> Checks and updates the customer's bcrypt password in `customer`.
 
-## Staff Authentication
+## Staff Dashboard and Reports
 
-Staff authentication is separate from customer authentication because staff users have different identities, permissions, redirects, and dashboards. Staff users log in by username and are scoped to their airline unless they have superadmin permissions.
+The staff dashboard uses a left-nav operations layout with dense tables, filters, charts, and role-aware actions. Normal staff are scoped to their airline through `airlineScope`; superadmins can view all airlines. Staff flight search also ensures `flight_read_model` exists before querying it.
 
-### Staff Login
+<p>
+  <img src="showcase-screenshots/35-staff-reports-ratings-count-3-of-3.jpeg" alt="Staff reports and ratings" width="48%" />
+  <img src="showcase-screenshots/34-staff-passengers-united-206-count-3-of-3.jpeg" alt="Staff passenger manifest" width="48%" />
+</p>
 
-> ```sql
-> select username, airline_name, email, first_name, last_name, password
-> from airline_staff
-> where lower(username) = lower(:username)
-> limit 1;
-> ```
->
-> Finds a staff account from the `airline_staff` table using case-insensitive username lookup before bcrypt password verification.
+
+### Flight, Fleet, and Review Overview
 
 > ```sql
-> insert into app_session (id, role, customer_email, staff_username, expires_at)
-> values (:sessionId, 'staff', null, :staffUsername, :expiresAt);
-> ```
->
-> Creates a persistent staff session in the `app_session` table after the submitted password matches the stored bcrypt hash.
-
-### Staff Registration
-
-Staff registration requires an existing airline, then creates the staff account and phone numbers in one transaction. The staff form is visually more compact than traveler signup because it belongs to an internal operations tool.
-
-> ```sql
-> select username, airline_name, email, first_name, last_name, password
-> from airline_staff
-> where lower(username) = lower(:username)
-> limit 1;
-> ```
->
-> Checks the `airline_staff` table for an existing username before creating a staff account.
-
-> ```sql
-> select name
-> from airline
-> where name = :airlineName
-> limit 1;
-> ```
->
-> Verifies the requested airline exists in the `airline` table before assigning a new staff account to it.
-
-> ```sql
-> insert into airline_staff (
->   username,
->   airline_name,
->   password,
->   first_name,
->   last_name,
->   date_of_birth,
->   email
-> )
-> values (
->   :username,
->   :airlineName,
->   :hashedPassword,
->   :firstName,
->   :lastName,
->   :dateOfBirth,
->   :email
-> );
-> ```
->
-> Inserts a staff account into the `airline_staff` table with a bcrypt-hashed password and airline assignment.
-
-> ```sql
-> insert into airline_staff_phone (username, phone_number)
-> values (:username, :phoneNumber);
-> ```
->
-> Inserts each staff phone number into the `airline_staff_phone` table inside the same registration transaction.
-
-## Staff Dashboard
-
-The staff dashboard is an operations workspace with left navigation, dense tables, filters, and role-aware actions. Normal staff are scoped to their own airline. Superadmins can manage all airlines and reference data.
-
-### Staff Flight Overview
-
-By default, staff see upcoming flights in the next 30 days. They can expand the range with date filters and narrow results by source or destination. This matches the course requirement while still making the dashboard useful as an operations screen.
-
-> ```sql
-> select
->   airline_name,
->   airplane_id,
->   flight_number,
->   departure_datetime,
->   arrival_datetime,
->   departure_airport_code,
->   departure_city,
->   arrival_airport_code,
->   arrival_city,
->   base_price,
->   status,
->   ticket_count,
->   available_seats,
->   average_rating,
->   review_count
+> select airline_name, airplane_id, flight_number,
+>        departure_datetime, arrival_datetime,
+>        departure_city, arrival_city, base_price,
+>        status, ticket_count, available_seats,
+>        average_rating, review_count
 > from flight_read_model
 > where (:airlineScope::text is null or airline_name = :airlineScope)
->   and (
->     (:startDate::text is null and :endDate::text is null and departure_datetime between now() and now() + make_interval(days => 30))
->     or (:startDate::text is not null and departure_datetime >= :startDate::date)
->   )
+>   and ((:startDate::text is null and :endDate::text is null
+>         and departure_datetime between now() and now() + make_interval(days => 30))
+>        or (:startDate::text is not null and departure_datetime >= :startDate::date))
 >   and (:endDate::text is null or departure_datetime < :endDate::date + interval '1 day')
->   and (:sourceQuery::text is null or lower(departure_city) like :sourceQuery or lower(departure_airport_code) like :sourceQuery)
->   and (:destinationQuery::text is null or lower(arrival_city) like :destinationQuery or lower(arrival_airport_code) like :destinationQuery)
 > order by departure_datetime asc;
 > ```
 >
-> Lists staff-visible flights from the `flight_read_model` view, scoped by `airlineScope` and filtered by optional date, source, and destination inputs.
-
-### Staff Fleet Overview
+> Lists staff-visible flights from `flight_read_model`, defaulting to the next 30 days.
 
 > ```sql
-> select airline_name, airplane_id, manufacturing_company, manufacturing_date::text as manufacturing_date, number_of_seats
+> select airline_name, airplane_id, manufacturing_company,
+>        manufacturing_date::text as manufacturing_date, number_of_seats
 > from airplane
 > where (:airlineScope::text is null or airline_name = :airlineScope)
 > order by airline_name asc, airplane_id asc;
 > ```
 >
-> Lists airplanes from the `airplane` table that the staff user is allowed to manage.
-
-### Staff Airport Reference Data
+> Lists manageable aircraft from `airplane`.
 
 > ```sql
-> select code, city, country
-> from airport
-> order by code asc;
-> ```
->
-> Lists airport reference rows from the `airport` table for staff flight creation and editing controls.
-
-### Staff Review Overview
-
-> ```sql
-> select
->   f.airline_name,
->   f.flight_number,
->   f.departure_datetime,
->   review.rating,
->   review.comment
+> select f.airline_name, f.flight_number, f.departure_datetime,
+>        review.rating, review.comment
 > from flight f
 > join review on review.airline_name = f.airline_name
 >   and review.flight_number = f.flight_number
@@ -584,101 +387,73 @@ By default, staff see upcoming flights in the next 30 days. They can expand the 
 > order by f.departure_datetime desc, review.review_datetime asc;
 > ```
 >
-> Lists review rows from the `review` table joined to `flight`, scoped by airline, so staff can see average ratings and customer comments by flight.
+> Lists flight reviews from `review` for staff rating summaries.
 
-### Ticket Sales Summary
+### Sales Reports
 
 > ```sql
-> select
->   count(*)::int as total_tickets,
->   count(*) filter (where purchase_datetime >= now() - interval '1 month')::int as last_month_tickets,
->   count(*) filter (where purchase_datetime >= now() - interval '1 year')::int as last_year_tickets
+> select count(*)::int as total_tickets,
+>        count(*) filter (where purchase_datetime >= now() - interval '1 month')::int as last_month_tickets,
+>        count(*) filter (where purchase_datetime >= now() - interval '1 year')::int as last_year_tickets
 > from ticket
 > where (:airlineScope::text is null or airline_name = :airlineScope);
-> ```
 >
-> Counts all, last-month, and last-year ticket sales from the `ticket` table for the current staff airline scope.
-
-### Monthly Sales Chart
-
-> ```sql
-> select
->   date_trunc('month', purchase_datetime)::text as month_start,
->   count(*)::int as tickets_sold
+> select date_trunc('month', purchase_datetime)::text as month_start,
+>        count(*)::int as tickets_sold
 > from ticket
 > where (:airlineScope::text is null or airline_name = :airlineScope)
 >   and purchase_datetime >= now() - interval '12 month'
 > group by date_trunc('month', purchase_datetime)
 > order by date_trunc('month', purchase_datetime) asc;
+>
+> select count(*)::int as tickets_sold
+> from ticket
+> where (:airlineScope::text is null or airline_name = :airlineScope)
+>   and purchase_datetime >= :startDate::date
+>   and purchase_datetime < :endDate::date + interval '1 day';
 > ```
 >
-> Groups ticket sales from the `ticket` table by purchase month for the staff dashboard's monthly sales chart.
+> Counts total, recent, monthly, and custom-range ticket sales from `ticket`.
 
 ## Staff Flight Management
 
-Staff can create flights, update flight fields, mark delays, and delete flights only when safe. The UI uses data tables and inline editing for quick operational changes, while server-side checks enforce airline permissions and relational safety.
+Staff can create flights, edit fields, update status, and delete flights when safe. The UI uses tables and inline editing, but server-side checks enforce permissions, airport validity, capacity, and dependency rules.
 
-### Create Flight
+<p>
+  <img src="showcase-screenshots/11-staff-flights-management.png" alt="Staff flights management" width="32%" />
+  <img src="showcase-screenshots/12-staff-flight-status-action.png" alt="Staff flight status action" width="32%" />
+  <img src="showcase-screenshots/12-staff-flight-status-delayed.png" alt="Delayed flight status result" width="32%" />
+</p>
+<p>
+  <img src="showcase-screenshots/13-staff-create-flight-dialog.png" alt="Staff create flight dialog" width="48%" />
+</p>
 
 > ```sql
-> select name
-> from airline
-> where name = :targetAirlineName
+> select name from airline where name = :airlineName limit 1;
+> select airplane_id from airplane
+> where airline_name = :airlineName and airplane_id = :airplaneId
 > limit 1;
-> ```
 >
-> Verifies the target airline exists in the `airline` table before staff can create a flight for it.
-
-> ```sql
-> select airplane_id
-> from airplane
-> where airline_name = :airlineName
->   and airplane_id = :airplaneId
-> limit 1;
-> ```
->
-> Checks the `airplane` table to ensure the selected airplane belongs to the airline receiving the new flight.
-
-> ```sql
 > insert into flight (
->   airline_name,
->   flight_number,
->   departure_datetime,
->   departure_airport_code,
->   arrival_airport_code,
->   arrival_datetime,
->   base_price,
->   status,
->   airplane_id
+>   airline_name, flight_number, departure_datetime,
+>   departure_airport_code, arrival_airport_code, arrival_datetime,
+>   base_price, status, airplane_id
 > )
 > values (
->   :airlineName,
->   :flightNumber,
->   :departureDatetime::text::timestamp,
->   :departureAirportCode,
->   :arrivalAirportCode,
->   :arrivalDatetime::text::timestamp,
->   :basePrice,
->   'on_time',
->   :airplaneId
+>   :airlineName, :flightNumber, :departureDatetime::text::timestamp,
+>   :departureAirportCode, :arrivalAirportCode, :arrivalDatetime::text::timestamp,
+>   :basePrice, 'on_time', :airplaneId
 > );
 > ```
 >
-> Inserts a new scheduled flight into the `flight` table after validating airline scope, airplane ownership, different airports, and arrival-after-departure timing.
-
-### Find Flight for Mutation
+> Creates a flight in `flight` after airline, airplane, airport, and time validation.
 
 > ```sql
-> select
->   airline_name,
->   flight_number,
->   departure_datetime,
->   departure_airport_code,
->   arrival_airport_code,
->   arrival_datetime,
->   base_price,
->   status,
->   airplane_id
+> select airline_name, flight_number,
+>        departure_datetime::text as departure_datetime,
+>        departure_airport_code, arrival_airport_code,
+>        arrival_datetime::text as arrival_datetime,
+>        base_price, status, airplane_id
 > from flight
 > where airline_name = :airlineName
 >   and flight_number = :flightNumber
@@ -686,199 +461,75 @@ Staff can create flights, update flight fields, mark delays, and delete flights 
 > limit 1;
 > ```
 >
-> Finds the exact flight row from the `flight` table before updates or deletes, after staff airline authorization is checked.
-
-### Update Flight Status
+> Finds the exact `flight` row before staff mutations. `departure_datetime` and `arrival_datetime` are selected as text so later mutation comparisons use consistent second-precision timestamp strings.
 
 > ```sql
-> update flight
-> set status = :status
-> where airline_name = :airlineName
->   and flight_number = :flightNumber
->   and departure_datetime = :departureDatetime;
+> update flight set status = :status where airline_name = :airlineName and flight_number = :flightNumber and departure_datetime = :departureDatetime::text::timestamp;
+> update flight set base_price = :basePrice where airline_name = :airlineName and flight_number = :flightNumber and departure_datetime = :departureDatetime::text::timestamp;
+> update flight set departure_airport_code = :code where airline_name = :airlineName and flight_number = :flightNumber and departure_datetime = :departureDatetime::text::timestamp;
+> update flight set arrival_airport_code = :code where airline_name = :airlineName and flight_number = :flightNumber and departure_datetime = :departureDatetime::text::timestamp;
+> update flight set departure_datetime = :newDeparture::text::timestamp where airline_name = :airlineName and flight_number = :flightNumber and departure_datetime = :oldDeparture::text::timestamp;
+> update flight set arrival_datetime = :newArrival::text::timestamp where airline_name = :airlineName and flight_number = :flightNumber and departure_datetime = :departureDatetime::text::timestamp;
 > ```
 >
-> Updates the `status` field in the `flight` table so staff can mark a flight as `on_time` or `delayed`.
-
-### Update Flight Price
+> Updates editable `flight` fields after validating status, airports, and time order. Staff flight mutation paths normalize `departure_datetime` with serialize/normalize timestamp forms and compare as `::text::timestamp`, which keeps second-precision primary key comparisons and flight foreign keys stable.
 
 > ```sql
-> update flight
-> set base_price = :basePrice
-> where airline_name = :airlineName
->   and flight_number = :flightNumber
->   and departure_datetime = :departureDatetime;
-> ```
->
-> Updates the `base_price` field in the `flight` table for the selected flight.
-
-### Update Flight Aircraft
-
-> ```sql
-> select
->   airplane.number_of_seats,
->   count(ticket.ticket_id)::int as ticket_count
+> select airplane.number_of_seats, count(ticket.ticket_id)::int as ticket_count
 > from airplane
-> left join ticket
->   on ticket.airline_name = :airlineName
+> left join ticket on ticket.airline_name = :airlineName
 >   and ticket.flight_number = :flightNumber
 >   and ticket.departure_datetime = :departureDatetime::text::timestamp
 > where airplane.airline_name = :airlineName
 >   and airplane.airplane_id = :airplaneId
 > group by airplane.number_of_seats
 > limit 1;
-> ```
 >
-> Checks the `airplane` and `ticket` tables to ensure the replacement aircraft belongs to the airline and has enough seats for tickets already sold.
-
-> ```sql
 > update flight
 > set airplane_id = :airplaneId
 > where airline_name = :airlineName
 >   and flight_number = :flightNumber
->   and departure_datetime = :departureDatetime;
+>   and departure_datetime = :departureDatetime::text::timestamp;
 > ```
 >
-> Updates the `airplane_id` field in the `flight` table after capacity and airline ownership checks pass.
-
-### Update Flight Airports
+> Changes a flight aircraft only if the new `airplane` has enough seats for sold `ticket` rows.
 
 > ```sql
-> select code
-> from airport
-> where code = :airportCode
-> limit 1;
-> ```
+> select exists (select 1 from ticket where airline_name = :airlineName and flight_number = :flightNumber and departure_datetime = :departureDatetime::text::timestamp) as has_tickets,
+>        exists (select 1 from review where airline_name = :airlineName and flight_number = :flightNumber and departure_datetime = :departureDatetime::text::timestamp) as has_reviews;
 >
-> Checks the `airport` table to ensure a replacement departure or arrival airport exists.
-
-> ```sql
-> update flight
-> set departure_airport_code = :departureAirportCode
-> where airline_name = :airlineName
->   and flight_number = :flightNumber
->   and departure_datetime = :departureDatetime;
-> ```
->
-> Updates the departure airport in the `flight` table after confirming it differs from the arrival airport.
-
-> ```sql
-> update flight
-> set arrival_airport_code = :arrivalAirportCode
-> where airline_name = :airlineName
->   and flight_number = :flightNumber
->   and departure_datetime = :departureDatetime;
-> ```
->
-> Updates the arrival airport in the `flight` table after confirming it differs from the departure airport.
-
-### Update Flight Times
-
-> ```sql
-> update flight
-> set departure_datetime = :newDepartureDatetime::text::timestamp
-> where airline_name = :airlineName
->   and flight_number = :flightNumber
->   and departure_datetime = :oldDepartureDatetime;
-> ```
->
-> Updates the departure timestamp in the `flight` table after confirming it remains before arrival time.
-
-> ```sql
-> update flight
-> set arrival_datetime = :arrivalDatetime::text::timestamp
-> where airline_name = :airlineName
->   and flight_number = :flightNumber
->   and departure_datetime = :departureDatetime;
-> ```
->
-> Updates the arrival timestamp in the `flight` table after confirming it remains after departure time.
-
-### Delete Flight
-
-> ```sql
-> select
->   exists (
->     select 1
->     from ticket
->     where ticket.airline_name = :airlineName
->       and ticket.flight_number = :flightNumber
->       and ticket.departure_datetime = :departureDatetime
->   ) as has_tickets,
->   exists (
->     select 1
->     from review
->     where review.airline_name = :airlineName
->       and review.flight_number = :flightNumber
->       and review.departure_datetime = :departureDatetime
->   ) as has_reviews;
-> ```
->
-> Checks the `ticket` and `review` tables before deleting a flight so flights with dependent purchases or reviews are protected.
-
-> ```sql
 > delete from flight
 > where airline_name = :airlineName
 >   and flight_number = :flightNumber
->   and departure_datetime = :departureDatetime;
+>   and departure_datetime = :departureDatetime::text::timestamp;
 > ```
 >
-> Deletes a flight from the `flight` table only when no tickets or reviews depend on it.
+> Deletes a `flight` only when no `ticket` or `review` rows depend on it.
 
-## Staff Fleet Management
+## Staff Fleet and Passenger Manifest
 
-Fleet management lets staff add airplanes, edit aircraft metadata, and delete unused aircraft. The page is a staff operations table rather than a simple form, so staff can scan aircraft and manage them in place.
+Fleet management lets staff add, edit, and delete airplanes. The manifest page lists customers on a selected flight.
 
-### Add Airplane
+<p>
+  <img src="showcase-screenshots/14-staff-fleet-table-count-3-of-3.png" alt="Staff fleet table" width="48%" />
+  <img src="showcase-screenshots/15-staff-add-airplane-dialog.png" alt="Staff add airplane dialog" width="48%" />
+</p>
 
 > ```sql
-> insert into airplane (
->   airline_name,
->   airplane_id,
->   number_of_seats,
->   manufacturing_company,
->   manufacturing_date
-> )
-> values (
->   :airlineName,
->   :airplaneId,
->   :numberOfSeats,
->   :manufacturingCompany,
->   :manufacturingDate
-> );
+> insert into airplane (airline_name, airplane_id, number_of_seats, manufacturing_company, manufacturing_date)
+> values (:airlineName, :airplaneId, :numberOfSeats, :manufacturingCompany, :manufacturingDate);
+>
+> update airplane set manufacturing_company = :company where airline_name = :airlineName and airplane_id = :airplaneId;
+> update airplane set manufacturing_date = :date where airline_name = :airlineName and airplane_id = :airplaneId;
+> update airplane set number_of_seats = :numberOfSeats where airline_name = :airlineName and airplane_id = :airplaneId;
 > ```
 >
-> Inserts a new airplane into the `airplane` table for the staff user's permitted airline scope.
-
-### Update Airplane Manufacturer
-
-> ```sql
-> update airplane
-> set manufacturing_company = :manufacturingCompany
-> where airline_name = :airlineName
->   and airplane_id = :airplaneId;
-> ```
->
-> Updates the `manufacturing_company` field in the `airplane` table after staff airline authorization.
-
-### Update Airplane Manufacturing Date
-
-> ```sql
-> update airplane
-> set manufacturing_date = :manufacturingDate
-> where airline_name = :airlineName
->   and airplane_id = :airplaneId;
-> ```
->
-> Updates the `manufacturing_date` field in the `airplane` table after staff airline authorization.
-
-### Update Airplane Seat Count
+> Creates and updates `airplane` records after staff airline authorization and seat-count validation.
 
 > ```sql
 > select coalesce(max(ticket_counts.ticket_count), 0)::int as max_tickets
 > from airplane
-> left join flight
->   on flight.airline_name = airplane.airline_name
+> left join flight on flight.airline_name = airplane.airline_name
 >   and flight.airplane_id = airplane.airplane_id
 > left join lateral (
 >   select count(*)::int as ticket_count
@@ -891,47 +542,26 @@ Fleet management lets staff add airplanes, edit aircraft metadata, and delete un
 >   and airplane.airplane_id = :airplaneId;
 > ```
 >
-> Finds the largest sold-ticket count for flights assigned to an airplane so seat count cannot be reduced below existing commitments.
-
-> ```sql
-> update airplane
-> set number_of_seats = :numberOfSeats
-> where airline_name = :airlineName
->   and airplane_id = :airplaneId;
-> ```
->
-> Updates the `number_of_seats` field in the `airplane` table after capacity safety checks pass.
-
-### Delete Airplane
+> Finds the maximum sold-ticket count before lowering an airplane's seat count.
 
 > ```sql
 > select count(*)::int as flight_count
 > from flight
 > where airline_name = :airlineName
 >   and airplane_id = :airplaneId;
-> ```
 >
-> Counts flights from the `flight` table that still use the airplane before deletion.
-
-> ```sql
 > delete from airplane
 > where airline_name = :airlineName
 >   and airplane_id = :airplaneId;
 > ```
 >
-> Deletes an airplane from the `airplane` table only when no flights are assigned to it.
-
-## Passenger Manifest
-
-The passenger manifest page lets staff choose a flight and see the customers who bought tickets for it. This supports operational tasks such as checking bookings, reviewing passenger identity, and preparing flight manifests.
+> Deletes an `airplane` only when no `flight` rows use it.
 
 > ```sql
-> select
->   ticket.ticket_id,
->   ticket.customer_email,
->   customer.name as customer_name,
->   customer.passport_number,
->   ticket.purchase_datetime
+> select ticket.ticket_id, ticket.customer_email,
+>        customer.name as customer_name,
+>        customer.passport_number,
+>        ticket.purchase_datetime
 > from ticket
 > join customer on customer.email = ticket.customer_email
 > where ticket.airline_name = :airlineName
@@ -940,29 +570,18 @@ The passenger manifest page lets staff choose a flight and see the customers who
 > order by ticket.purchase_datetime asc;
 > ```
 >
-> Lists passengers from the `ticket` table joined to `customer` for a selected flight that staff are authorized to manage.
-
-## Staff Reports
-
-The reports page supports both fixed summaries and custom date-range reporting. It gives staff a clear operational view of sales activity without exposing unrelated airlines to normal staff accounts.
-
-### Custom Date-Range Report
-
-> ```sql
-> select count(*)::int as tickets_sold
-> from ticket
-> where (:airlineScope::text is null or airline_name = :airlineScope)
->   and purchase_datetime >= :startDate::date
->   and purchase_datetime < :endDate::date + interval '1 day';
-> ```
->
-> Counts tickets sold from the `ticket` table for a staff-selected inclusive date range and permitted airline scope.
+> Lists passengers from `ticket` joined to `customer` for an authorized flight.
 
 ## Staff Profile and Security
 
-Staff profile pages let staff view and edit their own staff information separately from superadmin staff management. This prevents normal staff from accidentally editing fields that only administrators should control.
-
-### View Staff Profile
+<p>
+  <img src="showcase-screenshots/27-staff-profile-multi-phone-before-save.jpeg" alt="Staff profile phones before save" width="32%" />
+  <img src="showcase-screenshots/28-staff-profile-multi-phone-after-save.jpeg" alt="Staff profile phones after save" width="32%" />
+  <img src="showcase-screenshots/29-staff-profile-three-phone-dialog-before-save.jpeg" alt="Staff profile three-phone dialog" width="32%" />
+</p>
+<p>
+  <img src="showcase-screenshots/30-staff-profile-three-phone-after-save.jpeg" alt="Staff profile three-phone saved" width="48%" />
+</p>
 
 > ```sql
 > select username, airline_name, first_name, last_name, email,
@@ -970,152 +589,73 @@ Staff profile pages let staff view and edit their own staff information separate
 > from airline_staff
 > where username = :staffUsername
 > limit 1;
-> ```
 >
-> Reads the logged-in staff user's core profile from the `airline_staff` table.
-
-> ```sql
 > select phone_number
 > from airline_staff_phone
 > where username = :staffUsername
 > order by phone_number asc;
 > ```
 >
-> Lists the logged-in staff user's phone numbers from the `airline_staff_phone` table.
-
-### Update Staff Profile Field
+> Reads the logged-in staff profile from `airline_staff` and `airline_staff_phone`.
 
 > ```sql
 > update airline_staff
 > set :column = :validatedValue
 > where username = :staffUsername;
+>
+> delete from airline_staff_phone where username = :staffUsername;
+> insert into airline_staff_phone (username, phone_number) values (:staffUsername, :phoneNumber);
 > ```
 >
-> Updates an editable staff profile field in the `airline_staff` table for the logged-in staff user.
-
-### Replace Own Staff Phone Numbers
+> Updates staff profile fields and replaces phone numbers in the staff tables. After phone saves, the UI invalidates the React Query `['staff-profile']` cache before router invalidation so the staff profile screen refreshes from the saved database state.
 
 > ```sql
-> delete from airline_staff_phone
-> where username = :staffUsername;
+> select password from airline_staff where username = :staffUsername;
+> update airline_staff set password = :hashedPassword where username = :staffUsername;
 > ```
 >
-> Clears old phone numbers from the `airline_staff_phone` table before replacing them with the submitted list.
+> Checks and updates the staff bcrypt password in `airline_staff`.
+
+## Superadmin Management
+
+Superadmin screens manage system-wide reference and account data. Normal staff do not see these pages.
+
+<p>
+  <img src="showcase-screenshots/18-staff-airlines-table-count-1-of-1.png" alt="Superadmin airlines table" width="32%" />
+  <img src="showcase-screenshots/19-staff-create-airline-dialog.png" alt="Superadmin create airline dialog" width="32%" />
+  <img src="showcase-screenshots/20-staff-airports-table-count-8-of-8.png" alt="Superadmin airports table" width="32%" />
+</p>
+<p>
+  <img src="showcase-screenshots/21-staff-create-airport-dialog.png" alt="Superadmin create airport dialog" width="32%" />
+  <img src="showcase-screenshots/22-staff-staff-table-count-2-of-2.png" alt="Superadmin staff table" width="32%" />
+  <img src="showcase-screenshots/33-staff-customers-table-count-3-of-3.jpeg" alt="Superadmin customers table" width="32%" />
+</p>
+<p>
+  <img src="showcase-screenshots/23-staff-table-multi-phone-panel-existing-2.png" alt="Staff table multi-phone panel" width="32%" />
+  <img src="showcase-screenshots/24-staff-table-multi-phone-panel-added-third.png" alt="Staff table add third phone" width="32%" />
+  <img src="showcase-screenshots/25-staff-table-multi-phone-saved-third.png" alt="Staff table saved third phone" width="32%" />
+</p>
+<p>
+  <img src="showcase-screenshots/32-staff-table-three-phone-dialog.jpeg" alt="Staff table three-phone dialog" width="48%" />
+</p>
+
+### Airlines and Airports
 
 > ```sql
-> insert into airline_staff_phone (username, phone_number)
-> values (:staffUsername, :phoneNumber);
+> select name from airline order by name asc;
+> insert into airline (name) values (:name);
+> update airline set name = :newName where name = :oldName;
+> delete from airline where name = :name;
+>
+> select code, city, country, airport_type from airport order by code asc;
+> insert into airport (code, city, country, airport_type) values (:code, :city, :country, :airportType);
+> update airport set :column = :value where code = :code;
+> delete from airport where code = :code;
 > ```
 >
-> Inserts each replacement phone number into the `airline_staff_phone` table.
+> Lists, creates, updates, and deletes `airline` and `airport` reference records.
 
-### Change Staff Password
-
-> ```sql
-> select password
-> from airline_staff
-> where username = :staffUsername;
-> ```
->
-> Fetches the current bcrypt password hash from the `airline_staff` table before verifying the submitted current password.
-
-> ```sql
-> update airline_staff
-> set password = :hashedPassword
-> where username = :staffUsername;
-> ```
->
-> Updates the staff password in the `airline_staff` table after bcrypt verification and hashing of the new password.
-
-## Superadmin Airline Management
-
-Superadmin pages are intentionally separated from normal staff operations. A normal staff member manages flights and fleet for their airline; a superadmin can manage system-wide reference records.
-
-### List Airlines
-
-> ```sql
-> select name
-> from airline
-> order by name asc;
-> ```
->
-> Lists airline records from the `airline` table for the superadmin airline management page.
-
-### Create Airline
-
-> ```sql
-> insert into airline (name)
-> values (:name);
-> ```
->
-> Inserts a new airline into the `airline` table.
-
-### Rename Airline
-
-> ```sql
-> update airline
-> set name = :newName
-> where name = :oldName;
-> ```
->
-> Updates an airline name in the `airline` table.
-
-### Delete Airline
-
-> ```sql
-> delete from airline
-> where name = :name;
-> ```
->
-> Deletes an airline from the `airline` table when database constraints allow it.
-
-## Superadmin Airport Management
-
-Airport management controls the reference data used by public search, flight creation, flight editing, and airport comboboxes. The table UI supports quick scanning and inline edits.
-
-### List Airports
-
-> ```sql
-> select code, city, country, airport_type
-> from airport
-> order by code asc;
-> ```
->
-> Lists airport records from the `airport` table for superadmin management.
-
-### Create Airport
-
-> ```sql
-> insert into airport (code, city, country, airport_type)
-> values (:code, :city, :country, :airportType);
-> ```
->
-> Inserts a new airport into the `airport` table with code, city, country, and airport type.
-
-### Update Airport Field
-
-> ```sql
-> update airport
-> set :column = :value
-> where code = :code;
-> ```
->
-> Updates one editable airport field in the `airport` table after validating the requested field and value.
-
-### Delete Airport
-
-> ```sql
-> delete from airport
-> where code = :code;
-> ```
->
-> Deletes an airport from the `airport` table when database constraints allow it.
-
-## Superadmin Staff Management
-
-Superadmin staff management lets an administrator browse staff accounts, edit their assignment or contact details, replace phone numbers, and delete staff accounts. The page groups phone numbers so one staff account remains one visible row even when it has multiple phone records.
-
-### List Staff
+### Staff Accounts
 
 > ```sql
 > select airline_staff.username,
@@ -1127,66 +667,16 @@ Superadmin staff management lets an administrator browse staff accounts, edit th
 > from airline_staff
 > left join airline_staff_phone on airline_staff_phone.username = airline_staff.username
 > order by airline_staff.username asc, airline_staff_phone.phone_number asc;
+>
+> update airline_staff set :column = :validatedValue where username = :username;
+> delete from airline_staff_phone where username = :username;
+> insert into airline_staff_phone (username, phone_number) values (:username, :phoneNumber);
+> delete from airline_staff where username = :username;
 > ```
 >
-> Lists staff accounts from `airline_staff` and related phone numbers from `airline_staff_phone` for superadmin browsing and editing.
+> Lists, edits, replaces phone numbers for, and deletes staff accounts using `airline_staff` and `airline_staff_phone`.
 
-### Update Staff Field
-
-> ```sql
-> select name
-> from airline
-> where name = :airlineName
-> limit 1;
-> ```
->
-> Checks the `airline` table before changing a staff member's airline assignment.
-
-> ```sql
-> update airline_staff
-> set :column = :validatedValue
-> where username = :username;
-> ```
->
-> Updates one staff field in the `airline_staff` table after superadmin validation.
-
-### Replace Staff Phone Numbers
-
-> ```sql
-> delete from airline_staff_phone
-> where username = :username;
-> ```
->
-> Clears existing managed staff phone numbers from the `airline_staff_phone` table.
-
-> ```sql
-> insert into airline_staff_phone (username, phone_number)
-> values (:username, :phoneNumber);
-> ```
->
-> Inserts each replacement phone number into the `airline_staff_phone` table for the managed staff account.
-
-### Delete Staff
-
-> ```sql
-> delete from airline_staff_phone
-> where username = :username;
-> ```
->
-> Deletes a staff member's phone rows from the `airline_staff_phone` table before deleting the staff account.
-
-> ```sql
-> delete from airline_staff
-> where username = :username;
-> ```
->
-> Deletes the staff account from the `airline_staff` table.
-
-## Superadmin Customer Management
-
-Superadmin customer management is for oversight and data correction. It lists customer records, allows validated field edits, and prevents deleting customers who already have tickets or reviews.
-
-### List Customers
+### Customer Accounts
 
 > ```sql
 > select email, name, phone_number, date_of_birth::text as date_of_birth,
@@ -1195,70 +685,39 @@ Superadmin customer management is for oversight and data correction. It lists cu
 >        passport_country
 > from customer
 > order by name asc;
+>
+> update customer set :column = :validatedValue where email = :email;
+>
+> select exists (select 1 from ticket where customer_email = :email) as has_tickets,
+>        exists (select 1 from review where customer_email = :email) as has_reviews;
+>
+> delete from customer where email = :email;
 > ```
 >
-> Lists customer records from the `customer` table for superadmin browsing and editing.
-
-### Update Managed Customer Field
-
-> ```sql
-> update customer
-> set :column = :validatedValue
-> where email = :email;
-> ```
->
-> Updates one validated customer field in the `customer` table from the superadmin customer management page.
-
-### Delete Customer
-
-> ```sql
-> select
->   exists (
->     select 1
->     from ticket
->     where ticket.customer_email = :email
->   ) as has_tickets,
->   exists (
->     select 1
->     from review
->     where review.customer_email = :email
->   ) as has_reviews;
-> ```
->
-> Checks the `ticket` and `review` tables before deleting a customer so purchase and review history is not orphaned.
-
-> ```sql
-> delete from customer
-> where email = :email;
-> ```
->
-> Deletes a customer from the `customer` table only when no tickets or reviews depend on the account.
+> Lists, edits, and deletes `customer` records, while preventing deletion when `ticket` or `review` history exists.
 
 ## Shared Read Model
 
-Several pages use `flight_read_model`, a database view that centralizes flight display data, airport city names, seat availability, ticket counts, and review statistics. This keeps search, trips, and staff dashboards consistent.
+`flight_read_model` centralizes the flight display data used by public search, customer trips, and staff dashboards. It is defined in `seed.sql`, created/replaced at runtime in `src/lib/db.ts`, and used by the public and staff flight search paths. `status` stays `varchar(20)`, not `text`, so replacing an existing PostgreSQL view does not fail with a column type-change error.
 
 > ```sql
 > create view flight_read_model as
-> select
->   flight.airline_name,
->   flight.flight_number,
->   flight.departure_datetime,
->   flight.arrival_datetime,
->   flight.departure_airport_code,
->   departure_airport.city as departure_city,
->   departure_airport.country as departure_country,
->   flight.arrival_airport_code,
->   arrival_airport.city as arrival_city,
->   arrival_airport.country as arrival_country,
->   flight.airplane_id,
->   airplane.number_of_seats,
->   flight.base_price,
->   flight.status,
->   coalesce(ticket_counts.ticket_count, 0)::integer as ticket_count,
->   greatest(airplane.number_of_seats - coalesce(ticket_counts.ticket_count, 0), 0)::integer as available_seats,
->   review_stats.average_rating,
->   coalesce(review_stats.review_count, 0)::integer as review_count
+> select flight.airline_name,
+>        flight.flight_number,
+>        flight.departure_datetime,
+>        flight.arrival_datetime,
+>        flight.departure_airport_code,
+>        departure_airport.city as departure_city,
+>        flight.arrival_airport_code,
+>        arrival_airport.city as arrival_city,
+>        flight.airplane_id,
+>        airplane.number_of_seats,
+>        flight.base_price,
+>        flight.status::varchar(20) as status,
+>        coalesce(ticket_counts.ticket_count, 0)::integer as ticket_count,
+>        greatest(airplane.number_of_seats - coalesce(ticket_counts.ticket_count, 0), 0)::integer as available_seats,
+>        review_stats.average_rating,
+>        coalesce(review_stats.review_count, 0)::integer as review_count
 > from flight
 > join airport as departure_airport on departure_airport.code = flight.departure_airport_code
 > join airport as arrival_airport on arrival_airport.code = flight.arrival_airport_code
@@ -1272,12 +731,9 @@ Several pages use `flight_read_model`, a database view that centralizes flight d
 >   and ticket_counts.flight_number = flight.flight_number
 >   and ticket_counts.departure_datetime = flight.departure_datetime
 > left join (
->   select
->     airline_name,
->     flight_number,
->     departure_datetime,
->     round(avg(rating)::numeric, 1)::float8 as average_rating,
->     count(*)::integer as review_count
+>   select airline_name, flight_number, departure_datetime,
+>          round(avg(rating)::numeric, 1)::float8 as average_rating,
+>          count(*)::integer as review_count
 >   from review
 >   group by airline_name, flight_number, departure_datetime
 > ) as review_stats on review_stats.airline_name = flight.airline_name
@@ -1285,4 +741,4 @@ Several pages use `flight_read_model`, a database view that centralizes flight d
 >   and review_stats.departure_datetime = flight.departure_datetime;
 > ```
 >
-> Combines `flight`, `airport`, `airplane`, `ticket`, and `review` data into a reusable read model for search, trip history, and staff dashboard pages.
+> Combines `flight`, `airport`, `airplane`, `ticket`, and `review` into one reusable flight read model. `ticket` and `review` are aggregated first, then left-joined, so search and dashboard pages get ticket counts, available seats, average rating, and review count from one consistent view.
