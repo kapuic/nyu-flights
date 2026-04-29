@@ -1252,9 +1252,20 @@ export async function createAirportInternal(data: {
   return { message: `Airport ${data.code} created.` };
 }
 const AIRPORT_FIELD_UPDATES = {
-  airportType: { column: "airport_type", validate: (value: string) => value.toLowerCase() },
-  city: { column: "city", validate: (value: string) => value.trim() },
-  country: { column: "country", validate: (value: string) => value.trim() },
+  airportType: {
+    validate: (value: string) => value.toLowerCase(),
+    update: (code: string, value: string) =>
+      db`update airport set airport_type = ${value} where code = ${code}`,
+  },
+  city: {
+    validate: (value: string) => value.trim(),
+    update: (code: string, value: string) => db`update airport set city = ${value} where code = ${code}`,
+  },
+  country: {
+    validate: (value: string) => value.trim(),
+    update: (code: string, value: string) =>
+      db`update airport set country = ${value} where code = ${code}`,
+  },
 } as const;
 
 export async function updateAirportFieldInternal(data: {
@@ -1270,11 +1281,7 @@ export async function updateAirportFieldInternal(data: {
     return { error: "Choose a valid airport type." };
   }
 
-  await db`
-    update airport
-    set ${db(entry.column)} = ${value}
-    where code = ${data.code}
-  `;
+  await entry.update(data.code, value);
   return { message: `Airport ${data.code} updated.` };
 }
 
@@ -1335,30 +1342,37 @@ export async function listAllStaffInternal() {
   return Object.values(staffByUsername);
 }
 const STAFF_FIELD_UPDATES = {
-  airlineName: { column: "airline_name", validate: (value: string) => value.trim() },
+  airlineName: {
+    validate: (value: string) => value.trim(),
+    update: (username: string, value: string) =>
+      db`update airline_staff set airline_name = ${value} where username = ${username}`,
+  },
   email: {
-    column: "email",
     validate: (value: string) => {
       const email = value.trim();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Use a valid email address.");
       return email;
     },
+    update: (username: string, value: string) =>
+      db`update airline_staff set email = ${value} where username = ${username}`,
   },
   firstName: {
-    column: "first_name",
     validate: (value: string) => {
       const result = customerFieldValidators.name.safeParse(value);
       if (!result.success) throw new Error(result.error.issues[0].message);
       return result.data;
     },
+    update: (username: string, value: string) =>
+      db`update airline_staff set first_name = ${value} where username = ${username}`,
   },
   lastName: {
-    column: "last_name",
     validate: (value: string) => {
       const result = customerFieldValidators.name.safeParse(value);
       if (!result.success) throw new Error(result.error.issues[0].message);
       return result.data;
     },
+    update: (username: string, value: string) =>
+      db`update airline_staff set last_name = ${value} where username = ${username}`,
   },
 } as const;
 
@@ -1374,7 +1388,6 @@ export async function updateStaffFieldInternal(data: {
   value: string;
 }) {
   await requireSuperadmin();
-  const entry = STAFF_FIELD_UPDATES[data.field];
   const validated = validateStaffFieldUpdate(data.field, data.value);
 
   if (data.field === "airlineName") {
@@ -1387,11 +1400,7 @@ export async function updateStaffFieldInternal(data: {
     if (!airlineRows.length) return { error: "Choose a valid airline." };
   }
 
-  await db`
-    update airline_staff
-    set ${db(entry.column)} = ${validated}
-    where username = ${data.username}
-  `;
+  await STAFF_FIELD_UPDATES[data.field].update(data.username, validated);
 
   return { message: `Staff "${data.username}" updated.` };
 }
@@ -1456,76 +1465,85 @@ export async function deleteCustomerInternal(data: { email: string }) {
 }
 const MANAGED_CUSTOMER_FIELD_UPDATES = {
   buildingNumber: {
-    column: "building_number",
     validate: (value: string) => {
       const result = customerFieldValidators.buildingNumber.safeParse(value);
       if (!result.success) throw new Error(result.error.issues[0].message);
       return result.data;
     },
+    update: (email: string, value: string) =>
+      db`update customer set building_number = ${value} where email = ${email}`,
   },
   city: {
-    column: "city",
     validate: (value: string) => {
       const result = customerFieldValidators.city.safeParse(value);
       if (!result.success) throw new Error(result.error.issues[0].message);
       return result.data;
     },
+    update: (email: string, value: string) =>
+      db`update customer set city = ${value} where email = ${email}`,
   },
   name: {
-    column: "name",
     validate: (value: string) => {
       const result = customerFieldValidators.name.safeParse(value);
       if (!result.success) throw new Error(result.error.issues[0].message);
       return result.data;
     },
+    update: (email: string, value: string) =>
+      db`update customer set name = ${value} where email = ${email}`,
   },
   passportCountry: {
-    column: "passport_country",
     validate: (value: string) => {
       const result = customerFieldValidators.passportCountry.safeParse(value);
       if (!result.success) throw new Error(result.error.issues[0].message);
       return result.data;
     },
+    update: (email: string, value: string) =>
+      db`update customer set passport_country = ${value} where email = ${email}`,
   },
   passportExpiration: {
-    column: "passport_expiration",
     validate: (value: string) => {
       const result = customerFieldValidators.passportExpiration.safeParse(value);
       if (!result.success) throw new Error(result.error.issues[0].message);
       return result.data;
     },
+    update: (email: string, value: string) =>
+      db`update customer set passport_expiration = ${value} where email = ${email}`,
   },
   passportNumber: {
-    column: "passport_number",
     validate: (value: string) => {
       const result = customerFieldValidators.passportNumber.safeParse(value);
       if (!result.success) throw new Error(result.error.issues[0].message);
       return result.data;
     },
+    update: (email: string, value: string) =>
+      db`update customer set passport_number = ${value} where email = ${email}`,
   },
   phoneNumber: {
-    column: "phone_number",
     validate: (value: string) => {
       const result = customerFieldValidators.phoneNumber.safeParse(value);
       if (!result.success) throw new Error(result.error.issues[0].message);
       return result.data;
     },
+    update: (email: string, value: string) =>
+      db`update customer set phone_number = ${value} where email = ${email}`,
   },
   state: {
-    column: "state",
     validate: (value: string) => {
       const result = customerFieldValidators.state.safeParse(value);
       if (!result.success) throw new Error(result.error.issues[0].message);
       return result.data;
     },
+    update: (email: string, value: string) =>
+      db`update customer set state = ${value} where email = ${email}`,
   },
   street: {
-    column: "street",
     validate: (value: string) => {
       const result = customerFieldValidators.street.safeParse(value);
       if (!result.success) throw new Error(result.error.issues[0].message);
       return result.data;
     },
+    update: (email: string, value: string) =>
+      db`update customer set street = ${value} where email = ${email}`,
   },
 } as const;
 
@@ -1537,11 +1555,7 @@ export async function updateManagedCustomerFieldInternal(data: {
   await requireSuperadmin();
   const entry = MANAGED_CUSTOMER_FIELD_UPDATES[data.field];
   const validated = entry.validate(data.value);
-  await db`
-    update customer
-    set ${db(entry.column)} = ${validated}
-    where email = ${data.email}
-  `;
+  await entry.update(data.email, validated);
   return { message: `Customer "${data.email}" updated.` };
 }
 
@@ -1585,79 +1599,90 @@ export async function getCustomerProfileInternal() {
 }
 
 const EDITABLE_CUSTOMER_FIELDS: Partial<
-  Record<string, { column: string; validate: (v: string) => string }>
+  Record<
+    string,
+    {
+      validate: (v: string) => string;
+      update: (email: string, value: string) => Promise<unknown>;
+    }
+  >
 > = {
   buildingNumber: {
-    column: "building_number",
     validate: (v) => {
       const r = customerFieldValidators.buildingNumber.safeParse(v);
       if (!r.success) throw new Error(r.error.issues[0].message);
       return r.data;
     },
+    update: (email, value) =>
+      db`update customer set building_number = ${value} where email = ${email}`,
   },
   city: {
-    column: "city",
     validate: (v) => {
       const r = customerFieldValidators.city.safeParse(v);
       if (!r.success) throw new Error(r.error.issues[0].message);
       return r.data;
     },
+    update: (email, value) => db`update customer set city = ${value} where email = ${email}`,
   },
   name: {
-    column: "name",
     validate: (v) => {
       const r = customerFieldValidators.name.safeParse(v);
       if (!r.success) throw new Error(r.error.issues[0].message);
       return r.data;
     },
+    update: (email, value) => db`update customer set name = ${value} where email = ${email}`,
   },
   passportCountry: {
-    column: "passport_country",
     validate: (v) => {
       const r = customerFieldValidators.passportCountry.safeParse(v);
       if (!r.success) throw new Error(r.error.issues[0].message);
       return r.data;
     },
+    update: (email, value) =>
+      db`update customer set passport_country = ${value} where email = ${email}`,
   },
   passportExpiration: {
-    column: "passport_expiration",
     validate: (v) => {
       const r = customerFieldValidators.passportExpiration.safeParse(v);
       if (!r.success) throw new Error(r.error.issues[0].message);
       return r.data;
     },
+    update: (email, value) =>
+      db`update customer set passport_expiration = ${value} where email = ${email}`,
   },
   passportNumber: {
-    column: "passport_number",
     validate: (v) => {
       const r = customerFieldValidators.passportNumber.safeParse(v);
       if (!r.success) throw new Error(r.error.issues[0].message);
       return r.data;
     },
+    update: (email, value) =>
+      db`update customer set passport_number = ${value} where email = ${email}`,
   },
   phoneNumber: {
-    column: "phone_number",
     validate: (v) => {
       const r = customerFieldValidators.phoneNumber.safeParse(v);
       if (!r.success) throw new Error(r.error.issues[0].message);
       return r.data;
     },
+    update: (email, value) =>
+      db`update customer set phone_number = ${value} where email = ${email}`,
   },
   state: {
-    column: "state",
     validate: (v) => {
       const r = customerFieldValidators.state.safeParse(v);
       if (!r.success) throw new Error(r.error.issues[0].message);
       return r.data;
     },
+    update: (email, value) => db`update customer set state = ${value} where email = ${email}`,
   },
   street: {
-    column: "street",
     validate: (v) => {
       const r = customerFieldValidators.street.safeParse(v);
       if (!r.success) throw new Error(r.error.issues[0].message);
       return r.data;
     },
+    update: (email, value) => db`update customer set street = ${value} where email = ${email}`,
   },
 };
 
@@ -1666,11 +1691,7 @@ export async function updateCustomerFieldInternal(data: { field: string; value: 
   const entry = EDITABLE_CUSTOMER_FIELDS[data.field];
   if (!entry) throw new Error(`Field "${data.field}" is not editable.`);
   const validated = entry.validate(data.value);
-  await db`
-    update customer
-    set ${db(entry.column)} = ${validated}
-    where email = ${user.email}
-  `;
+  await entry.update(user.email, validated);
   return { success: true };
 }
 
@@ -1793,22 +1814,22 @@ export async function updateStaffProfileFieldInternal(data: {
   value: string;
 }) {
   const user = await requireUser("staff");
-  const fieldMap = {
-    email: "email",
-    firstName: "first_name",
-    lastName: "last_name",
-  } as const;
-  const column = fieldMap[data.field];
   const trimmed = data.value.trim();
   if (!trimmed) return { error: "Value is required." };
   if (data.field === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
     return { error: "Use a valid email address." };
   }
-  await db`
-    update airline_staff
-    set ${db(column)} = ${trimmed}
-    where username = ${user.id}
-  `;
+  switch (data.field) {
+    case "email":
+      await db`update airline_staff set email = ${trimmed} where username = ${user.id}`;
+      break;
+    case "firstName":
+      await db`update airline_staff set first_name = ${trimmed} where username = ${user.id}`;
+      break;
+    case "lastName":
+      await db`update airline_staff set last_name = ${trimmed} where username = ${user.id}`;
+      break;
+  }
   return { message: "Profile updated." };
 }
 
