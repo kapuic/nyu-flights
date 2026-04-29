@@ -26,7 +26,7 @@ export type StaffPhoneNumbersSheetProps = {
 
 function normalizePhoneRows(phoneNumbers: Array<string>) {
   const rows = phoneNumbers.length ? phoneNumbers : [""];
-  return rows.map((phoneNumber) => phoneNumber.trim());
+  return rows.map((phoneNumber) => phoneNumber.trim() || "");
 }
 
 export function StaffPhoneNumbersSheet({

@@ -9,7 +9,7 @@ import type {
   StaffDashboardData,
 } from "@/lib/queries";
 import type { AirportOption } from "@/lib/airports";
-import { NANOID_LENGTH, db } from "@/lib/db";
+import { NANOID_LENGTH, db, ensureFlightReadModel } from "@/lib/db";
 import { requireUser } from "@/lib/auth.server";
 import {
   canManageOperationalAirline,
@@ -34,6 +34,10 @@ function normalizeQueryValue(value: string | undefined) {
   if (!normalized) return null;
   return `%${normalized}%`;
 }
+async function ensureFlightReadModelReady() {
+  await ensureFlightReadModel();
+}
+
 type FlightReadModelRow = {
   airline_name: string;
   airplane_id: string;
@@ -167,6 +171,7 @@ export async function searchFlightsInternal(input: {
     destinationQuery: string | null;
     sourceQuery: string | null;
   }) {
+    await ensureFlightReadModelReady();
     return db<Array<FlightReadModelRow>>`
       select
         airline_name,
@@ -271,6 +276,8 @@ export async function getCustomerDashboardInternal(filters: {
   const startDate = normalizeFilterDate(filters.startDate);
   const endDate = normalizeFilterDate(filters.endDate);
 
+  await ensureFlightReadModelReady();
+
   const flights = await db<
     Array<
       FlightReadModelRow & {
@@ -359,6 +366,8 @@ export async function getStaffDashboardInternal(filters: {
   const destinationQuery = normalizeQueryValue(filters.destination);
   const startDate = normalizeFilterDate(filters.startDate);
   const endDate = normalizeFilterDate(filters.endDate);
+
+  await ensureFlightReadModelReady();
 
   const flights = await db<Array<FlightReadModelRow>>`
     select
@@ -554,7 +563,7 @@ export async function purchaseTicketInternal(data: {
     >`
       select
         f.base_price,
-        f.departure_datetime,
+        f.departure_datetime::text as departure_datetime,
         f.departure_datetime > now() as is_future,
         airplane.number_of_seats
       from flight f
@@ -600,7 +609,7 @@ export async function purchaseTicketInternal(data: {
         ${user.email},
         ${data.airlineName},
         ${data.flightNumber},
-        ${flight.departure_datetime},
+        ${serializeTimestamp(flight.departure_datetime).replace("T", " ")}::text::timestamp,
         now(),
         ${data.cardType},
         ${data.cardNumber},
@@ -669,7 +678,7 @@ export async function submitReviewInternal(data: {
       ${user.email},
       ${data.airlineName},
       ${data.flightNumber},
-      ${eligibleFlight.departure_datetime},
+      ${serializeTimestamp(eligibleFlight.departure_datetime).replace("T", " ")}::text::timestamp,
       ${data.rating},
       ${data.comment || null},
       now()
@@ -721,10 +730,10 @@ async function getStaffFlightForMutation(
     select
       airline_name,
       flight_number,
-      departure_datetime,
+      departure_datetime::text as departure_datetime,
       departure_airport_code,
       arrival_airport_code,
-      arrival_datetime,
+      arrival_datetime::text as arrival_datetime,
       base_price,
       status,
       airplane_id
@@ -845,7 +854,7 @@ export async function updateFlightStatusInternal(data: {
     set status = ${data.status}
     where airline_name = ${flight.airline_name}
       and flight_number = ${flight.flight_number}
-      and departure_datetime = ${flight.departure_datetime}
+      and departure_datetime = ${normalizeTimestampForSql(flight.departure_datetime)}::text::timestamp
   `;
 
   return {
@@ -863,7 +872,7 @@ export async function updateFlightFieldInternal(data: FlightEditableFieldInput) 
       set status = ${data.value}
       where airline_name = ${flight.airline_name}
         and flight_number = ${flight.flight_number}
-        and departure_datetime = ${flight.departure_datetime}
+        and departure_datetime = ${normalizeTimestampForSql(flight.departure_datetime)}::text::timestamp
     `;
     return { message: `Flight ${data.flightNumber} status updated.` };
   }
@@ -874,7 +883,7 @@ export async function updateFlightFieldInternal(data: FlightEditableFieldInput) 
       set base_price = ${data.value}
       where airline_name = ${flight.airline_name}
         and flight_number = ${flight.flight_number}
-        and departure_datetime = ${flight.departure_datetime}
+        and departure_datetime = ${normalizeTimestampForSql(flight.departure_datetime)}::text::timestamp
     `;
     return { message: `Flight ${data.flightNumber} price updated.` };
   }
@@ -886,7 +895,7 @@ export async function updateFlightFieldInternal(data: FlightEditableFieldInput) 
       set airplane_id = ${data.value}
       where airline_name = ${flight.airline_name}
         and flight_number = ${flight.flight_number}
-        and departure_datetime = ${flight.departure_datetime}
+        and departure_datetime = ${normalizeTimestampForSql(flight.departure_datetime)}::text::timestamp
     `;
     return { message: `Flight ${data.flightNumber} aircraft updated.` };
   }
@@ -901,7 +910,7 @@ export async function updateFlightFieldInternal(data: FlightEditableFieldInput) 
       set departure_airport_code = ${data.value}
       where airline_name = ${flight.airline_name}
         and flight_number = ${flight.flight_number}
-        and departure_datetime = ${flight.departure_datetime}
+        and departure_datetime = ${normalizeTimestampForSql(flight.departure_datetime)}::text::timestamp
     `;
     return { message: `Flight ${data.flightNumber} departure airport updated.` };
   }
@@ -916,7 +925,7 @@ export async function updateFlightFieldInternal(data: FlightEditableFieldInput) 
       set arrival_airport_code = ${data.value}
       where airline_name = ${flight.airline_name}
         and flight_number = ${flight.flight_number}
-        and departure_datetime = ${flight.departure_datetime}
+        and departure_datetime = ${normalizeTimestampForSql(flight.departure_datetime)}::text::timestamp
     `;
     return { message: `Flight ${data.flightNumber} arrival airport updated.` };
   }
@@ -931,7 +940,7 @@ export async function updateFlightFieldInternal(data: FlightEditableFieldInput) 
       set departure_datetime = ${normalizeTimestampForSql(data.value)}::text::timestamp
       where airline_name = ${flight.airline_name}
         and flight_number = ${flight.flight_number}
-        and departure_datetime = ${flight.departure_datetime}
+        and departure_datetime = ${normalizeTimestampForSql(flight.departure_datetime)}::text::timestamp
     `;
     return { message: `Flight ${data.flightNumber} departure time updated.` };
   }
@@ -945,7 +954,7 @@ export async function updateFlightFieldInternal(data: FlightEditableFieldInput) 
     set arrival_datetime = ${normalizeTimestampForSql(data.value)}::text::timestamp
     where airline_name = ${flight.airline_name}
       and flight_number = ${flight.flight_number}
-      and departure_datetime = ${flight.departure_datetime}
+      and departure_datetime = ${normalizeTimestampForSql(flight.departure_datetime)}::text::timestamp
   `;
   return { message: `Flight ${data.flightNumber} arrival time updated.` };
 }

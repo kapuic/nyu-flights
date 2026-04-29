@@ -27,8 +27,7 @@ function shouldShowFieldError(
 function getPhoneRows(value: string) {
   const phoneNumbers = value
     .split(",")
-    .map((phoneNumber) => phoneNumber.trim())
-    .filter(Boolean);
+    .map((phoneNumber) => phoneNumber.trim());
   return phoneNumbers.length ? phoneNumbers : [""];
 }
 
@@ -51,6 +50,7 @@ function StaffRegisterPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [phoneSheetOpen, setPhoneSheetOpen] = useState(false);
+  const [phoneSheetRows, setPhoneSheetRows] = useState<Array<string>>([""]);
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
@@ -417,9 +417,14 @@ function StaffRegisterPage() {
                                                                 : "Add backups if this staff account needs more phone numbers."}
                                                             </FieldDescription>
                                                             <Button
-                                                              onClick={() =>
-                                                                setPhoneSheetOpen(true)
-                                                              }
+                                                              onClick={() => {
+                                                                setPhoneSheetRows(
+                                                                  getPhoneRows(
+                                                                    phoneNumbersField.state.value,
+                                                                  ),
+                                                                );
+                                                                setPhoneSheetOpen(true);
+                                                              }}
                                                               size="sm"
                                                               type="button"
                                                               variant="outline"
@@ -432,15 +437,20 @@ function StaffRegisterPage() {
                                                       <StaffPhoneNumbersSheet
                                                         description="Add every phone number this staff account should use."
                                                         onOpenChange={setPhoneSheetOpen}
-                                                        onPhoneNumbersChange={(phoneNumbers) =>
+                                                        onPhoneNumbersChange={(phoneNumbers) => {
+                                                          setPhoneSheetRows(phoneNumbers);
                                                           phoneNumbersField.handleChange(
                                                             serializePhoneRows(phoneNumbers),
-                                                          )
-                                                        }
+                                                          );
+                                                        }}
                                                         open={phoneSheetOpen}
-                                                        phoneNumbers={getPhoneRows(
-                                                          phoneNumbersField.state.value,
-                                                        )}
+                                                        phoneNumbers={
+                                                          phoneSheetOpen
+                                                            ? phoneSheetRows
+                                                            : getPhoneRows(
+                                                                phoneNumbersField.state.value,
+                                                              )
+                                                        }
                                                         title="Staff phone numbers"
                                                       />
                                                     </>

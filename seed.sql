@@ -166,7 +166,7 @@ SELECT
     flight.airplane_id,
     airplane.number_of_seats,
     flight.base_price,
-    flight.status,
+    flight.status::VARCHAR(20) AS status,
     COALESCE(ticket_counts.ticket_count, 0)::INTEGER AS ticket_count,
     GREATEST(airplane.number_of_seats - COALESCE(ticket_counts.ticket_count, 0), 0)::INTEGER AS available_seats,
     review_stats.average_rating,

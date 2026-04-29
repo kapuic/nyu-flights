@@ -1,5 +1,5 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { formatPhoneNumberIntl } from "react-phone-number-input";
@@ -65,6 +65,7 @@ function SettingsSection({
 function StaffProfilePage() {
   const { data: profile } = useSuspenseQuery(staffProfileQueryOptions());
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [phoneSheetOpen, setPhoneSheetOpen] = useState(false);
   const [phoneSheetDraft, setPhoneSheetDraft] = useState<Array<string>>([]);
   const [savingPhones, setSavingPhones] = useState(false);
@@ -72,8 +73,9 @@ function StaffProfilePage() {
   const permission = getStaffPermission(profile.username);
 
   const refreshProfile = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ["staff-profile"] });
     await router.invalidate();
-  }, [router]);
+  }, [queryClient, router]);
 
   const saveField = useCallback(
     async (field: "email" | "firstName" | "lastName", value: string) => {

@@ -17,16 +17,11 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { createAirlineFn, deleteAirlineFn, updateAirlineFn } from "@/lib/queries";
 import { createAirlineSchema } from "@/lib/schemas";
-import { createAirlineSchema } from "@/lib/schemas";
 import { staffAirlinesQueryOptions } from "@/lib/staff-queries";
 
 type AirlineRow = {
   name: string;
 };
-
-function getAirlineNameError(name: string) {
-  return createAirlineSchema.shape.name.safeParse(name).error?.issues.at(0)?.message ?? null;
-}
 
 function getAirlineNameError(name: string) {
   return createAirlineSchema.shape.name.safeParse(name).error?.issues.at(0)?.message ?? null;
@@ -52,7 +47,6 @@ function ManageAirlinesPage() {
   const deleteConfirm = useDeleteConfirmation();
   const queryClient = useQueryClient();
   const router = useRouter();
-  const airlineNameError = getAirlineNameError(newName);
   const showFieldErrors = submissionAttempts > 0;
   const airlineNameError = showFieldErrors ? getAirlineNameError(newName) : null;
 
