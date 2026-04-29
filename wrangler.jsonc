@@ -1,0 +1,41 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "flights-demo",
+  "main": "@tanstack/react-start/server-entry",
+  "compatibility_date": "2026-04-21",
+  "account_id": "a0122b7d72ae4860ca5775e66e8b6565",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "queue_consumer_no_wait_for_wait_until",
+    "html_rewriter_treats_esi_include_as_void_tag",
+  ],
+  "send_metrics": false,
+
+  "workers_dev": false,
+  "routes": ["flights-demo.kapui.net/*"],
+
+  "observability": {
+    "logs": { "enabled": true },
+    "traces": { "enabled": true },
+  },
+
+  "placement": { "mode": "smart" },
+
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
+
+  "vars": {
+    "DATABASE_URL": "postgres://flights:eWCwYQRxjVTDCsNq5jZqK4CI7yPi1Zb7@208.84.101.171:5485/air_ticket_reservation",
+    "SESSION_SECRET": "air-ticket-reservation-session-secret-2026-prod",
+  },
+
+  // Sensitive values should be set as secrets using:
+  // wrangler secret put SESSION_SECRET
+  // wrangler secret put DATABASE_URL
+
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "733a4282ff174a08b548dccf4920b23a",
+    },
+  ],
+}

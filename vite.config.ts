@@ -4,12 +4,21 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite"
 import viteReact from "@vitejs/plugin-react"
 import viteTsConfigPaths from "vite-tsconfig-paths"
 import tailwindcss from "@tailwindcss/vite"
-import { nitro } from "nitro/vite"
 
-const config = defineConfig({
-  plugins: [
-    devtools(),
-    nitro(),
+const isCloudflare = !!process.env.CF_DEPLOY
+
+const config = defineConfig(async () => {
+  const plugins = []
+
+  if (isCloudflare) {
+    const { cloudflare } = await import("@cloudflare/vite-plugin")
+    plugins.push(cloudflare({ viteEnvironment: { name: "ssr" } }))
+  } else {
+    const { nitro } = await import("nitro/vite")
+    plugins.push(devtools(), nitro())
+  }
+
+  plugins.push(
     viteTsConfigPaths({
       projects: ["./tsconfig.json"],
     }),
@@ -29,7 +38,9 @@ const config = defineConfig({
       },
     }),
     viteReact(),
-  ],
+  )
+
+  return { plugins }
 })
 
 export default config

@@ -95,7 +95,7 @@ function StaffSecurityPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-6">
+    <div className="flex flex-col gap-6 px-4 pb-4 pt-2 md:px-6 md:pb-6 md:pt-3">
       <div>
         <h1 className="text-lg font-semibold">Security</h1>
         <p className="text-sm text-muted-foreground">Manage your password</p>

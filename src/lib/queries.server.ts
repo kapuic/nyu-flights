@@ -1693,7 +1693,7 @@ async function changePasswordForAccount(options: {
   selectPassword: () => Promise<string | null>;
   updatePassword: (hashedPassword: string) => Promise<unknown>;
 }) {
-  const bcrypt = (await import("bcrypt")).default;
+  const bcrypt = await import("bcryptjs");
   const storedPassword = await options.selectPassword();
   if (!storedPassword) throw new Error(`${options.accountLabel} not found.`);
   const valid = await bcrypt.compare(options.currentPassword, storedPassword);

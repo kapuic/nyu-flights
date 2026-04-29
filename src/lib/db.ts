@@ -5,9 +5,11 @@ import { env } from "@/lib/env"
 export const NANOID_LENGTH = 21
 
 export const db = postgres(env.databaseUrl, {
+  connect_timeout: 10,
   idle_timeout: 20,
   max: 10,
   prepare: false,
+  ssl: env.databaseUrl.includes("sslmode") ? "require" : false,
 })
 
 let ensureSessionTablePromise: Promise<void> | null = null
