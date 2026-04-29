@@ -1,7 +1,5 @@
 # Use Cases and Queries
 
-This document summarizes the application's main use cases and the SQL behind them. It reflects the final E2E-fixed query paths, including runtime creation of `flight_read_model` for existing development databases, cache refresh behavior for staff profile phone saves, and normalized timestamp casting for flight foreign keys.
-
 ## Search
 
 The public search page lets anyone browse future flights before signing in. It supports city/code autocomplete, one-way search, round-trip search, flexible "Any origin" / "Any destination" filters, result cards, and client-side sorting by price, duration, departure time, or arrival time. The globe UI uses real route data so the page feels like a travel product rather than a plain database form.
@@ -45,7 +43,7 @@ Airport inputs autocomplete from database airports by city, code, or country.
 
 ### One-Way and Round-Trip Search
 
-One-way search finds outbound future flights. Round-trip search runs the same query twice: once for the outbound leg, then once with source and destination reversed for the return leg. Blank source or destination means "Any origin" or "Any destination," which makes browsing more flexible than requiring both endpoints. The server ensures `flight_read_model` exists before search queries run, so existing dev databases and fresh seeded databases share the same read model.
+One-way search finds outbound future flights. Round-trip search runs the same query twice: once for the outbound leg, then once with source and destination reversed for the return leg. Blank source or destination means "Any origin" or "Any destination," which makes browsing more flexible than requiring both endpoints.
 
 > ```sql
 > select airline_name, airplane_id, flight_number,
@@ -78,7 +76,6 @@ Customers and staff have separate login/register flows, but both use bcrypt pass
 </p>
 <p>
   <img src="showcase-screenshots/26-staff-signup-multi-phone-dialog-fixed.jpeg" alt="Staff signup multi-phone dialog" width="32%" />
-  <img src="showcase-screenshots/31-staff-signup-three-phone-dialog.jpeg" alt="Staff signup three-phone dialog" width="32%" />
 </p>
 
 ### Customer Login and Registration
@@ -219,10 +216,6 @@ The trips page separates upcoming and past flights. Review controls appear only 
 <p>
   <img src="showcase-screenshots/03-customer-my-trips.png" alt="Customer trips page" width="32%" />
   <img src="showcase-screenshots/04-customer-review-dialog.png" alt="Customer review dialog" width="32%" />
-  <img src="showcase-screenshots/05-customer-review-posted.png" alt="Posted customer review" width="32%" />
-</p>
-<p>
-  <img src="showcase-screenshots/06-customer-trips-filtered-past-review-state.png" alt="Filtered customer trip review state" width="48%" />
 </p>
 
 ### View My Flights
@@ -339,13 +332,12 @@ The account area separates profile, payment history, and security so trips do no
 
 ## Staff Dashboard and Reports
 
-The staff dashboard uses a left-nav operations layout with dense tables, filters, charts, and role-aware actions. Normal staff are scoped to their airline through `airlineScope`; superadmins can view all airlines. Staff flight search also ensures `flight_read_model` exists before querying it.
+The staff dashboard uses a left-nav operations layout with dense tables, filters, charts, and role-aware actions. Normal staff are scoped to their airline through `airlineScope`; superadmins can view all airlines. Staff flight search also ensures `flight_read_model` exists before querying it. (This level of role-based access was not required by this project, but I felt like doing it.)
 
 <p>
   <img src="showcase-screenshots/35-staff-reports-ratings-count-3-of-3.jpeg" alt="Staff reports and ratings" width="48%" />
   <img src="showcase-screenshots/34-staff-passengers-united-206-count-3-of-3.jpeg" alt="Staff passenger manifest" width="48%" />
 </p>
-
 
 ### Flight, Fleet, and Review Overview
 
@@ -420,7 +412,6 @@ The staff dashboard uses a left-nav operations layout with dense tables, filters
 Staff can create flights, edit fields, update status, and delete flights when safe. The UI uses tables and inline editing, but server-side checks enforce permissions, airport validity, capacity, and dependency rules.
 
 <p>
-  <img src="showcase-screenshots/11-staff-flights-management.png" alt="Staff flights management" width="32%" />
   <img src="showcase-screenshots/12-staff-flight-status-action.png" alt="Staff flight status action" width="32%" />
   <img src="showcase-screenshots/12-staff-flight-status-delayed.png" alt="Delayed flight status result" width="32%" />
 </p>
@@ -575,12 +566,8 @@ Fleet management lets staff add, edit, and delete airplanes. The manifest page l
 ## Staff Profile and Security
 
 <p>
-  <img src="showcase-screenshots/27-staff-profile-multi-phone-before-save.jpeg" alt="Staff profile phones before save" width="32%" />
   <img src="showcase-screenshots/28-staff-profile-multi-phone-after-save.jpeg" alt="Staff profile phones after save" width="32%" />
   <img src="showcase-screenshots/29-staff-profile-three-phone-dialog-before-save.jpeg" alt="Staff profile three-phone dialog" width="32%" />
-</p>
-<p>
-  <img src="showcase-screenshots/30-staff-profile-three-phone-after-save.jpeg" alt="Staff profile three-phone saved" width="48%" />
 </p>
 
 > ```sql
@@ -607,7 +594,7 @@ Fleet management lets staff add, edit, and delete airplanes. The manifest page l
 > insert into airline_staff_phone (username, phone_number) values (:staffUsername, :phoneNumber);
 > ```
 >
-> Updates staff profile fields and replaces phone numbers in the staff tables. After phone saves, the UI invalidates the React Query `['staff-profile']` cache before router invalidation so the staff profile screen refreshes from the saved database state.
+> Updates staff profile fields and replaces phone numbers in the staff tables.
 
 > ```sql
 > select password from airline_staff where username = :staffUsername;
@@ -622,21 +609,15 @@ Superadmin screens manage system-wide reference and account data. Normal staff d
 
 <p>
   <img src="showcase-screenshots/18-staff-airlines-table-count-1-of-1.png" alt="Superadmin airlines table" width="32%" />
-  <img src="showcase-screenshots/19-staff-create-airline-dialog.png" alt="Superadmin create airline dialog" width="32%" />
   <img src="showcase-screenshots/20-staff-airports-table-count-8-of-8.png" alt="Superadmin airports table" width="32%" />
 </p>
 <p>
   <img src="showcase-screenshots/21-staff-create-airport-dialog.png" alt="Superadmin create airport dialog" width="32%" />
-  <img src="showcase-screenshots/22-staff-staff-table-count-2-of-2.png" alt="Superadmin staff table" width="32%" />
   <img src="showcase-screenshots/33-staff-customers-table-count-3-of-3.jpeg" alt="Superadmin customers table" width="32%" />
 </p>
 <p>
-  <img src="showcase-screenshots/23-staff-table-multi-phone-panel-existing-2.png" alt="Staff table multi-phone panel" width="32%" />
   <img src="showcase-screenshots/24-staff-table-multi-phone-panel-added-third.png" alt="Staff table add third phone" width="32%" />
   <img src="showcase-screenshots/25-staff-table-multi-phone-saved-third.png" alt="Staff table saved third phone" width="32%" />
-</p>
-<p>
-  <img src="showcase-screenshots/32-staff-table-three-phone-dialog.jpeg" alt="Staff table three-phone dialog" width="48%" />
 </p>
 
 ### Airlines and Airports
@@ -695,50 +676,3 @@ Superadmin screens manage system-wide reference and account data. Normal staff d
 > ```
 >
 > Lists, edits, and deletes `customer` records, while preventing deletion when `ticket` or `review` history exists.
-
-## Shared Read Model
-
-`flight_read_model` centralizes the flight display data used by public search, customer trips, and staff dashboards. It is defined in `seed.sql`, created/replaced at runtime in `src/lib/db.ts`, and used by the public and staff flight search paths. `status` stays `varchar(20)`, not `text`, so replacing an existing PostgreSQL view does not fail with a column type-change error.
-
-> ```sql
-> create view flight_read_model as
-> select flight.airline_name,
->        flight.flight_number,
->        flight.departure_datetime,
->        flight.arrival_datetime,
->        flight.departure_airport_code,
->        departure_airport.city as departure_city,
->        flight.arrival_airport_code,
->        arrival_airport.city as arrival_city,
->        flight.airplane_id,
->        airplane.number_of_seats,
->        flight.base_price,
->        flight.status::varchar(20) as status,
->        coalesce(ticket_counts.ticket_count, 0)::integer as ticket_count,
->        greatest(airplane.number_of_seats - coalesce(ticket_counts.ticket_count, 0), 0)::integer as available_seats,
->        review_stats.average_rating,
->        coalesce(review_stats.review_count, 0)::integer as review_count
-> from flight
-> join airport as departure_airport on departure_airport.code = flight.departure_airport_code
-> join airport as arrival_airport on arrival_airport.code = flight.arrival_airport_code
-> join airplane on airplane.airline_name = flight.airline_name
->   and airplane.airplane_id = flight.airplane_id
-> left join (
->   select airline_name, flight_number, departure_datetime, count(*)::integer as ticket_count
->   from ticket
->   group by airline_name, flight_number, departure_datetime
-> ) as ticket_counts on ticket_counts.airline_name = flight.airline_name
->   and ticket_counts.flight_number = flight.flight_number
->   and ticket_counts.departure_datetime = flight.departure_datetime
-> left join (
->   select airline_name, flight_number, departure_datetime,
->          round(avg(rating)::numeric, 1)::float8 as average_rating,
->          count(*)::integer as review_count
->   from review
->   group by airline_name, flight_number, departure_datetime
-> ) as review_stats on review_stats.airline_name = flight.airline_name
->   and review_stats.flight_number = flight.flight_number
->   and review_stats.departure_datetime = flight.departure_datetime;
-> ```
->
-> Combines `flight`, `airport`, `airplane`, `ticket`, and `review` into one reusable flight read model. `ticket` and `review` are aggregated first, then left-joined, so search and dashboard pages get ticket counts, available seats, average rating, and review count from one consistent view.
