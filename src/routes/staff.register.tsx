@@ -24,10 +24,16 @@ function shouldShowFieldError(
 ) {
   return (meta.isTouched || submissionAttempts > 0) && !meta.isValid;
 }
+
+function getFieldErrorMessage(errors: Array<unknown>) {
+  return errors
+    .map((fieldError) =>
+      typeof fieldError === "string" ? fieldError : (fieldError as { message?: string })?.message,
+    )
+    .find(Boolean);
+}
 function getPhoneRows(value: string) {
-  const phoneNumbers = value
-    .split(",")
-    .map((phoneNumber) => phoneNumber.trim());
+  const phoneNumbers = value.split(",").map((phoneNumber) => phoneNumber.trim());
   return phoneNumbers.length ? phoneNumbers : [""];
 }
 
@@ -73,7 +79,16 @@ function StaffRegisterPage() {
       username: "",
     },
     validators: {
-      onSubmit: ({ value }) => staffRegistrationSchema.safeParse(value).error?.issues,
+      onSubmitAsync: async ({ value }) => {
+        const result = staffRegistrationSchema.safeParse(value);
+        if (result.success) return undefined;
+
+        return {
+          fields: Object.fromEntries(
+            result.error.issues.map((issue) => [issue.path.join("."), issue.message]),
+          ),
+        };
+      },
     },
     onSubmit: async ({ value }) => {
       const result = await registerStaffFn({ data: value });
@@ -403,9 +418,14 @@ function StaffRegisterPage() {
                                                           submissionAttempts,
                                                         ) ? (
                                                           <FieldError
-                                                            errors={
-                                                              phoneNumbersField.state.meta.errors
-                                                            }
+                                                            errors={[
+                                                              {
+                                                                message: getFieldErrorMessage(
+                                                                  phoneNumbersField.state.meta
+                                                                    .errors,
+                                                                ),
+                                                              },
+                                                            ]}
                                                           />
                                                         ) : (
                                                           <div className="flex items-center justify-between gap-3">
