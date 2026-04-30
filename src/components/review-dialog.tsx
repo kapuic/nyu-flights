@@ -1,47 +1,42 @@
-import {  useState } from "react"
-import { useRouter } from "@tanstack/react-router"
-import { ArrowRight, Star } from "lucide-react"
-import { toast } from "sonner"
-import type {FormEvent} from "react";
+import { useState } from "react";
+import { useRouter } from "@tanstack/react-router";
+import { ArrowRight, Star } from "lucide-react";
+import { toast } from "sonner";
+import type { FormEvent } from "react";
 
-import type { CustomerFlight } from "@/lib/queries"
+import type { CustomerFlight } from "@/lib/queries";
+import { CountryFlag } from "@/components/country-flag";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Drawer,
   DrawerContent,
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { useIsMobile } from "@/hooks/use-mobile"
-import { submitReviewFn } from "@/lib/queries"
-import { formatPlainDate } from "@/lib/temporal"
-import { getErrorMessage } from "@/lib/utils"
+} from "@/components/ui/drawer";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { submitReviewFn } from "@/lib/queries";
+import { formatPlainDate } from "@/lib/temporal";
+import { getErrorMessage } from "@/lib/utils";
 
 type ReviewDialogProps = {
-  flight: CustomerFlight | null
-  onOpenChange: (open: boolean) => void
-  open: boolean
-}
+  flight: CustomerFlight | null;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+};
 
-function StarRating({
-  onChange,
-  value,
-}: {
-  onChange: (rating: number) => void
-  value: number
-}) {
-  const [hovered, setHovered] = useState(0)
+function StarRating({ onChange, value }: { onChange: (rating: number) => void; value: number }) {
+  const [hovered, setHovered] = useState(0);
 
   return (
     <div className="flex gap-1" onMouseLeave={() => setHovered(0)}>
@@ -63,30 +58,24 @@ function StarRating({
         </button>
       ))}
     </div>
-  )
+  );
 }
 
-function ReviewFormContent({
-  flight,
-  onClose,
-}: {
-  flight: CustomerFlight
-  onClose: () => void
-}) {
-  const router = useRouter()
-  const [rating, setRating] = useState(0)
-  const [comment, setComment] = useState("")
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState("")
+function ReviewFormContent({ flight, onClose }: { flight: CustomerFlight; onClose: () => void }) {
+  const router = useRouter();
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
+    e.preventDefault();
     if (rating === 0) {
-      setError("Please select a rating.")
-      return
+      setError("Please select a rating.");
+      return;
     }
-    setSubmitting(true)
-    setError("")
+    setSubmitting(true);
+    setError("");
     try {
       const result = await submitReviewFn({
         data: {
@@ -96,42 +85,42 @@ function ReviewFormContent({
           flightNumber: flight.flightNumber,
           rating,
         },
-      })
+      });
       if ("error" in result && result.error) {
-        setError(result.error)
-        return
+        setError(result.error);
+        return;
       }
-      await router.invalidate()
-      toast.success("Review submitted!")
-      onClose()
+      await router.invalidate();
+      toast.success("Review submitted!");
+      onClose();
     } catch (err) {
-      setError(getErrorMessage(err, "Failed to submit review."))
+      setError(getErrorMessage(err, "Failed to submit review."));
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
   }
 
   const departureDateDisplay = (() => {
-    const [datePart] = flight.departureDatetime.split("T")
-    return formatPlainDate(datePart)
-  })()
+    const [datePart] = flight.departureDatetime.split("T");
+    return formatPlainDate(datePart);
+  })();
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span className="font-medium text-foreground">
+        <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+          <CountryFlag countryCode={flight.departureCountryCode} size={16} />
           {flight.departureAirportCode}
         </span>
         <ArrowRight className="size-3.5" />
-        <span className="font-medium text-foreground">
+        <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
           {flight.arrivalAirportCode}
+          <CountryFlag countryCode={flight.arrivalCountryCode} size={16} />
         </span>
         <span className="mx-1">·</span>
         <span>Flight {flight.flightNumber}</span>
         <span className="mx-1">·</span>
-        <span>
-          {departureDateDisplay}
-        </span>
+        <span>{departureDateDisplay}</span>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -149,22 +138,13 @@ function ReviewFormContent({
           maxLength={500}
           className="min-h-24 resize-none"
         />
-        <p className="text-xs text-muted-foreground">
-          {comment.length}/500 characters
-        </p>
+        <p className="text-xs text-muted-foreground">{comment.length}/500 characters</p>
       </div>
 
-      {error && (
-        <p className="text-sm text-destructive">{error}</p>
-      )}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
-      <div className="flex gap-2 justify-end">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onClose}
-          disabled={submitting}
-        >
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
           Cancel
         </Button>
         <Button type="submit" disabled={submitting || rating === 0}>
@@ -172,18 +152,14 @@ function ReviewFormContent({
         </Button>
       </div>
     </form>
-  )
+  );
 }
 
-export function ReviewDialog({
-  flight,
-  onOpenChange,
-  open,
-}: ReviewDialogProps) {
-  const isMobile = useIsMobile()
+export function ReviewDialog({ flight, onOpenChange, open }: ReviewDialogProps) {
+  const isMobile = useIsMobile();
 
   function handleClose() {
-    onOpenChange(false)
+    onOpenChange(false);
   }
 
   if (isMobile) {
@@ -192,18 +168,14 @@ export function ReviewDialog({
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle>Review Flight</DrawerTitle>
-            <DrawerDescription>
-              How was your experience?
-            </DrawerDescription>
+            <DrawerDescription>How was your experience?</DrawerDescription>
           </DrawerHeader>
           <div className="px-4 pb-4">
-            {flight && (
-              <ReviewFormContent flight={flight} onClose={handleClose} />
-            )}
+            {flight && <ReviewFormContent flight={flight} onClose={handleClose} />}
           </div>
         </DrawerContent>
       </Drawer>
-    )
+    );
   }
 
   return (
@@ -211,14 +183,10 @@ export function ReviewDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Review Flight</DialogTitle>
-          <DialogDescription>
-            How was your experience?
-          </DialogDescription>
+          <DialogDescription>How was your experience?</DialogDescription>
         </DialogHeader>
-        {flight && (
-          <ReviewFormContent flight={flight} onClose={handleClose} />
-        )}
+        {flight && <ReviewFormContent flight={flight} onClose={handleClose} />}
       </DialogContent>
     </Dialog>
-  )
+  );
 }

@@ -8,6 +8,7 @@ import { AlertTriangleIcon, CircleCheckIcon, Plus, Trash2Icon } from "lucide-rea
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
 
+import type { FlightOption } from "@/lib/queries";
 import type { DashboardDataTableFilterOption } from "@/components/dashboard-data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,24 +53,8 @@ type EditableFlightField =
   | "departureAirportCode"
   | "departureDatetime"
   | "status";
-
-type FlightRow = {
-  airlineName: string;
+type FlightRow = FlightOption & {
   airplaneId: string;
-  arrivalAirportCode: string;
-  arrivalAirportName: string;
-  arrivalCity: string;
-  arrivalDatetime: string;
-  averageRating: number | null;
-  availableSeats: number;
-  basePrice: number;
-  departureAirportCode: string;
-  departureAirportName: string;
-  departureCity: string;
-  departureDatetime: string;
-  flightNumber: string;
-  reviewCount: number;
-  status: "on_time" | "delayed";
   ticketCount: number;
 };
 
@@ -138,7 +123,10 @@ const flightFilterSearchParams = {
   source: parseAsString.withDefault(""),
   startDate: parseAsString.withDefault(""),
 };
-const flightStatusOptions: Array<{ label: string; value: FlightRow["status"] }> = [
+const flightStatusOptions: Array<{
+  label: string;
+  value: FlightRow["status"];
+}> = [
   { label: "On Time", value: "on_time" },
   { label: "Delayed", value: "delayed" },
 ];
@@ -168,9 +156,12 @@ function getStatusLabel(status: FlightRow["status"]) {
   return status === "on_time" ? "On Time" : "Delayed";
 }
 
-function getAirportDisplayLabel(value: string) {
-  const airport = getAirportOption(value);
-  return airport ? `${value} (${airport.city})` : value;
+function getAirportDisplayLabel(value: string, flights: Array<FlightRow>) {
+  const match = flights.find(
+    (flight) => flight.departureAirportCode === value || flight.arrivalAirportCode === value,
+  );
+  const city = match?.departureAirportCode === value ? match.departureCity : match?.arrivalCity;
+  return city ? `${value} (${city})` : value;
 }
 
 function getFlightRowId(flight: FlightRow) {
@@ -184,7 +175,7 @@ function getUniqueOptions(
   const options = new Map<string, string>();
   for (const flight of flights) {
     const value = flight[valueKey];
-    options.set(value, getFilterOptionLabel(valueKey, value));
+    options.set(value, getFilterOptionLabel(valueKey, value, flights));
   }
   return Array.from(options, ([value, label]) => ({ label, value })).sort((a, b) =>
     a.label.localeCompare(b.label),
@@ -194,16 +185,16 @@ function getUniqueOptions(
 function getFilterOptionLabel(
   valueKey: "airlineName" | "airplaneId" | "arrivalAirportCode" | "departureAirportCode" | "status",
   value: string,
+  flights: Array<FlightRow>,
 ) {
   if (valueKey === "status") return getStatusLabel(value as FlightRow["status"]);
   if (valueKey === "airlineName") return value;
   if (valueKey === "airplaneId") return `Aircraft ${value}`;
-  return getAirportDisplayLabel(value);
+  return getAirportDisplayLabel(value, flights);
 }
 function getFlightExportValue(flight: FlightRow, columnId: string) {
-  if (columnId === "departureAirportCode")
-    return getAirportDisplayLabel(flight.departureAirportCode);
-  if (columnId === "arrivalAirportCode") return getAirportDisplayLabel(flight.arrivalAirportCode);
+  if (columnId === "departureAirportCode") return flight.departureAirportName;
+  if (columnId === "arrivalAirportCode") return flight.arrivalAirportName;
   if (columnId === "departureDatetime") return formatDateShort(flight.departureDatetime);
   if (columnId === "arrivalDatetime") return formatDateShort(flight.arrivalDatetime);
   if (columnId === "status") return getStatusLabel(flight.status);
@@ -212,21 +203,25 @@ function getFlightExportValue(flight: FlightRow, columnId: string) {
   return undefined;
 }
 
-function AirportCell({ code }: { code: string }) {
-  const airport = getAirportOption(code);
+function AirportCell({
+  code,
+  countryCode,
+  name,
+}: {
+  code: string;
+  countryCode: string;
+  name: string;
+}) {
   return (
     <div className="flex min-w-52 items-center justify-start gap-2 text-left">
-      {airport ? <CountryFlag countryCode={airport.countryCode} size={18} /> : null}
+      <CountryFlag countryCode={countryCode} size={18} />
       <div className="min-w-0">
-        <div className="font-mono text-sm font-medium tracking-tight text-left">{code}</div>
-        <div className="truncate text-xs text-muted-foreground">
-          {airport?.name ?? airport?.city ?? "Unknown airport"}
-        </div>
+        <div className="text-left font-mono text-sm font-medium tracking-tight">{code}</div>
+        <div className="truncate text-xs text-muted-foreground">{name}</div>
       </div>
     </div>
   );
 }
-
 function FlightStatusBadge({ status }: { status: FlightRow["status"] }) {
   const isOnTime = status === "on_time";
   const Icon = isOnTime ? CircleCheckIcon : AlertTriangleIcon;
@@ -239,11 +234,15 @@ function FlightStatusBadge({ status }: { status: FlightRow["status"] }) {
 }
 
 function FlightGlobe({
-  departureCode,
   arrivalCode,
+  arrivalCountryCode,
+  departureCode,
+  departureCountryCode,
 }: {
   arrivalCode: string;
+  arrivalCountryCode: string;
   departureCode: string;
+  departureCountryCode: string;
 }) {
   const depAirport = getAirportOption(departureCode);
   const arrAirport = getAirportOption(arrivalCode);
@@ -258,19 +257,19 @@ function FlightGlobe({
     if (depAirport)
       m.push({
         id: `dep-${depAirport.code.toLowerCase()}`,
-        countryCode: depAirport.countryCode,
+        countryCode: departureCountryCode,
         label: `${depAirport.city} (${depAirport.code})`,
         location: [depAirport.lat, depAirport.lng],
       });
     if (arrAirport)
       m.push({
         id: `arr-${arrAirport.code.toLowerCase()}`,
-        countryCode: arrAirport.countryCode,
+        countryCode: arrivalCountryCode,
         label: `${arrAirport.city} (${arrAirport.code})`,
         location: [arrAirport.lat, arrAirport.lng],
       });
     return m;
-  }, [depAirport, arrAirport]);
+  }, [depAirport, arrAirport, departureCountryCode, arrivalCountryCode]);
 
   const globeArcs = useMemo(() => {
     if (!depAirport || !arrAirport) return [];
@@ -290,7 +289,7 @@ function FlightGlobe({
 }
 
 const AIRPORT_COMBOBOX_ITEM_LABEL = (airport: { city: string; code: string }) =>
-  getAirportDisplayLabel(airport.code);
+  `${airport.code} (${airport.city})`;
 const AIRPORT_COMBOBOX_ITEM_VALUE = (airport: { city: string; code: string }) =>
   `${airport.code} ${airport.city}`;
 
@@ -407,7 +406,10 @@ function StaffFlightsPage() {
 
       toast.success(result.message);
       await queryClient.invalidateQueries({ queryKey: ["staff-dashboard"] });
-      await queryClient.refetchQueries({ queryKey: ["staff-dashboard"], type: "active" });
+      await queryClient.refetchQueries({
+        queryKey: ["staff-dashboard"],
+        type: "active",
+      });
       await queryClient.invalidateQueries({ queryKey: ["staff-passengers"] });
       await router.invalidate();
     },
@@ -448,7 +450,10 @@ function StaffFlightsPage() {
 
       toast.success(`Deleted ${rows.length} flight${rows.length === 1 ? "" : "s"}.`);
       await queryClient.invalidateQueries({ queryKey: ["staff-dashboard"] });
-      await queryClient.refetchQueries({ queryKey: ["staff-dashboard"], type: "active" });
+      await queryClient.refetchQueries({
+        queryKey: ["staff-dashboard"],
+        type: "active",
+      });
       await queryClient.invalidateQueries({ queryKey: ["staff-passengers"] });
       await router.invalidate();
     } catch {
@@ -514,8 +519,20 @@ function StaffFlightsPage() {
             items={dbAirports}
             onSave={(code) => saveFlightField(row.original, "departureAirportCode", code)}
             placeholder="Search departure airport"
-            renderItem={(airport) => <AirportCell code={airport.code} />}
-            renderValue={(code) => <AirportCell code={code} />}
+            renderItem={(airport) => (
+              <AirportCell
+                code={airport.code}
+                countryCode={airport.countryCode}
+                name={airport.name}
+              />
+            )}
+            renderValue={() => (
+              <AirportCell
+                code={row.original.departureAirportCode}
+                countryCode={row.original.departureCountryCode}
+                name={row.original.departureAirportName}
+              />
+            )}
             value={row.original.departureAirportCode}
             valueFromItem={(airport) => airport.code}
           />
@@ -535,8 +552,20 @@ function StaffFlightsPage() {
             items={dbAirports}
             onSave={(code) => saveFlightField(row.original, "arrivalAirportCode", code)}
             placeholder="Search arrival airport"
-            renderItem={(airport) => <AirportCell code={airport.code} />}
-            renderValue={(code) => <AirportCell code={code} />}
+            renderItem={(airport) => (
+              <AirportCell
+                code={airport.code}
+                countryCode={airport.countryCode}
+                name={airport.name}
+              />
+            )}
+            renderValue={() => (
+              <AirportCell
+                code={row.original.arrivalAirportCode}
+                countryCode={row.original.arrivalCountryCode}
+                name={row.original.arrivalAirportName}
+              />
+            )}
             value={row.original.arrivalAirportCode}
             valueFromItem={(airport) => airport.code}
           />
@@ -781,7 +810,16 @@ function StaffFlightsPage() {
 
             return (
               <>
-                <FlightGlobe departureCode={departureCode} arrivalCode={arrivalCode} />
+                <FlightGlobe
+                  departureCode={departureCode}
+                  departureCountryCode={
+                    dbAirports.find((airport) => airport.code === departureCode)?.countryCode ?? ""
+                  }
+                  arrivalCode={arrivalCode}
+                  arrivalCountryCode={
+                    dbAirports.find((airport) => airport.code === arrivalCode)?.countryCode ?? ""
+                  }
+                />
                 <form onSubmit={handleSubmit}>
                   <FieldGroup>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -827,7 +865,9 @@ function StaffFlightsPage() {
                             {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
                               <FieldError
                                 errors={[
-                                  { message: getFieldErrorMessage(field.state.meta.errors) },
+                                  {
+                                    message: getFieldErrorMessage(field.state.meta.errors),
+                                  },
                                 ]}
                               />
                             ) : null}
@@ -857,7 +897,9 @@ function StaffFlightsPage() {
                             {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
                               <FieldError
                                 errors={[
-                                  { message: getFieldErrorMessage(field.state.meta.errors) },
+                                  {
+                                    message: getFieldErrorMessage(field.state.meta.errors),
+                                  },
                                 ]}
                               />
                             ) : null}
@@ -883,7 +925,9 @@ function StaffFlightsPage() {
                             {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
                               <FieldError
                                 errors={[
-                                  { message: getFieldErrorMessage(field.state.meta.errors) },
+                                  {
+                                    message: getFieldErrorMessage(field.state.meta.errors),
+                                  },
                                 ]}
                               />
                             ) : null}
@@ -909,7 +953,9 @@ function StaffFlightsPage() {
                             {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
                               <FieldError
                                 errors={[
-                                  { message: getFieldErrorMessage(field.state.meta.errors) },
+                                  {
+                                    message: getFieldErrorMessage(field.state.meta.errors),
+                                  },
                                 ]}
                               />
                             ) : null}
@@ -934,7 +980,9 @@ function StaffFlightsPage() {
                             {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
                               <FieldError
                                 errors={[
-                                  { message: getFieldErrorMessage(field.state.meta.errors) },
+                                  {
+                                    message: getFieldErrorMessage(field.state.meta.errors),
+                                  },
                                 ]}
                               />
                             ) : null}
@@ -959,7 +1007,9 @@ function StaffFlightsPage() {
                             {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
                               <FieldError
                                 errors={[
-                                  { message: getFieldErrorMessage(field.state.meta.errors) },
+                                  {
+                                    message: getFieldErrorMessage(field.state.meta.errors),
+                                  },
                                 ]}
                               />
                             ) : null}
@@ -989,7 +1039,11 @@ function StaffFlightsPage() {
                           />
                           {shouldShowFieldError(field.state.meta, submissionAttempts) ? (
                             <FieldError
-                              errors={[{ message: getFieldErrorMessage(field.state.meta.errors) }]}
+                              errors={[
+                                {
+                                  message: getFieldErrorMessage(field.state.meta.errors),
+                                },
+                              ]}
                             />
                           ) : null}
                         </Field>

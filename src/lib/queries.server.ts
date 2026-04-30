@@ -43,18 +43,24 @@ type FlightReadModelRow = {
   airplane_id: string;
   arrival_airport_code: string;
   arrival_city: string;
+  arrival_country: string;
   arrival_datetime: string;
   average_rating: number | null;
   available_seats: number;
   base_price: string;
   departure_airport_code: string;
   departure_city: string;
+  departure_country: string;
   departure_datetime: string;
   flight_number: string;
   review_count: number;
   status: "on_time" | "delayed";
   ticket_count: number;
 };
+
+function normalizeCountryCode(country: string) {
+  return country.trim().toUpperCase();
+}
 
 function formatAirportName(city: string, code: string) {
   return `${city} · ${code.trim()}`;
@@ -65,6 +71,7 @@ function mapFlightOption(row: FlightReadModelRow): FlightOption {
     airlineName: row.airline_name,
     arrivalAirportCode: row.arrival_airport_code,
     arrivalAirportName: formatAirportName(row.arrival_city, row.arrival_airport_code),
+    arrivalCountryCode: normalizeCountryCode(row.arrival_country),
     arrivalCity: row.arrival_city,
     arrivalDatetime: serializeTimestamp(row.arrival_datetime),
     averageRating: row.average_rating,
@@ -72,6 +79,7 @@ function mapFlightOption(row: FlightReadModelRow): FlightOption {
     basePrice: Number(row.base_price),
     departureAirportCode: row.departure_airport_code,
     departureAirportName: formatAirportName(row.departure_city, row.departure_airport_code),
+    departureCountryCode: normalizeCountryCode(row.departure_country),
     departureCity: row.departure_city,
     departureDatetime: serializeTimestamp(row.departure_datetime),
     flightNumber: row.flight_number,
@@ -79,7 +87,6 @@ function mapFlightOption(row: FlightReadModelRow): FlightOption {
     status: row.status,
   };
 }
-
 
 export async function listGlobeRoutesInternal() {
   const routes = await db<
@@ -134,7 +141,7 @@ export async function listDbAirportsInternal(): Promise<Array<AirportOption>> {
       code: row.code.trim(),
       city: row.city,
       country: row.country,
-      countryCode: coord?.countryCode ?? row.country.trim(),
+      countryCode: normalizeCountryCode(row.country),
       lat: coord?.lat ?? 0,
       lng: coord?.lng ?? 0,
       name: coord?.name ?? row.city,
@@ -181,8 +188,10 @@ export async function searchFlightsInternal(input: {
         arrival_datetime,
         departure_airport_code,
         departure_city,
+        departure_country,
         arrival_airport_code,
         arrival_city,
+        arrival_country,
         base_price,
         status,
         ticket_count,
@@ -251,7 +260,10 @@ async function resolveOperationalAirlineForCreate(
   const targetAirlineName = airlineScope ?? requestedAirlineName?.trim();
   if (!targetAirlineName) return { error: "Choose an airline before continuing.", ok: false };
   if (!canStaffManageOperationalAirline(user, targetAirlineName))
-    return { error: "You can only manage airlines you are allowed to manage.", ok: false };
+    return {
+      error: "You can only manage airlines you are allowed to manage.",
+      ok: false,
+    };
 
   const rows = await db<Array<{ name: string }>>`
     select name
@@ -296,8 +308,10 @@ export async function getCustomerDashboardInternal(filters: {
       flight_read_model.arrival_datetime,
       flight_read_model.departure_airport_code,
       flight_read_model.departure_city,
+      flight_read_model.departure_country,
       flight_read_model.arrival_airport_code,
       flight_read_model.arrival_city,
+      flight_read_model.arrival_country,
       flight_read_model.base_price,
       flight_read_model.status,
       flight_read_model.ticket_count,
@@ -325,6 +339,7 @@ export async function getCustomerDashboardInternal(filters: {
     airlineName: row.airline_name,
     arrivalAirportCode: row.arrival_airport_code,
     arrivalAirportName: formatAirportName(row.arrival_city, row.arrival_airport_code),
+    arrivalCountryCode: normalizeCountryCode(row.arrival_country),
     arrivalCity: row.arrival_city,
     arrivalDatetime: serializeTimestamp(row.arrival_datetime),
     averageRating: row.average_rating,
@@ -334,6 +349,7 @@ export async function getCustomerDashboardInternal(filters: {
     comment: row.comment,
     departureAirportCode: row.departure_airport_code,
     departureAirportName: formatAirportName(row.departure_city, row.departure_airport_code),
+    departureCountryCode: normalizeCountryCode(row.departure_country),
     departureCity: row.departure_city,
     departureDatetime: serializeTimestamp(row.departure_datetime),
     flightNumber: row.flight_number,
@@ -378,8 +394,10 @@ export async function getStaffDashboardInternal(filters: {
       arrival_datetime,
       departure_airport_code,
       departure_city,
+      departure_country,
       arrival_airport_code,
       arrival_city,
+      arrival_country,
       base_price,
       status,
       ticket_count,
@@ -518,7 +536,10 @@ export async function getStaffDashboardInternal(filters: {
           ratingsTotal: 0,
           reviewCount: 0,
         };
-        entry.comments.push({ comment: row.comment?.trim() || null, rating: row.rating });
+        entry.comments.push({
+          comment: row.comment?.trim() || null,
+          rating: row.rating,
+        });
         entry.ratingsTotal += row.rating;
         entry.reviewCount += 1;
         groupedRatings[key] = entry;
@@ -1060,7 +1081,9 @@ export async function updateAirplaneFieldInternal(data: {
       where airline_name = ${data.airlineName}
         and airplane_id = ${data.airplaneId}
     `;
-    return { message: `Airplane ${data.airplaneId} manufacturing date updated.` };
+    return {
+      message: `Airplane ${data.airplaneId} manufacturing date updated.`,
+    };
   }
 
   const seats = Number(data.value);
@@ -1082,7 +1105,9 @@ export async function updateAirplaneFieldInternal(data: {
       and airplane.airplane_id = ${data.airplaneId}
   `;
   if (seats < dependencyRows[0].max_tickets) {
-    return { error: "Seat count cannot be lower than tickets already sold on assigned flights." };
+    return {
+      error: "Seat count cannot be lower than tickets already sold on assigned flights.",
+    };
   }
 
   await db`
@@ -1259,7 +1284,8 @@ const AIRPORT_FIELD_UPDATES = {
   },
   city: {
     validate: (value: string) => value.trim(),
-    update: (code: string, value: string) => db`update airport set city = ${value} where code = ${code}`,
+    update: (code: string, value: string) =>
+      db`update airport set city = ${value} where code = ${code}`,
   },
   country: {
     validate: (value: string) => value.trim(),
@@ -1719,7 +1745,8 @@ async function changePasswordForAccount(options: {
   if (!storedPassword) throw new Error(`${options.accountLabel} not found.`);
   const valid = await bcrypt.compare(options.currentPassword, storedPassword);
   if (!valid) throw new Error("Current password is incorrect.");
-  if (options.newPassword.length < 8) throw new Error("New password must be at least 8 characters.");
+  if (options.newPassword.length < 8)
+    throw new Error("New password must be at least 8 characters.");
   const hashed = await bcrypt.hash(options.newPassword, 10);
   await options.updatePassword(hashed);
   return { success: true };
@@ -1858,4 +1885,3 @@ export async function changeStaffPasswordInternal(data: {
       db`update airline_staff set password = ${hashedPassword} where username = ${user.id}`,
   });
 }
-

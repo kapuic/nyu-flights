@@ -3,6 +3,7 @@ import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
+import { CountryFlag } from "@/components/country-flag";
 
 import {
   Combobox,
@@ -56,15 +57,48 @@ function getFlightSelectionKey(flight: {
 }) {
   return `${flight.airlineName}::${flight.flightNumber}::${flight.departureDatetime}`;
 }
-
 function getFlightSelectionLabel(flight: {
   airlineName: string;
   arrivalAirportCode: string;
+  arrivalCountryCode: string;
   departureAirportCode: string;
+  departureCountryCode: string;
   departureDatetime: string;
   flightNumber: string;
 }) {
   return `${flight.airlineName} · ${flight.flightNumber} — ${flight.departureAirportCode} → ${flight.arrivalAirportCode} (${formatDateShort(flight.departureDatetime)})`;
+}
+
+function FlightSelectionOption({
+  flight,
+}: {
+  flight: {
+    airlineName: string;
+    arrivalAirportCode: string;
+    arrivalCountryCode: string;
+    departureAirportCode: string;
+    departureCountryCode: string;
+    departureDatetime: string;
+    flightNumber: string;
+  };
+}) {
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      <span className="truncate">
+        {flight.airlineName} · {flight.flightNumber}
+      </span>
+      <span className="inline-flex shrink-0 items-center gap-1.5 text-muted-foreground">
+        <CountryFlag countryCode={flight.departureCountryCode} size={16} />
+        {flight.departureAirportCode}
+        <span aria-hidden="true">→</span>
+        {flight.arrivalAirportCode}
+        <CountryFlag countryCode={flight.arrivalCountryCode} size={16} />
+      </span>
+      <span className="truncate text-muted-foreground">
+        ({formatDateShort(flight.departureDatetime)})
+      </span>
+    </span>
+  );
 }
 
 function getFlightSelectionSearchValue(flight: {
@@ -158,7 +192,9 @@ function StaffPassengersPage() {
             itemToStringLabel={getFlightSelectionLabel}
             itemToStringValue={getFlightSelectionSearchValue}
             onValueChange={(flight) => {
-              void setSearchParams({ flight: flight ? getFlightSelectionKey(flight) : "" });
+              void setSearchParams({
+                flight: flight ? getFlightSelectionKey(flight) : "",
+              });
             }}
           >
             <ComboboxInput placeholder="Search flights" showClear className="w-full" />
@@ -167,7 +203,7 @@ function StaffPassengersPage() {
               <ComboboxList>
                 {(flight) => (
                   <ComboboxItem key={getFlightSelectionKey(flight)} value={flight}>
-                    <span className="truncate">{getFlightSelectionLabel(flight)}</span>
+                    <FlightSelectionOption flight={flight} />
                   </ComboboxItem>
                 )}
               </ComboboxList>

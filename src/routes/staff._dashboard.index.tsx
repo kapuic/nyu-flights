@@ -1,32 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { AlertTriangleIcon, CircleCheckIcon, Clock, PlaneTakeoff, Ticket } from "lucide-react";
+import { AlertTriangleIcon, Clock, PlaneTakeoff, Ticket } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 
+import type { FlightOption } from "@/lib/queries";
 import type { DashboardDataTableFilterOption } from "@/components/dashboard-data-table";
 import { CountryFlag } from "@/components/country-flag";
 import {
   DashboardDataTable,
   DashboardDataTableColumnHeader,
 } from "@/components/dashboard-data-table";
-import { Badge } from "@/components/ui/badge";
-import { getAirportOption } from "@/lib/airports";
 import { staffDashboardQueryOptions } from "@/lib/staff-queries";
 import { formatDateTimeShort as formatTemporalDateTimeShort } from "@/lib/temporal";
 
-type DashboardFlightRow = {
-  airlineName: string;
-  arrivalAirportCode: string;
-  arrivalAirportName: string;
-  arrivalCity: string;
-  arrivalDatetime: string;
-  departureAirportCode: string;
-  departureAirportName: string;
-  departureCity: string;
-  departureDatetime: string;
-  flightNumber: string;
-  status: "on_time" | "delayed";
+type DashboardFlightRow = FlightOption & {
   ticketCount: number;
 };
 
@@ -49,7 +37,7 @@ function getUniqueOptions(
   const options = new Map<string, string>();
   for (const flight of flights) {
     const value = flight[valueKey];
-    options.set(value, getFilterOptionLabel(valueKey, value));
+    options.set(value, getFilterOptionLabel(valueKey, value, flights));
   }
   return Array.from(options, ([value, label]) => ({ label, value })).sort((a, b) =>
     a.label.localeCompare(b.label),
@@ -59,36 +47,36 @@ function getUniqueOptions(
 function getFilterOptionLabel(
   valueKey: "airlineName" | "arrivalAirportCode" | "departureAirportCode" | "status",
   value: string,
+  flights: Array<DashboardFlightRow>,
 ) {
   if (valueKey === "airlineName") return value;
   if (valueKey === "status") return value === "on_time" ? "On Time" : "Delayed";
-  const airport = getAirportOption(value);
-  return airport ? `${value} — ${airport.city}` : value;
+  const match = flights.find((flight) =>
+    valueKey === "departureAirportCode"
+      ? flight.departureAirportCode === value
+      : flight.arrivalAirportCode === value,
+  );
+  const city = valueKey === "departureAirportCode" ? match?.departureCity : match?.arrivalCity;
+  return city ? `${value} — ${city}` : value;
 }
 
-function AirportCell({ code }: { code: string }) {
-  const airport = getAirportOption(code);
+function AirportCell({
+  code,
+  countryCode,
+  name,
+}: {
+  code: string;
+  countryCode: string;
+  name: string;
+}) {
   return (
     <div className="flex min-w-36 items-center gap-2">
-      {airport ? <CountryFlag countryCode={airport.countryCode} size={18} /> : null}
+      <CountryFlag countryCode={countryCode} size={18} />
       <div className="min-w-0">
         <div className="font-mono text-sm font-medium tracking-tight">{code}</div>
-        <div className="truncate text-xs text-muted-foreground">
-          {airport?.name ?? airport?.city ?? "Unknown airport"}
-        </div>
+        <div className="truncate text-xs text-muted-foreground">{name}</div>
       </div>
     </div>
-  );
-}
-
-function FlightStatusBadge({ status }: { status: DashboardFlightRow["status"] }) {
-  const isOnTime = status === "on_time";
-  const Icon = isOnTime ? CircleCheckIcon : AlertTriangleIcon;
-  return (
-    <Badge variant={isOnTime ? "secondary" : "destructive"} className="text-xs">
-      <Icon data-icon="inline-start" />
-      {isOnTime ? "On Time" : "Delayed"}
-    </Badge>
   );
 }
 
@@ -97,6 +85,14 @@ function getDashboardExportValue(row: DashboardFlightRow, columnId: string) {
   if (columnId === "arrivalDatetime") return formatDateShort(row.arrivalDatetime);
   if (columnId === "status") return row.status === "on_time" ? "On Time" : "Delayed";
   return undefined;
+}
+function FlightStatusBadge({ status }: { status: DashboardFlightRow["status"] }) {
+  const label = status === "on_time" ? "On Time" : "Delayed";
+  const className =
+    status === "on_time"
+      ? "text-sm text-emerald-600 dark:text-emerald-400"
+      : "text-sm text-amber-600 dark:text-amber-400";
+  return <span className={className}>{label}</span>;
 }
 
 function StaffDashboardPage() {
@@ -132,13 +128,25 @@ function StaffDashboardPage() {
         accessorKey: "departureAirportCode",
         filterFn: "arrIncludesSome",
         header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="From" />,
-        cell: ({ row }) => <AirportCell code={row.original.departureAirportCode} />,
+        cell: ({ row }) => (
+          <AirportCell
+            code={row.original.departureAirportCode}
+            countryCode={row.original.departureCountryCode}
+            name={row.original.departureAirportName}
+          />
+        ),
       },
       {
         accessorKey: "arrivalAirportCode",
         filterFn: "arrIncludesSome",
         header: ({ column }) => <DashboardDataTableColumnHeader column={column} title="To" />,
-        cell: ({ row }) => <AirportCell code={row.original.arrivalAirportCode} />,
+        cell: ({ row }) => (
+          <AirportCell
+            code={row.original.arrivalAirportCode}
+            countryCode={row.original.arrivalCountryCode}
+            name={row.original.arrivalAirportName}
+          />
+        ),
       },
       {
         accessorKey: "departureDatetime",

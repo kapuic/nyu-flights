@@ -78,6 +78,7 @@ export type FlightOption = {
   airlineName: string;
   arrivalAirportCode: string;
   arrivalAirportName: string;
+  arrivalCountryCode: string;
   arrivalCity: string;
   arrivalDatetime: string;
   averageRating: number | null;
@@ -85,6 +86,7 @@ export type FlightOption = {
   basePrice: number;
   departureAirportCode: string;
   departureAirportName: string;
+  departureCountryCode: string;
   departureCity: string;
   departureDatetime: string;
   flightNumber: string;

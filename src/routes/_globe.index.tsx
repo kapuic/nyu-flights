@@ -1,136 +1,135 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useForm } from "@tanstack/react-form"
-import { useQuery } from "@tanstack/react-query"
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useForm } from "@tanstack/react-form";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeftRight,
   ArrowRight,
   Calendar as CalendarIcon,
   RotateCcw,
   Search,
-} from "lucide-react"
+} from "lucide-react";
 
-import type { FlightOption, FlightSearchResponse } from "@/lib/queries"
-import type { AirportSelection } from "@/lib/booking-store"
-import { listDbAirportsFn, searchFlightsFn } from "@/lib/queries"
-import { useBookingStore } from "@/lib/booking-store"
-import { AirportCombobox } from "@/components/airport-combobox"
-import { FlightResultCard } from "@/components/flight-result-card"
-import { formatCurrency } from "@/lib/format"
+import type { FlightOption, FlightSearchResponse } from "@/lib/queries";
+import type { AirportSelection } from "@/lib/booking-store";
+import { listDbAirportsFn, searchFlightsFn } from "@/lib/queries";
+import { useBookingStore } from "@/lib/booking-store";
+import { AirportCombobox } from "@/components/airport-combobox";
+import { CountryFlag } from "@/components/country-flag";
+import { FlightResultCard } from "@/components/flight-result-card";
+import { formatCurrency } from "@/lib/format";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Calendar } from "@/components/ui/calendar"
-import { cn } from "@/lib/utils"
-import { compareDateTimes, formatTime, getFlightDuration, jsDateToPlainDateString, plainDateToJsDate, todayJsDate } from "@/lib/temporal"
+  compareDateTimes,
+  formatTime,
+  getFlightDuration,
+  jsDateToPlainDateString,
+  plainDateToJsDate,
+  todayJsDate,
+} from "@/lib/temporal";
 
-type SortKey = "price" | "duration" | "departure" | "arrival"
-type SortDir = "asc" | "desc"
-type SortState = { key: SortKey; dir: SortDir }
+type SortKey = "price" | "duration" | "departure" | "arrival";
+type SortDir = "asc" | "desc";
+type SortState = { key: SortKey; dir: SortDir };
 
 const SORT_OPTIONS: Array<{ key: SortKey; label: string }> = [
   { key: "price", label: "Price" },
   { key: "duration", label: "Duration" },
   { key: "departure", label: "Departure Time" },
   { key: "arrival", label: "Arrival Time" },
-]
+];
 
 const SORT_LABELS: Record<SortKey, { asc: string; desc: string }> = {
   price: { asc: "cheapest first", desc: "most expensive first" },
   duration: { asc: "shortest first", desc: "longest first" },
   departure: { asc: "earliest departure", desc: "latest departure" },
   arrival: { asc: "earliest arrival", desc: "latest arrival" },
-}
+};
 
 function sortFlights(flights: Array<FlightOption>, sort: SortState): Array<FlightOption> {
   const sorted = [...flights].sort((a, b) => {
-    let cmp = 0
+    let cmp = 0;
     switch (sort.key) {
       case "price":
-        cmp = a.basePrice - b.basePrice
-        break
+        cmp = a.basePrice - b.basePrice;
+        break;
       case "duration": {
-        const da = getFlightDuration(a.departureDatetime, a.arrivalDatetime)
-        const db = getFlightDuration(b.departureDatetime, b.arrivalDatetime)
-        cmp = (da.hours * 60 + da.minutes) - (db.hours * 60 + db.minutes)
-        break
+        const da = getFlightDuration(a.departureDatetime, a.arrivalDatetime);
+        const db = getFlightDuration(b.departureDatetime, b.arrivalDatetime);
+        cmp = da.hours * 60 + da.minutes - (db.hours * 60 + db.minutes);
+        break;
       }
       case "departure":
-        cmp = compareDateTimes(a.departureDatetime, b.departureDatetime)
-        break
+        cmp = compareDateTimes(a.departureDatetime, b.departureDatetime);
+        break;
       case "arrival":
-        cmp = compareDateTimes(a.arrivalDatetime, b.arrivalDatetime)
-        break
+        cmp = compareDateTimes(a.arrivalDatetime, b.arrivalDatetime);
+        break;
     }
-    return sort.dir === "asc" ? cmp : -cmp
-  })
-  return sorted
+    return sort.dir === "asc" ? cmp : -cmp;
+  });
+  return sorted;
 }
 
 function formatDateKey(d: Date | undefined) {
-  return d ? jsDateToPlainDateString(d) : ""
+  return d ? jsDateToPlainDateString(d) : "";
 }
 
 function parseDateKey(s: string): Date | undefined {
-  return plainDateToJsDate(s)
+  return plainDateToJsDate(s);
 }
 
 export const Route = createFileRoute("/_globe/")({
   component: PublicHomePage,
-})
+});
 
 type SearchFormValues = {
-  departureDate: string
-  destination: string
-  returnDate: string
-  source: string
-  tripType: "one-way" | "round-trip"
-}
-function getRouteError(
-  searchFrom: AirportSelection | null,
-  searchTo: AirportSelection | null
-) {
+  departureDate: string;
+  destination: string;
+  returnDate: string;
+  source: string;
+  tripType: "one-way" | "round-trip";
+};
+function getRouteError(searchFrom: AirportSelection | null, searchTo: AirportSelection | null) {
   return searchFrom && searchTo && searchFrom.code === searchTo.code
     ? "Origin and destination must differ."
-    : null
+    : null;
 }
 
 function PublicHomePage() {
-  const navigate = useNavigate()
-  const { currentUser } = Route.useRouteContext()
+  const navigate = useNavigate();
+  const { currentUser } = Route.useRouteContext();
   // DB airports for combobox
   const dbAirportsQuery = useQuery({
     queryKey: ["db-airports"],
     queryFn: () => listDbAirportsFn(),
     staleTime: 5 * 60 * 1000,
-  })
-  const dbAirports = dbAirportsQuery.data ?? []
+  });
+  const dbAirports = dbAirportsQuery.data ?? [];
 
   // Booking store
-  const searchFrom = useBookingStore((s) => s.searchFrom)
-  const searchTo = useBookingStore((s) => s.searchTo)
-  const setSearch = useBookingStore((s) => s.setSearch)
-  const setResultRoutes = useBookingStore((s) => s.setResultRoutes)
-  const setShowAuthModal = useBookingStore((s) => s.setShowAuthModal)
-  const selectOutbound = useBookingStore((s) => s.selectOutbound)
-  const selectReturn = useBookingStore((s) => s.selectReturn)
-  const routeError = getRouteError(searchFrom, searchTo)
+  const searchFrom = useBookingStore((s) => s.searchFrom);
+  const searchTo = useBookingStore((s) => s.searchTo);
+  const setSearch = useBookingStore((s) => s.setSearch);
+  const setResultRoutes = useBookingStore((s) => s.setResultRoutes);
+  const setShowAuthModal = useBookingStore((s) => s.setShowAuthModal);
+  const selectOutbound = useBookingStore((s) => s.selectOutbound);
+  const selectReturn = useBookingStore((s) => s.selectReturn);
+  const routeError = getRouteError(searchFrom, searchTo);
 
   // Round-trip phase 2: outbound selected, picking return
-  const [pickingReturn, setPickingReturn] = useState<FlightOption | null>(null)
+  const [pickingReturn, setPickingReturn] = useState<FlightOption | null>(null);
 
   // Whether a search has been triggered
-  const [hasSearched, setHasSearched] = useState(false)
+  const [hasSearched, setHasSearched] = useState(false);
   // Sort state
-  const [sort, setSort] = useState<SortState>({ key: "price", dir: "asc" })
+  const [sort, setSort] = useState<SortState>({ key: "price", dir: "asc" });
   function toggleSort(key: SortKey) {
     setSort((prev) =>
-      prev.key === key
-        ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
-        : { key, dir: "asc" }
-    )
+      prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" },
+    );
   }
 
   // TanStack Form
@@ -143,32 +142,29 @@ function PublicHomePage() {
       tripType: "one-way" as "one-way" | "round-trip",
     } satisfies SearchFormValues,
     onSubmit: ({ value }) => {
-      const source = value.source.trim()
-      const destination = value.destination.trim()
-      if (!searchFrom && !searchTo && !source && !destination) return
+      const source = value.source.trim();
+      const destination = value.destination.trim();
+      if (!searchFrom && !searchTo && !source && !destination) return;
 
-      if (getRouteError(searchFrom, searchTo)) return
-      setHasSearched(true)
+      if (getRouteError(searchFrom, searchTo)) return;
+      setHasSearched(true);
     },
-  })
+  });
 
   // Track search-driving values as state (reactive for useQuery)
-  const [departureDateValue, setDepartureDateValue] = useState("")
-  const [returnDateValue, setReturnDateValue] = useState("")
-  const [tripTypeValue, setTripTypeValue] = useState<"one-way" | "round-trip">(
-    "one-way"
-  )
+  const [departureDateValue, setDepartureDateValue] = useState("");
+  const [returnDateValue, setReturnDateValue] = useState("");
+  const [tripTypeValue, setTripTypeValue] = useState<"one-way" | "round-trip">("one-way");
 
   // Auto-trigger search if store has airports (restoration after navigation)
   useEffect(() => {
     if ((searchFrom || searchTo) && !hasSearched) {
-      setHasSearched(true)
+      setHasSearched(true);
     }
-
-  }, [])
+  }, []);
 
   // Search query
-  const searchEnabled = hasSearched && (!!searchFrom || !!searchTo)
+  const searchEnabled = hasSearched && (!!searchFrom || !!searchTo);
 
   const searchQuery = useQuery({
     queryKey: [
@@ -190,117 +186,116 @@ function PublicHomePage() {
         },
       }),
     enabled: searchEnabled,
-  })
+  });
 
-  const results = searchQuery.data as FlightSearchResponse | undefined
-  const isLoading =
-    (searchQuery.isLoading || searchQuery.isFetching) && searchEnabled
-  const searchError = searchQuery.error
+  const results = searchQuery.data as FlightSearchResponse | undefined;
+  const isLoading = (searchQuery.isLoading || searchQuery.isFetching) && searchEnabled;
+  const searchError = searchQuery.error;
   const sortedOutbound = useMemo(() => {
-    if (!results) return []
-    return sortFlights(results.outbound, sort)
-  }, [results, sort])
+    if (!results) return [];
+    return sortFlights(results.outbound, sort);
+  }, [results, sort]);
 
   // Sync result routes to store for globe display
   const resultRoutes = useMemo(() => {
-    if (!results) return []
-    const seen = new Set<string>()
+    if (!results) return [];
+    const seen = new Set<string>();
     return results.outbound
       .map((f) => ({
         departureCode: f.departureAirportCode,
         arrivalCode: f.arrivalAirportCode,
       }))
       .filter((r) => {
-        const key = `${r.departureCode}-${r.arrivalCode}`
-        if (seen.has(key)) return false
-        seen.add(key)
-        return true
-      })
-  }, [results])
+        const key = `${r.departureCode}-${r.arrivalCode}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }, [results]);
 
   useEffect(() => {
-    setResultRoutes(resultRoutes)
-  }, [resultRoutes, setResultRoutes])
+    setResultRoutes(resultRoutes);
+  }, [resultRoutes, setResultRoutes]);
 
   // Eligible return flights for a given outbound
   const eligibleReturns = useMemo(() => {
-    if (!results || tripTypeValue !== "round-trip") return []
-    if (!pickingReturn) return results.returnOptions
+    if (!results || tripTypeValue !== "round-trip") return [];
+    if (!pickingReturn) return results.returnOptions;
     return results.returnOptions.filter(
-      (r) => compareDateTimes(r.departureDatetime, pickingReturn.arrivalDatetime) > 0
-    )
-  }, [results, tripTypeValue, pickingReturn])
+      (r) => compareDateTimes(r.departureDatetime, pickingReturn.arrivalDatetime) > 0,
+    );
+  }, [results, tripTypeValue, pickingReturn]);
 
   // Return flight previews for an outbound card
   const getReturnPreview = useCallback(
     (outbound: FlightOption) => {
-      if (!results || tripTypeValue !== "round-trip") return null
+      if (!results || tripTypeValue !== "round-trip") return null;
       const eligible = results.returnOptions.filter(
-        (r) => compareDateTimes(r.departureDatetime, outbound.arrivalDatetime) > 0
-      )
-      if (eligible.length === 0) return null
-      const cheapest = Math.min(...eligible.map((r) => r.basePrice))
-      return { count: eligible.length, cheapest, preview: eligible.slice(0, 3) }
+        (r) => compareDateTimes(r.departureDatetime, outbound.arrivalDatetime) > 0,
+      );
+      if (eligible.length === 0) return null;
+      const cheapest = Math.min(...eligible.map((r) => r.basePrice));
+      return { count: eligible.length, cheapest, preview: eligible.slice(0, 3) };
     },
-    [results, tripTypeValue]
-  )
+    [results, tripTypeValue],
+  );
 
   // Airport selection handlers
   const handleFromSelect = useCallback(
     (airport: AirportSelection) => {
-      setPickingReturn(null)
+      setPickingReturn(null);
       if (searchTo && airport.code === searchTo.code) {
-        return
+        return;
       }
-      setSearch({ searchFrom: airport })
-      form.setFieldValue("source", `${airport.city} (${airport.code})`)
-      if (searchTo) setHasSearched(true)
+      setSearch({ searchFrom: airport });
+      form.setFieldValue("source", `${airport.city} (${airport.code})`);
+      if (searchTo) setHasSearched(true);
     },
-    [searchTo, form, setSearch]
-  )
+    [searchTo, form, setSearch],
+  );
 
   const handleToSelect = useCallback(
     (airport: AirportSelection) => {
-      setPickingReturn(null)
+      setPickingReturn(null);
       if (searchFrom && airport.code === searchFrom.code) {
-        return
+        return;
       }
-      setSearch({ searchTo: airport })
-      form.setFieldValue("destination", `${airport.city} (${airport.code})`)
-      if (searchFrom) setHasSearched(true)
+      setSearch({ searchTo: airport });
+      form.setFieldValue("destination", `${airport.city} (${airport.code})`);
+      if (searchFrom) setHasSearched(true);
     },
-    [searchFrom, form, setSearch]
-  )
+    [searchFrom, form, setSearch],
+  );
 
   const handleSwap = useCallback(() => {
-    const prevFrom = searchFrom
-    const prevTo = searchTo
-    const prevSource = form.getFieldValue("source")
-    const prevDest = form.getFieldValue("destination")
-    setSearch({ searchFrom: prevTo, searchTo: prevFrom })
-    form.setFieldValue("source", prevDest)
-    form.setFieldValue("destination", prevSource)
-    if (prevFrom && prevTo) setHasSearched(true)
-  }, [searchFrom, searchTo, form, setSearch])
+    const prevFrom = searchFrom;
+    const prevTo = searchTo;
+    const prevSource = form.getFieldValue("source");
+    const prevDest = form.getFieldValue("destination");
+    setSearch({ searchFrom: prevTo, searchTo: prevFrom });
+    form.setFieldValue("source", prevDest);
+    form.setFieldValue("destination", prevSource);
+    if (prevFrom && prevTo) setHasSearched(true);
+  }, [searchFrom, searchTo, form, setSearch]);
 
   const handleBook = useCallback(
     (flight: FlightOption) => {
       // Round-trip: first click selects outbound, show return picker
       if (tripTypeValue === "round-trip" && !pickingReturn) {
-        setPickingReturn(flight)
-        return
+        setPickingReturn(flight);
+        return;
       }
 
       // One-way or return already picked: go to checkout
       if (!currentUser) {
-        selectOutbound(pickingReturn ?? flight)
-        if (pickingReturn) selectReturn(flight)
-        setShowAuthModal(true)
-        return
+        selectOutbound(pickingReturn ?? flight);
+        if (pickingReturn) selectReturn(flight);
+        setShowAuthModal(true);
+        return;
       }
-      selectOutbound(pickingReturn ?? flight)
-      if (pickingReturn) selectReturn(flight)
-      void navigate({ to: "/checkout" })
+      selectOutbound(pickingReturn ?? flight);
+      if (pickingReturn) selectReturn(flight);
+      void navigate({ to: "/checkout" });
     },
     [
       currentUser,
@@ -310,37 +305,37 @@ function PublicHomePage() {
       setShowAuthModal,
       tripTypeValue,
       pickingReturn,
-    ]
-  )
+    ],
+  );
 
   const handleFromClear = useCallback(() => {
-    setPickingReturn(null)
-    setSearch({ searchFrom: null })
-    if (!searchTo) setHasSearched(false)
-  }, [searchTo, setSearch])
+    setPickingReturn(null);
+    setSearch({ searchFrom: null });
+    if (!searchTo) setHasSearched(false);
+  }, [searchTo, setSearch]);
 
   const handleToClear = useCallback(() => {
-    setPickingReturn(null)
-    setSearch({ searchTo: null })
-    if (!searchFrom) setHasSearched(false)
-  }, [searchFrom, setSearch])
+    setPickingReturn(null);
+    setSearch({ searchTo: null });
+    if (!searchFrom) setHasSearched(false);
+  }, [searchFrom, setSearch]);
 
   const handleClearSearch = useCallback(() => {
-    setPickingReturn(null)
-    setHasSearched(false)
-    setResultRoutes([])
-    setSearch({ searchFrom: null, searchTo: null })
-    form.setFieldValue("source", "")
-    form.setFieldValue("destination", "")
-  }, [form, setResultRoutes, setSearch])
+    setPickingReturn(null);
+    setHasSearched(false);
+    setResultRoutes([]);
+    setSearch({ searchFrom: null, searchTo: null });
+    form.setFieldValue("source", "");
+    form.setFieldValue("destination", "");
+  }, [form, setResultRoutes, setSearch]);
 
-  const showResults = hasSearched && (!!results || isLoading || !!searchError)
+  const showResults = hasSearched && (!!results || isLoading || !!searchError);
 
   return (
     <main
       className={cn(
         "relative z-10 mx-auto flex max-w-3xl flex-col items-center px-4 transition-all duration-500",
-        showResults ? "pt-4" : "pt-[20vh] md:pt-[25vh]"
+        showResults ? "pt-4" : "pt-[20vh] md:pt-[25vh]",
       )}
       style={{
         transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)",
@@ -349,9 +344,9 @@ function PublicHomePage() {
       <div className="w-full">
         <form
           onSubmit={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            void form.handleSubmit()
+            e.preventDefault();
+            e.stopPropagation();
+            void form.handleSubmit();
           }}
         >
           <div className="flex flex-col gap-0 rounded-2xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-xl backdrop-saturate-150 md:flex-row md:items-stretch">
@@ -365,12 +360,9 @@ function PublicHomePage() {
                     items={dbAirports}
                     value={field.state.value}
                     onValueChange={(v) => {
-                      field.handleChange(v)
-                      if (
-                        searchFrom &&
-                        v !== `${searchFrom.city} (${searchFrom.code})`
-                      ) {
-                        handleFromClear()
+                      field.handleChange(v);
+                      if (searchFrom && v !== `${searchFrom.city} (${searchFrom.code})`) {
+                        handleFromClear();
                       }
                     }}
                     onSelect={handleFromSelect}
@@ -400,18 +392,13 @@ function PublicHomePage() {
                     items={dbAirports}
                     value={field.state.value}
                     onValueChange={(v) => {
-                      field.handleChange(v)
-                      if (
-                        searchTo &&
-                        v !== `${searchTo.city} (${searchTo.code})`
-                      ) {
-                        handleToClear()
+                      field.handleChange(v);
+                      if (searchTo && v !== `${searchTo.city} (${searchTo.code})`) {
+                        handleToClear();
                       }
                     }}
                     onSelect={handleToSelect}
-                    placeholder={
-                      searchFrom ? "Any destination" : "Select destination"
-                    }
+                    placeholder={searchFrom ? "Any destination" : "Select destination"}
                   />
                 )}
               </form.Field>
@@ -426,13 +413,13 @@ function PublicHomePage() {
                   <DatePickerField
                     value={parseDateKey(field.state.value)}
                     onChange={(d) => {
-                      const key = formatDateKey(d)
-                      field.handleChange(key)
-                      setDepartureDateValue(key)
-                      const ret = parseDateKey(form.getFieldValue("returnDate"))
+                      const key = formatDateKey(d);
+                      field.handleChange(key);
+                      setDepartureDateValue(key);
+                      const ret = parseDateKey(form.getFieldValue("returnDate"));
                       if (d && ret && ret < d) {
-                        form.setFieldValue("returnDate", "")
-                        setReturnDateValue("")
+                        form.setFieldValue("returnDate", "");
+                        setReturnDateValue("");
                       }
                     }}
                     placeholder="Select date"
@@ -454,14 +441,13 @@ function PublicHomePage() {
                         <DatePickerField
                           value={parseDateKey(field.state.value)}
                           onChange={(d) => {
-                            const key = formatDateKey(d)
-                            field.handleChange(key)
-                            setReturnDateValue(key)
+                            const key = formatDateKey(d);
+                            field.handleChange(key);
+                            setReturnDateValue(key);
                           }}
                           placeholder="Any date"
                           minDate={
-                            parseDateKey(form.getFieldValue("departureDate")) ??
-                            todayJsDate()
+                            parseDateKey(form.getFieldValue("departureDate")) ?? todayJsDate()
                           }
                         />
                       )}
@@ -481,11 +467,7 @@ function PublicHomePage() {
           </div>
         </form>
 
-        {routeError && (
-          <div className="mt-2 text-center text-sm text-red-400">
-            {routeError}
-          </div>
-        )}
+        {routeError && <div className="mt-2 text-center text-sm text-red-400">{routeError}</div>}
 
         <div className="mt-3 flex items-center justify-center gap-1">
           <form.Subscribe selector={(s) => s.values.tripType}>
@@ -494,17 +476,17 @@ function PublicHomePage() {
                 <button
                   type="button"
                   onClick={() => {
-                    form.setFieldValue("tripType", "one-way")
-                    form.setFieldValue("returnDate", "")
-                    setTripTypeValue("one-way")
-                    setReturnDateValue("")
-                    setPickingReturn(null)
+                    form.setFieldValue("tripType", "one-way");
+                    form.setFieldValue("returnDate", "");
+                    setTripTypeValue("one-way");
+                    setReturnDateValue("");
+                    setPickingReturn(null);
                   }}
                   className={cn(
                     "rounded-full px-4 py-1.5 text-sm transition-colors",
                     tripType === "one-way"
                       ? "bg-white/10 text-white"
-                      : "text-white/40 hover:text-white/60"
+                      : "text-white/40 hover:text-white/60",
                   )}
                 >
                   One way
@@ -512,14 +494,14 @@ function PublicHomePage() {
                 <button
                   type="button"
                   onClick={() => {
-                    form.setFieldValue("tripType", "round-trip")
-                    setTripTypeValue("round-trip")
+                    form.setFieldValue("tripType", "round-trip");
+                    setTripTypeValue("round-trip");
                   }}
                   className={cn(
                     "rounded-full px-4 py-1.5 text-sm transition-colors",
                     tripType === "round-trip"
                       ? "bg-white/10 text-white"
-                      : "text-white/40 hover:text-white/60"
+                      : "text-white/40 hover:text-white/60",
                   )}
                 >
                   Round trip
@@ -563,9 +545,12 @@ function PublicHomePage() {
                     <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-medium tracking-widest text-white/60 uppercase">
                       Outbound
                     </span>
-                    <span className="text-sm font-medium text-white">
-                      {pickingReturn.departureAirportCode} →{" "}
+                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-white">
+                      <CountryFlag countryCode={pickingReturn.departureCountryCode} size={16} />
+                      {pickingReturn.departureAirportCode}
+                      <span aria-hidden="true">→</span>
                       {pickingReturn.arrivalAirportCode}
+                      <CountryFlag countryCode={pickingReturn.arrivalCountryCode} size={16} />
                     </span>
                     <span className="text-xs text-white/40">
                       {formatTime(pickingReturn.departureDatetime)} –{" "}
@@ -622,7 +607,7 @@ function PublicHomePage() {
                 </span>
                 <div className="flex items-center gap-1">
                   {SORT_OPTIONS.map((opt) => {
-                    const active = sort.key === opt.key
+                    const active = sort.key === opt.key;
                     return (
                       <button
                         key={opt.key}
@@ -632,34 +617,23 @@ function PublicHomePage() {
                           "rounded-full px-2.5 py-1 text-[10px] font-medium tracking-wide transition-colors",
                           active
                             ? "bg-white/10 text-white/70"
-                            : "text-white/25 hover:text-white/40"
+                            : "text-white/25 hover:text-white/40",
                         )}
                       >
                         {opt.label}
                         {active && (
-                          <span className="ml-0.5">
-                            {sort.dir === "asc" ? "\u2191" : "\u2193"}
-                          </span>
+                          <span className="ml-0.5">{sort.dir === "asc" ? "\u2191" : "\u2193"}</span>
                         )}
                       </button>
-                    )
+                    );
                   })}
                 </div>
               </div>
               {sortedOutbound.map((flight, i) => {
-                const returnInfo =
-                  tripTypeValue === "round-trip"
-                    ? getReturnPreview(flight)
-                    : null
+                const returnInfo = tripTypeValue === "round-trip" ? getReturnPreview(flight) : null;
                 return (
-                  <div
-                    key={`${flight.flightNumber}-${flight.departureDatetime}`}
-                  >
-                    <FlightResultCard
-                      flight={flight}
-                      index={i}
-                      onBook={handleBook}
-                    />
+                  <div key={`${flight.flightNumber}-${flight.departureDatetime}`}>
+                    <FlightResultCard flight={flight} index={i} onBook={handleBook} />
 
                     {returnInfo && (
                       <div className="mx-2 -mt-1 rounded-b-lg border border-t-0 border-white/[0.06] bg-white/[0.02] px-4 py-2.5">
@@ -683,9 +657,7 @@ function PublicHomePage() {
                                   {formatTime(ret.arrivalDatetime)}
                                 </span>
                               </div>
-                              <span className="text-white/40">
-                                {formatCurrency(ret.basePrice)}
-                              </span>
+                              <span className="text-white/40">{formatCurrency(ret.basePrice)}</span>
                             </div>
                           ))}
                         </div>
@@ -697,33 +669,28 @@ function PublicHomePage() {
                       </div>
                     )}
                   </div>
-                )
+                );
               })}
             </div>
           )}
 
-          {!pickingReturn &&
-            results &&
-            results.outbound.length === 0 &&
-            !isLoading && (
-              <div className="flex flex-col items-center gap-4 py-16 text-center">
-                <div className="text-white/30">No flights found</div>
-                <div className="text-sm text-white/20">
-                  Try different airports or dates
-                </div>
-                <button
-                  type="button"
-                  onClick={handleClearSearch}
-                  className="rounded-full border border-white/10 px-4 py-1.5 text-sm text-white/50 transition-colors hover:bg-white/[0.06] hover:text-white/70"
-                >
-                  Clear search
-                </button>
-              </div>
-            )}
+          {!pickingReturn && results && results.outbound.length === 0 && !isLoading && (
+            <div className="flex flex-col items-center gap-4 py-16 text-center">
+              <div className="text-white/30">No flights found</div>
+              <div className="text-sm text-white/20">Try different airports or dates</div>
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="rounded-full border border-white/10 px-4 py-1.5 text-sm text-white/50 transition-colors hover:bg-white/[0.06] hover:text-white/70"
+              >
+                Clear search
+              </button>
+            </div>
+          )}
         </div>
       )}
     </main>
-  )
+  );
 }
 
 function DatePickerField({
@@ -732,21 +699,18 @@ function DatePickerField({
   placeholder,
   minDate,
 }: {
-  value: Date | undefined
-  onChange: (date: Date | undefined) => void
-  placeholder: string
-  minDate?: Date
+  value: Date | undefined;
+  onChange: (date: Date | undefined) => void;
+  placeholder: string;
+  minDate?: Date;
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         render={
-          <button
-            type="button"
-            className="flex h-9 w-full items-center gap-2 px-3 text-sm"
-          />
+          <button type="button" className="flex h-9 w-full items-center gap-2 px-3 text-sm" />
         }
       >
         <CalendarIcon className="size-4 shrink-0 text-white/40" />
@@ -768,13 +732,13 @@ function DatePickerField({
           mode="single"
           selected={value}
           onSelect={(d) => {
-            onChange(d)
-            setOpen(false)
+            onChange(d);
+            setOpen(false);
           }}
           disabled={{ before: minDate ?? todayJsDate() }}
           className="text-white [--cell-size:--spacing(9)]"
         />
       </PopoverContent>
     </Popover>
-  )
+  );
 }

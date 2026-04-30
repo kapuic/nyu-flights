@@ -1,26 +1,22 @@
-import { ArrowRight, Clock, Plane, Star } from "lucide-react"
+import { ArrowRight, Clock, Star } from "lucide-react";
 
-import type { FlightOption } from "@/lib/queries"
-import { formatCurrency } from "@/lib/format"
-import { formatShortDate, formatTime, getFlightDuration } from "@/lib/temporal"
-import { cn } from "@/lib/utils"
+import type { FlightOption } from "@/lib/queries";
+import { CountryFlag } from "@/components/country-flag";
+import { formatCurrency } from "@/lib/format";
+import { formatShortDate, formatTime, getFlightDuration } from "@/lib/temporal";
 
 function formatDuration(departure: string, arrival: string) {
-  const dur = getFlightDuration(departure, arrival)
-  return `${dur.hours}h ${dur.minutes}m`
+  const dur = getFlightDuration(departure, arrival);
+  return `${dur.hours}h ${dur.minutes}m`;
 }
 
 type FlightResultCardProps = {
-  flight: FlightOption
-  index: number
-  onBook?: (flight: FlightOption) => void
-}
+  flight: FlightOption;
+  index: number;
+  onBook?: (flight: FlightOption) => void;
+};
 
-export function FlightResultCard({
-  flight,
-  index,
-  onBook,
-}: FlightResultCardProps) {
+export function FlightResultCard({ flight, index, onBook }: FlightResultCardProps) {
   return (
     <div
       className="group rounded-xl border border-white/[0.08] bg-white/[0.04] p-5 backdrop-blur-sm transition-colors hover:border-white/15 hover:bg-white/[0.06]"
@@ -32,40 +28,19 @@ export function FlightResultCard({
         animationTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)",
       }}
     >
-      {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Plane className="size-3.5 text-white/40" />
-          <span className="text-xs font-medium tracking-wide text-white/50 uppercase">
-            {flight.flightNumber}
-          </span>
-          <span className="text-xs text-white/30">·</span>
-          <span className="text-xs text-white/40">{flight.airlineName}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div
-            className={cn(
-              "size-1.5 rounded-full",
-              flight.status === "on_time" ? "bg-emerald-400" : "bg-amber-400"
-            )}
-          />
-          <span className="text-xs text-white/50">
-            {flight.status === "on_time" ? "On Time" : "Delayed"}
-          </span>
-        </div>
-      </div>
-
-      {/* Route */}
       <div className="mb-4 flex items-center gap-4">
         <div className="min-w-0 flex-1">
-          <div className="text-lg font-semibold tracking-tight text-white">
-            {flight.departureAirportCode}
+          <div className="flex items-center gap-2">
+            <CountryFlag countryCode={flight.departureCountryCode} size={18} />
+            <div className="text-lg font-semibold tracking-tight text-white">
+              {flight.departureAirportCode}
+            </div>
           </div>
-          <div className="truncate text-xs text-white/40">
-            {flight.departureCity}
-          </div>
+          <div className="truncate text-xs text-white/40">{flight.departureCity}</div>
           <div className="mt-0.5 text-sm text-white/70">
-            <span className="text-xs text-white/30">{formatShortDate(flight.departureDatetime)}</span>{" "}
+            <span className="text-xs text-white/30">
+              {formatShortDate(flight.departureDatetime)}
+            </span>{" "}
             {formatTime(flight.departureDatetime)}
           </div>
         </div>
@@ -82,12 +57,13 @@ export function FlightResultCard({
         </div>
 
         <div className="min-w-0 flex-1 text-right">
-          <div className="text-lg font-semibold tracking-tight text-white">
-            {flight.arrivalAirportCode}
+          <div className="flex items-center justify-end gap-2">
+            <div className="text-lg font-semibold tracking-tight text-white">
+              {flight.arrivalAirportCode}
+            </div>
+            <CountryFlag countryCode={flight.arrivalCountryCode} size={18} />
           </div>
-          <div className="truncate text-xs text-white/40">
-            {flight.arrivalCity}
-          </div>
+          <div className="truncate text-xs text-white/40">{flight.arrivalCity}</div>
           <div className="mt-0.5 text-sm text-white/70">
             <span className="text-xs text-white/30">{formatShortDate(flight.arrivalDatetime)}</span>{" "}
             {formatTime(flight.arrivalDatetime)}
@@ -98,9 +74,7 @@ export function FlightResultCard({
       {/* Footer */}
       <div className="flex items-end justify-between">
         <div className="flex items-center gap-4">
-          <div className="text-xl font-semibold text-white">
-            {formatCurrency(flight.basePrice)}
-          </div>
+          <div className="text-xl font-semibold text-white">{formatCurrency(flight.basePrice)}</div>
           {flight.averageRating !== null && (
             <div className="flex items-center gap-1 text-xs text-white/40">
               <Star className="size-3 fill-white/40 text-white/40" />
@@ -112,8 +86,7 @@ export function FlightResultCard({
 
         <div className="flex items-center gap-3">
           <span className="text-xs text-white/30">
-            {flight.availableSeats} seat{flight.availableSeats !== 1 ? "s" : ""}{" "}
-            left
+            {flight.availableSeats} seat{flight.availableSeats !== 1 ? "s" : ""} left
           </span>
           {onBook && (
             <button
@@ -127,6 +100,5 @@ export function FlightResultCard({
         </div>
       </div>
     </div>
-  )
+  );
 }
-
