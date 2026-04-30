@@ -377,7 +377,7 @@ export const purchaseTicketSchema = flightIdentitySchema.extend({
   cardExpiration: z.string().min(1, "Card expiration is required."),
   cardNumber: z.string().min(12, "Card number is required."),
   cardType: z.enum(["credit", "debit"]),
-  nameOnCard: z.string().min(2, "Name on card is required."),
+  nameOnCard: z.string().min(1, "Name on card is required."),
 });
 
 export const reviewSchema = flightIdentitySchema.extend({
@@ -394,7 +394,7 @@ export const createFlightSchema = z
     basePrice: z.coerce.number().positive("Price must be positive."),
     departureAirportCode: z.string().length(3, "Departure airport code is required."),
     departureDatetime: z.string().min(1, "Departure time is required."),
-    flightNumber: z.string().min(2, "Flight number is required."),
+    flightNumber: z.string().min(1, "Flight number is required."),
   })
   .superRefine(validateFlightSchedule);
 
@@ -443,8 +443,8 @@ export const deleteFlightSchema = flightIdentitySchema;
 export const addAirplaneSchema = z
   .object({
     airlineName: z.string().trim().default(""),
-    airplaneId: z.string().min(2, "Airplane ID is required."),
-    manufacturingCompany: z.string().min(2, "Manufacturer is required."),
+    airplaneId: z.string().trim().min(1, "Airplane ID is required."),
+    manufacturingCompany: z.string().min(1, "Manufacturer is required."),
     manufacturingDate: z.string().min(1, "Manufacturing date is required."),
     numberOfSeats: z.coerce.number().int().positive("Seat count must be positive."),
   })
