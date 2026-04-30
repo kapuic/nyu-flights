@@ -245,7 +245,7 @@ VALUES
     ('user3@nyu.edu',        '$2b$10$mWkpYnfVGyIDtflnb9O.A.OzwyroqNiHk/BGcKjeiOQQC2EGx/bkC', 'Trudy Jones', '1890', 'Jay Street', 'Brooklyn', 'New York', '+12124324324', '54324', '2025-09-24', 'US', '1999-09-19');
 
 -- Adaptation: flight status 'on-time' replaced with 'on_time'.
--- Adaptation: added flight United 102 at 2024-08-09 (not in professor scenario but required by ticket 5 which references this flight or else the FK constraint fails).
+-- Professor correction: ticket 5's scenario date is 2026-02-14 13:25:25, not 2024-08-09 13:25:25.
 INSERT INTO flight (
     airline_name, flight_number, departure_datetime,
     departure_airport_code, arrival_airport_code, arrival_datetime,
@@ -258,7 +258,7 @@ VALUES
     ('United', '207', '2026-06-19 13:25:25', 'LAX', 'SFO', '2026-06-19 16:50:25', 300.00,  'on_time', '2'),
     ('United', '296', '2025-12-28 13:25:25', 'PVG', 'SFO', '2025-12-28 16:50:25', 3000.00, 'on_time', '1'),
     ('United', '715', '2026-01-25 10:25:25', 'PVG', 'BEI', '2026-01-25 13:50:25', 500.00,  'delayed', '1'),
-    ('United', '102', '2024-08-09 13:25:25', 'SFO', 'LAX', '2024-08-09 16:50:25', 300.00,  'on_time', '3');
+    ('United', '102', '2026-02-14 13:25:25', 'SFO', 'LAX', '2026-02-14 16:50:25', 300.00,  'on_time', '3');
 
 -- Adaptation: ticket_id from BIGINT to VARCHAR(21) (nanoid-compatible but values kept).
 -- Adaptation: card_number '1111-2222-3333-4444' replaced with '4111111111111111' (Luhn-valid Visa test number).
@@ -274,7 +274,7 @@ VALUES
     ('2',  'user1@nyu.edu',        'United', '102', '2026-01-14 13:25:25', '2025-12-20 11:55:55', 'credit', '4242424242424242', 'User 1',           '2027-03-01'),
     ('3',  'user1@nyu.edu',        'United', '104', '2026-02-14 13:25:25', '2026-01-21 11:55:55', 'credit', '4242424242424242', 'User 1',           '2024-03-01'),
     ('4',  'testcustomer@nyu.edu', 'United', '104', '2026-02-14 13:25:25', '2026-01-28 11:55:55', 'credit', '4111111111111111', 'Test Customer 1',  '2027-03-01'),
-    ('5',  'user3@nyu.edu',        'United', '102', '2024-08-09 13:25:25', '2025-07-16 11:55:55', 'credit', '4242424242424242', 'User 3',           '2024-03-01'),
+    ('5',  'user3@nyu.edu',        'United', '102', '2026-02-14 13:25:25', '2025-07-16 11:55:55', 'credit', '4242424242424242', 'User 3',           '2024-03-01'),
     ('6',  'testcustomer@nyu.edu', 'United', '715', '2026-01-25 10:25:25', '2025-05-20 11:55:55', 'credit', '4111111111111111', 'Test Customer 1',  '2024-03-01'),
     ('7',  'user3@nyu.edu',        'United', '206', '2026-05-19 13:25:25', '2026-03-20 11:55:55', 'credit', '4242424242424242', 'User 3',           '2024-03-01'),
     ('8',  'user1@nyu.edu',        'United', '206', '2026-05-19 13:25:25', '2026-02-21 11:55:55', 'credit', '4242424242424242', 'User 1',           '2024-03-01'),
@@ -294,4 +294,3 @@ VALUES
     ('user1@nyu.edu',        'United', '104', '2026-02-14 13:25:25', 5, 'Comfortable journey and Professional',                    '2026-02-15 11:56:55');
 
 COMMIT;
-
