@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState } from "react";
 
 import {
   Dialog,
@@ -7,7 +7,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Drawer,
   DrawerClose,
@@ -16,77 +16,72 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { useIsDesktop } from "@/hooks/use-media-query"
+} from "@/components/ui/drawer";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useIsDesktop } from "@/hooks/use-media-query";
+import { Temporal, todayDate } from "@/lib/temporal";
 
-const SUPPRESS_KEY = "delete-confirm-suppressed"
+const SUPPRESS_KEY = "delete-confirm-suppressed";
 
 function isSuppressedToday(): boolean {
   try {
-    const stored = localStorage.getItem(SUPPRESS_KEY)
-    if (!stored) return false
-    const date = new Date(stored)
-    const now = new Date()
-    return (
-      date.getFullYear() === now.getFullYear() &&
-      date.getMonth() === now.getMonth() &&
-      date.getDate() === now.getDate()
-    )
+    const stored = localStorage.getItem(SUPPRESS_KEY);
+    if (!stored) return false;
+    return Temporal.PlainDate.compare(Temporal.PlainDate.from(stored), todayDate()) === 0;
   } catch {
-    return false
+    return false;
   }
 }
 
 function suppressForToday() {
-  localStorage.setItem(SUPPRESS_KEY, new Date().toISOString())
+  localStorage.setItem(SUPPRESS_KEY, todayDate().toString());
 }
 
 export function useDeleteConfirmation() {
   const [pending, setPending] = useState<{
-    label: string
-    onConfirm: () => void
-  } | null>(null)
+    label: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   function requestDelete(label: string, onConfirm: () => void) {
     if (isSuppressedToday()) {
-      onConfirm()
-      return
+      onConfirm();
+      return;
     }
-    setPending({ label, onConfirm })
+    setPending({ label, onConfirm });
   }
 
   function close() {
-    setPending(null)
+    setPending(null);
   }
 
-  return { pending, requestDelete, close }
+  return { pending, requestDelete, close };
 }
 
 export function DeleteConfirmation({
   pending,
   onClose,
 }: {
-  onClose: () => void
-  pending: { label: string; onConfirm: () => void } | null
+  onClose: () => void;
+  pending: { label: string; onConfirm: () => void } | null;
 }) {
-  const isDesktop = useIsDesktop()
-  const [suppress, setSuppress] = useState(false)
+  const isDesktop = useIsDesktop();
+  const [suppress, setSuppress] = useState(false);
 
   function handleConfirm() {
-    if (suppress) suppressForToday()
-    pending?.onConfirm()
-    onClose()
-    setSuppress(false)
+    if (suppress) suppressForToday();
+    pending?.onConfirm();
+    onClose();
+    setSuppress(false);
   }
 
   function handleCancel() {
-    onClose()
-    setSuppress(false)
+    onClose();
+    setSuppress(false);
   }
 
-  const open = !!pending
+  const open = !!pending;
 
   if (isDesktop) {
     return (
@@ -94,15 +89,10 @@ export function DeleteConfirmation({
         <DialogContent showCloseButton={false}>
           <DialogHeader>
             <DialogTitle>Delete {pending?.label}?</DialogTitle>
-            <DialogDescription>
-              This action cannot be undone.
-            </DialogDescription>
+            <DialogDescription>This action cannot be undone.</DialogDescription>
           </DialogHeader>
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Checkbox
-              checked={suppress}
-              onCheckedChange={(v) => setSuppress(!!v)}
-            />
+            <Checkbox checked={suppress} onCheckedChange={(v) => setSuppress(!!v)} />
             Do not ask again today
           </label>
           <DialogFooter>
@@ -115,7 +105,7 @@ export function DeleteConfirmation({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    )
+    );
   }
 
   return (
@@ -123,16 +113,11 @@ export function DeleteConfirmation({
       <DrawerContent>
         <DrawerHeader>
           <DrawerTitle>Delete {pending?.label}?</DrawerTitle>
-          <DrawerDescription>
-            This action cannot be undone.
-          </DrawerDescription>
+          <DrawerDescription>This action cannot be undone.</DrawerDescription>
         </DrawerHeader>
         <div className="px-4 pb-2">
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Checkbox
-              checked={suppress}
-              onCheckedChange={(v) => setSuppress(!!v)}
-            />
+            <Checkbox checked={suppress} onCheckedChange={(v) => setSuppress(!!v)} />
             Do not ask again today
           </label>
         </div>
@@ -148,5 +133,5 @@ export function DeleteConfirmation({
         </DrawerFooter>
       </DrawerContent>
     </Drawer>
-  )
+  );
 }

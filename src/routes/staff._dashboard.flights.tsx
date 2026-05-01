@@ -37,6 +37,7 @@ import { isAdminOrAbove } from "@/lib/staff-permissions";
 import { createFlightSchema } from "@/lib/schemas";
 import { staffDashboardQueryOptions } from "@/lib/staff-queries";
 import { getAirportOption } from "@/lib/airports";
+import { formatDateTimeShort } from "@/lib/temporal";
 import {
   createFlightFn,
   deleteFlightFn,
@@ -132,13 +133,7 @@ const flightStatusOptions: Array<{
 ];
 
 function formatDateShort(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return formatDateTimeShort(iso);
 }
 
 function formatCurrency(value: number) {

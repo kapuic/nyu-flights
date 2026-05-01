@@ -23,6 +23,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import {
   compareDateTimes,
+  formatPickerDate,
   formatTime,
   getFlightDuration,
   jsDateToPlainDateString,
@@ -715,13 +716,7 @@ function DatePickerField({
       >
         <CalendarIcon className="size-4 shrink-0 text-white/40" />
         <span className={cn("text-sm", value ? "text-white" : "text-white/30")}>
-          {value
-            ? value.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })
-            : placeholder}
+          {value ? formatPickerDate(jsDateToPlainDateString(value)) : placeholder}
         </span>
       </PopoverTrigger>
       <PopoverContent

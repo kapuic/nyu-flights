@@ -13,7 +13,7 @@ import { DeleteConfirmation, useDeleteConfirmation } from "@/components/delete-c
 import {
   DashboardDataTable,
   DashboardDataTableColumnHeader,
-  DashboardDataTableInlineDateTimeCell,
+  DashboardDataTableInlineDateCell,
   DashboardDataTableInlineTextCell,
 } from "@/components/dashboard-data-table";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ import {
 import { addAirplaneSchema } from "@/lib/schemas";
 import { staffDashboardQueryOptions } from "@/lib/staff-queries";
 import { isAdminOrAbove } from "@/lib/staff-permissions";
+import { formatDateOnlyShort } from "@/lib/temporal";
 
 type AirplaneRow = {
   airlineName: string;
@@ -105,11 +106,7 @@ export const Route = createFileRoute("/staff/_dashboard/fleet")({
 const staffDashboardRoute = getRouteApi("/staff/_dashboard");
 
 function formatDate(value: string) {
-  return new Date(value).toLocaleDateString("en-US", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDateOnlyShort(value);
 }
 
 function getFleetExportValue(airplane: AirplaneRow, columnId: string) {
@@ -281,7 +278,7 @@ function StaffFleetPage() {
           <DashboardDataTableColumnHeader column={column} title="Mfg. Date" />
         ),
         cell: ({ row }) => (
-          <DashboardDataTableInlineDateTimeCell
+          <DashboardDataTableInlineDateCell
             ariaLabel={`Update ${row.original.airplaneId} manufacturing date`}
             formatValue={formatDate}
             onSave={(value) => saveAirplaneField(row.original, "manufacturingDate", value)}

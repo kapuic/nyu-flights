@@ -1,76 +1,50 @@
-"use client"
+"use client";
 
-import { format } from "date-fns"
-import { CalendarIcon, ClockIcon } from "lucide-react"
-import { useMemo, useState } from "react"
+import { CalendarIcon, ClockIcon } from "lucide-react";
+import { useMemo, useState } from "react";
 
-import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import { Field, FieldLabel } from "@/components/ui/field"
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from "@/components/ui/input-group"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
-
-import { jsDateToPlainDateString, plainDateToJsDate } from "@/lib/temporal"
+  combineDateAndTimeValues,
+  formatDateTimeInputValue,
+  formatPickerDate,
+  formatPickerDateTime,
+  formatTimeInputValue,
+  jsDateToPlainDateString,
+  plainDateToJsDate,
+  todayString,
+} from "@/lib/temporal";
+import { cn } from "@/lib/utils";
 
 function parseDateValue(value: string) {
-  if (!value) return undefined
-  return plainDateToJsDate(value)
+  if (!value) return undefined;
+  return plainDateToJsDate(value);
 }
 
 function parseDateTimeValue(value: string) {
-  if (!value) return undefined
-
-  const parsed = new Date(value)
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed
+  if (!value) return undefined;
+  const dateOnlyValue = value.split("T")[0]?.split(" ")[0] ?? "";
+  return plainDateToJsDate(dateOnlyValue);
 }
 
 function formatDateValue(date: Date | undefined) {
-  if (!date) return ""
-  return jsDateToPlainDateString(date)
-}
-
-function formatDateTimeValue(date: Date | undefined) {
-  if (!date) return ""
-  return format(date, "yyyy-MM-dd'T'HH:mm")
-}
-
-function getTimeValue(date: Date | undefined) {
-  if (!date) return "09:00"
-  return format(date, "HH:mm")
-}
-
-function combineDateAndTime(date: Date, timeValue: string) {
-  const [hours = 0, minutes = 0] = timeValue
-    .split(":")
-    .map((part) => Number.parseInt(part, 10))
-
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-    Number.isNaN(hours) ? 0 : hours,
-    Number.isNaN(minutes) ? 0 : minutes
-  )
+  if (!date) return "";
+  return jsDateToPlainDateString(date);
 }
 
 type DatePickerFieldProps = {
-  className?: string
-  defaultOpen?: boolean
-  id?: string
-  onBlur?: () => void
-  onChange: (value: string) => void
-  placeholder?: string
-  value: string
-}
+  className?: string;
+  defaultOpen?: boolean;
+  id?: string;
+  onBlur?: () => void;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  value: string;
+};
 
 export function DatePickerField({
   className,
@@ -81,8 +55,8 @@ export function DatePickerField({
   placeholder = "Pick a date",
   value,
 }: DatePickerFieldProps) {
-  const selectedDate = parseDateValue(value)
-  const [open, setOpen] = useState(initialOpen)
+  const selectedDate = parseDateValue(value);
+  const [open, setOpen] = useState(initialOpen);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -95,17 +69,13 @@ export function DatePickerField({
             data-empty={!selectedDate}
             className={cn(
               "w-full justify-start px-2.5 font-normal data-[empty=true]:text-muted-foreground",
-              className
+              className,
             )}
           />
         }
       >
         <CalendarIcon data-icon="inline-start" />
-        {selectedDate ? (
-          format(selectedDate, "PPP")
-        ) : (
-          <span>{placeholder}</span>
-        )}
+        {selectedDate ? formatPickerDate(value) : <span>{placeholder}</span>}
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto p-0">
         <Calendar
@@ -113,24 +83,24 @@ export function DatePickerField({
           mode="single"
           selected={selectedDate}
           onSelect={(date) => {
-            onChange(formatDateValue(date))
-            onBlur?.()
-            setOpen(false)
+            onChange(formatDateValue(date));
+            onBlur?.();
+            setOpen(false);
           }}
         />
       </PopoverContent>
     </Popover>
-  )
+  );
 }
 
 type DateTimePickerFieldProps = {
-  className?: string
-  id?: string
-  onBlur?: () => void
-  onChange: (value: string) => void
-  placeholder?: string
-  value: string
-}
+  className?: string;
+  id?: string;
+  onBlur?: () => void;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  value: string;
+};
 
 export function DateTimePickerField({
   className,
@@ -140,9 +110,9 @@ export function DateTimePickerField({
   placeholder = "Pick date and time",
   value,
 }: DateTimePickerFieldProps) {
-  const selectedDate = parseDateTimeValue(value)
-  const selectedTime = useMemo(() => getTimeValue(selectedDate), [selectedDate])
-  const [open, setOpen] = useState(false)
+  const selectedDate = parseDateTimeValue(value);
+  const selectedTime = useMemo(() => formatTimeInputValue(value), [value]);
+  const [open, setOpen] = useState(false);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -155,17 +125,13 @@ export function DateTimePickerField({
             data-empty={!selectedDate}
             className={cn(
               "w-full justify-start px-2.5 font-normal data-[empty=true]:text-muted-foreground",
-              className
+              className,
             )}
           />
         }
       >
         <CalendarIcon data-icon="inline-start" />
-        {selectedDate ? (
-          format(selectedDate, "PPp")
-        ) : (
-          <span>{placeholder}</span>
-        )}
+        {selectedDate ? formatPickerDateTime(value) : <span>{placeholder}</span>}
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto p-0">
         <div className="flex flex-col">
@@ -175,34 +141,28 @@ export function DateTimePickerField({
             selected={selectedDate}
             onSelect={(date) => {
               if (!date) {
-                onChange("")
-                onBlur?.()
-                return
+                onChange("");
+                onBlur?.();
+                return;
               }
 
-              onChange(
-                formatDateTimeValue(combineDateAndTime(date, selectedTime))
-              )
-              onBlur?.()
+              onChange(combineDateAndTimeValues(jsDateToPlainDateString(date), selectedTime));
+              onBlur?.();
             }}
           />
           <div className="border-t p-3">
             <Field>
-              <FieldLabel htmlFor={id ? `${id}-time` : undefined}>
-                Time
-              </FieldLabel>
+              <FieldLabel htmlFor={id ? `${id}-time` : undefined}>Time</FieldLabel>
               <InputGroup>
                 <InputGroupInput
                   id={id ? `${id}-time` : undefined}
                   type="time"
                   value={selectedTime}
                   onChange={(event) => {
-                    const baseDate = selectedDate ?? new Date()
-                    onChange(
-                      formatDateTimeValue(
-                        combineDateAndTime(baseDate, event.target.value)
-                      )
-                    )
+                    const baseDate = value
+                      ? formatDateTimeInputValue(value).split("T")[0]
+                      : todayString();
+                    onChange(combineDateAndTimeValues(baseDate, event.target.value));
                   }}
                   onBlur={onBlur}
                   className="appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
@@ -225,5 +185,5 @@ export function DateTimePickerField({
         </div>
       </PopoverContent>
     </Popover>
-  )
+  );
 }

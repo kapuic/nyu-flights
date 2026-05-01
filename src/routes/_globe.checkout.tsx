@@ -13,7 +13,7 @@ import { PaymentCardForm, validatePaymentCard } from "@/components/ui/payment-fo
 import { useBookingStore } from "@/lib/booking-store";
 import { formatCurrency } from "@/lib/format";
 import { purchaseTicketFn } from "@/lib/queries";
-import { formatShortDate, formatTime, getFlightDuration } from "@/lib/temporal";
+import { formatShortDate, formatTime, getFlightDuration, todayDate } from "@/lib/temporal";
 import { cn, getErrorMessage } from "@/lib/utils";
 import { detectCardBrand } from "@/components/ui/credit-card";
 
@@ -106,8 +106,14 @@ const FAKER_ISSUERS = [
   "instapayment",
 ] as const;
 
+function getRandomInt(maxExclusive: number) {
+  const values = new Uint32Array(1);
+  crypto.getRandomValues(values);
+  return values[0] % maxExclusive;
+}
+
 function generateRandomCard(): PaymentCardValues {
-  const issuer = FAKER_ISSUERS[Math.floor(Math.random() * FAKER_ISSUERS.length)];
+  const issuer = FAKER_ISSUERS[getRandomInt(FAKER_ISSUERS.length)];
   const rawNumber = faker.finance.creditCardNumber(issuer).replace(/-/g, "");
   const brand = detectCardBrand(rawNumber);
 
@@ -122,9 +128,9 @@ function generateRandomCard(): PaymentCardValues {
   }
 
   // Random future expiration
-  const now = new Date();
-  const futureMonth = Math.floor(Math.random() * 12) + 1;
-  const futureYear = (now.getFullYear() % 100) + Math.floor(Math.random() * 5) + 1;
+  const today = todayDate();
+  const futureMonth = getRandomInt(12) + 1;
+  const futureYear = (today.year % 100) + getRandomInt(5) + 1;
   const expiration = `${String(futureMonth).padStart(2, "0")}/${String(futureYear).padStart(2, "0")}`;
 
   const cvv = faker.finance.creditCardCVV();
