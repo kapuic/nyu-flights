@@ -930,12 +930,7 @@ export function DashboardDataTableInlineDateTimeCell({
 
   return (
     <div className={cn("flex min-w-48 flex-col items-start gap-1", className)}>
-      <DateTimePickerField
-        value={draft}
-        onChange={setDraft}
-        onBlur={() => void save()}
-        placeholder="Pick date and time"
-      />
+      <DateTimePickerField value={draft} onChange={setDraft} placeholder="Pick date and time" />
       <div className="flex items-center gap-1">
         <Button type="button" size="xs" disabled={disabled || saving} onClick={() => void save()}>
           Save
