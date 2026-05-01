@@ -28,7 +28,7 @@ export function FlightResultCard({ flight, index, onBook }: FlightResultCardProp
         animationTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)",
       }}
     >
-      <div className="mb-4 flex items-center gap-4">
+      <div className="mb-4 flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <CountryFlag countryCode={flight.departureCountryCode} size={18} />
@@ -43,6 +43,10 @@ export function FlightResultCard({ flight, index, onBook }: FlightResultCardProp
             </span>{" "}
             {formatTime(flight.departureDatetime)}
           </div>
+        </div>
+
+        <div className="shrink-0 pt-0.5 text-right font-mono text-xs font-medium tracking-tight text-white/45">
+          {flight.flightNumber}
         </div>
 
         <div className="flex flex-col items-center gap-1 px-2">
